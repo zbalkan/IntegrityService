@@ -14,7 +14,10 @@ namespace Company.WebApplication1
                 .UseWindowsService()
                 .ConfigureLogging(logging
                     => logging.AddEventLog(conf =>
-                        conf.SourceName = "File Integrity Monitoring Service"
+                        {
+                            conf.SourceName = "File Integrity Monitoring Service";
+                            conf.LogName = "FIM";
+                        }
                         ))
                 .Build();
 
