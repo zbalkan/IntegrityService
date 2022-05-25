@@ -5,12 +5,14 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Security.Cryptography;
+using IntegrityService.FIM;
 
 namespace IntegrityService.Utils
 {
     internal sealed class FileSystemMonitor
     {
         private readonly ILogger _logger;
+        private readonly Context _context;
         private readonly bool _useDigest;
         private List<FileSystemWatcher> _watchers;
 
@@ -21,12 +23,16 @@ namespace IntegrityService.Utils
         /// <see href="https://devblogs.microsoft.com/oldnewthing/20140507-00/?p=1053"/>
         private readonly FixedSizeDictionary<string, DateTime> _duplicateCheckBuffer;
 
-        public FileSystemMonitor(ILogger logger, bool useDigest)
+        public FileSystemMonitor(
+            ILogger logger,
+            Context context,
+            bool useDigest)
         {
             _logger = logger;
+            _context = context;
             _useDigest = useDigest;
 
-            _duplicateCheckBuffer = new FixedSizeDictionary<string, DateTime>(50);
+            _duplicateCheckBuffer = new FixedSizeDictionary<string, DateTime>();
         }
 
         public void Start() => InvokeWatchers();
@@ -78,11 +84,11 @@ namespace IntegrityService.Utils
             }
         }
 
-        private void OnChanged(object sender, FileSystemEventArgs e) => WriteLog(e, "Changed");
+        private void OnChanged(object sender, FileSystemEventArgs e) => ProcessEvent(e.FullPath, ChangeCategory.Changed);
 
-        private void OnCreated(object sender, FileSystemEventArgs e) => WriteLog(e, "Created");
+        private void OnCreated(object sender, FileSystemEventArgs e) => ProcessEvent(e.FullPath, ChangeCategory.Created);
         
-        private void OnDeleted(object sender, FileSystemEventArgs e) => WriteLog(e, "Deleted");
+        private void OnDeleted(object sender, FileSystemEventArgs e) => ProcessEvent(e.FullPath, ChangeCategory.Deleted);
 
         private void OnError(object sender, ErrorEventArgs e) => PrintException(e.GetException());
 
@@ -106,23 +112,33 @@ namespace IntegrityService.Utils
             }
         }
 
-        private void WriteLog(FileSystemEventArgs e, string category)
+        private void ProcessEvent(string filePath, ChangeCategory category)
         {
-            if (IsExcluded(e.FullPath) || IsDuplicate(e.FullPath))
+            if (IsExcluded(filePath) || IsDuplicate(filePath))
             {
                 return;
             }
 
-            if (_useDigest && IsFile(e.FullPath))
-            {
-                var digest = Sha256CheckSum(e.FullPath);
-                _logger.LogInformation("{category}: {path}\nDigest: {digest}", category, e.FullPath, digest);
-            }
-            else
-            {
-                _logger.LogInformation("{category}: {path}", category, e.FullPath);
-            }
+            var digest = CalculateFileDigest(filePath);
+
+            WriteToDatabase(filePath, category, digest);
+            WriteLog(filePath, category, digest);
         }
+
+        private void WriteLog(string filePath, ChangeCategory category, string digest) => _logger.LogInformation("{category}: {path}\nDigest: {digest}", Enum.GetName(category), filePath, digest);
+
+        private void WriteToDatabase(string filePath, ChangeCategory category, string digest) =>
+            _context.FileSystemChanges.Insert(new FileSystemChange
+            {
+                Id = Guid.NewGuid(),
+                ChangeCategory = category,
+                ConfigChangeType = ConfigChangeType.FileSystem,
+                Entity = filePath,
+                DateTime = DateTime.Now,
+                FullPath = filePath,
+                SourceComputer = Environment.MachineName,
+                CurrentHash = digest
+            });
 
         private bool IsDuplicate(string fullPath)
         {
@@ -144,6 +160,18 @@ namespace IntegrityService.Utils
                 .Any(excludedPath => path.EndsWith(excludedPath, StringComparison.OrdinalIgnoreCase));
 
         private static bool IsFile(string fullPath) => File.Exists(fullPath); // If it is a directory or a removed file, you cannot get a digest. So return false.
+
+        private string CalculateFileDigest(string path)
+        {
+            var digest = string.Empty;
+
+            if (_useDigest && IsFile(path))
+            {
+                digest = Sha256CheckSum(path);
+            }
+
+            return digest;
+        }
 
         private string Sha256CheckSum(string filePath)
         {
