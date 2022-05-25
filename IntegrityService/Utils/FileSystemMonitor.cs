@@ -78,69 +78,11 @@ namespace IntegrityService.Utils
             }
         }
 
-        private void OnChanged(object sender, FileSystemEventArgs e)
-        {
-            if ((e.ChangeType != WatcherChangeTypes.Changed && e.ChangeType != WatcherChangeTypes.Renamed) || IsExcluded(e.FullPath))
-            {
-                return;
-            }
+        private void OnChanged(object sender, FileSystemEventArgs e) => WriteLog(e, "Changed");
 
-            if (IsDuplicate(e.FullPath))
-            {
-                return;
-            }
-
-            if (_useDigest && IsFile(e.FullPath))
-            {
-                var digest = Sha256CheckSum(e.FullPath);
-                _logger.LogInformation("{category}: {path}\nDigest: {digest}", "Changed", e.FullPath, digest);
-            }
-            else
-            {
-                _logger.LogInformation("{category}: {path}", e.FullPath);
-            }
-        }
-
-        private void OnCreated(object sender, FileSystemEventArgs e)
-        {
-            if (IsExcluded(e.FullPath))
-            {
-                return;
-            }
-
-            if (IsDuplicate(e.FullPath))
-            {
-                return;
-            }
-
-            if (_useDigest && IsFile(e.FullPath))
-            {
-                var digest = Sha256CheckSum(e.FullPath);
-                _logger.LogInformation("{category}: {path}\nDigest: {digest}", "Created", e.FullPath, digest);
-            }
-            else
-            {
-                _logger.LogInformation("{category}: {path}", "Created", e.FullPath);
-            }
-        }
-
-        private void OnDeleted(object sender, FileSystemEventArgs e)
-        {
-            if (IsExcluded(e.FullPath))
-            {
-                return;
-            }
-
-            if (_useDigest && IsFile(e.FullPath))
-            {
-                var digest = Sha256CheckSum(e.FullPath);
-                _logger.LogInformation("{category}: {path}\nDigest: {digest}", "Deleted", e.FullPath, digest);
-            }
-            else
-            {
-                _logger.LogInformation("{category}: {path}", "Deleted", e.FullPath);
-            }
-        }
+        private void OnCreated(object sender, FileSystemEventArgs e) => WriteLog(e, "Created");
+        
+        private void OnDeleted(object sender, FileSystemEventArgs e) => WriteLog(e, "Deleted");
 
         private void OnError(object sender, ErrorEventArgs e) => PrintException(e.GetException());
 
@@ -164,6 +106,24 @@ namespace IntegrityService.Utils
             }
         }
 
+        private void WriteLog(FileSystemEventArgs e, string category)
+        {
+            if (IsExcluded(e.FullPath) || IsDuplicate(e.FullPath))
+            {
+                return;
+            }
+
+            if (_useDigest && IsFile(e.FullPath))
+            {
+                var digest = Sha256CheckSum(e.FullPath);
+                _logger.LogInformation("{category}: {path}\nDigest: {digest}", category, e.FullPath, digest);
+            }
+            else
+            {
+                _logger.LogInformation("{category}: {path}", category, e.FullPath);
+            }
+        }
+
         private bool IsDuplicate(string fullPath)
         {
             if (_duplicateCheckBuffer.ContainsKey(fullPath) &&
@@ -172,7 +132,7 @@ namespace IntegrityService.Utils
                 return true;
             }
 
-            _duplicateCheckBuffer.Add(fullPath, File.GetLastWriteTime(fullPath));
+            _duplicateCheckBuffer.AddOrUpdate(fullPath, File.GetLastWriteTime(fullPath));
             return false;
         }
 
