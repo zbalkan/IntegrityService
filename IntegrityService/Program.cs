@@ -1,3 +1,4 @@
+using IntegrityService.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -5,12 +6,9 @@ using Serilog;
 
 namespace IntegrityService
 {
-    public class Program
+    public static class Program
     {
-        public static void Main(string[] args)
-        {
-            CreateHostBuilder(args).Build().Run();
-        }
+        public static void Main(string[] args) => CreateHostBuilder(args).Build().Run();
 
         private static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
@@ -20,13 +18,10 @@ namespace IntegrityService
                     logging.SetMinimumLevel(LogLevel.Information);
                     // Add Serilog for event logging
                     _ = logging.AddSerilog((Serilog.Core.Logger?)new LoggerConfiguration()
-                        .WriteTo.EventLog("FIM", "FIM", manageEventSource: true)
+                        .WriteTo.EventLog("FIM", "FIM", manageEventSource: true,eventIdProvider: new EventIdProvider())
                         .CreateLogger());
                 })
-                .ConfigureServices(services =>
-                    {
-                        _ = services.AddHostedService<Worker>();
-                    })
+                .ConfigureServices(services => _ = services.AddHostedService<Worker>())
                 .UseWindowsService();
     }
 }

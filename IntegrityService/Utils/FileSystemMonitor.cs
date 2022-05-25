@@ -73,6 +73,7 @@ namespace IntegrityService.Utils
                 watcher.Deleted += OnDeleted;
 
                 watcher.Error += OnError;
+
                 _watchers.Add(watcher);
             }
         }
@@ -92,11 +93,11 @@ namespace IntegrityService.Utils
             if (_useDigest && IsFile(e.FullPath))
             {
                 var digest = Sha256CheckSum(e.FullPath);
-                _logger.LogInformation("Changed: {path}\nDigest: {digest}", e.FullPath, digest);
+                _logger.LogInformation("{category}: {path}\nDigest: {digest}", "Changed", e.FullPath, digest);
             }
             else
             {
-                _logger.LogInformation("Changed: {path}", e.FullPath);
+                _logger.LogInformation("{category}: {path}", e.FullPath);
             }
         }
 
@@ -115,11 +116,11 @@ namespace IntegrityService.Utils
             if (_useDigest && IsFile(e.FullPath))
             {
                 var digest = Sha256CheckSum(e.FullPath);
-                _logger.LogInformation("Created: {path}\nDigest: {digest}", e.FullPath, digest);
+                _logger.LogInformation("{category}: {path}\nDigest: {digest}", "Created", e.FullPath, digest);
             }
             else
             {
-                _logger.LogInformation("Created: {path}", e.FullPath);
+                _logger.LogInformation("{category}: {path}", "Created", e.FullPath);
             }
         }
 
@@ -133,11 +134,11 @@ namespace IntegrityService.Utils
             if (_useDigest && IsFile(e.FullPath))
             {
                 var digest = Sha256CheckSum(e.FullPath);
-                _logger.LogInformation("Delete: {path}\nDigest: {digest}", e.FullPath, digest);
+                _logger.LogInformation("{category}: {path}\nDigest: {digest}", "Deleted", e.FullPath, digest);
             }
             else
             {
-                _logger.LogInformation("Delete: {path}", e.FullPath);
+                _logger.LogInformation("{category}: {path}", "Deleted", e.FullPath);
             }
         }
 
@@ -178,7 +179,7 @@ namespace IntegrityService.Utils
         private static bool IsExcluded(string path) =>
             Settings.Instance.ExcludedPaths
                 .Any(excludedPath => path.StartsWith(excludedPath, StringComparison.OrdinalIgnoreCase))
-            || 
+            ||
             Settings.Instance.ExcludedExtensions
                 .Any(excludedPath => path.EndsWith(excludedPath, StringComparison.OrdinalIgnoreCase));
 
