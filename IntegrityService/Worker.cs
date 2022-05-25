@@ -2,8 +2,10 @@ using IntegrityService.Utils;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using IntegrityService.FIM;
 
 namespace IntegrityService
 {
@@ -16,7 +18,9 @@ namespace IntegrityService
         {
             _logger = logger;
 
-            _fsMonitor = new FileSystemMonitor(_logger, true);
+            var context = new Context(@"fim.db");
+
+            _fsMonitor = new FileSystemMonitor(_logger, context, true);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -39,7 +43,6 @@ namespace IntegrityService
                 _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
                 await Task.Delay(30000, stoppingToken);
             }
-
         }
 
         private bool Handler(CtrlType signal)

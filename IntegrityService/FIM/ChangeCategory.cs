@@ -2,8 +2,8 @@
 {
     public enum ChangeCategory
     {
-        Added,
-        Modified,
+        Created,
+        Changed,
         Deleted
     }
 }
