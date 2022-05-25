@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Security.Cryptography;
 
@@ -11,20 +12,28 @@ namespace IntegrityService.Utils
     {
         private readonly ILogger _logger;
         private readonly bool _useDigest;
+        private List<FileSystemWatcher> _watchers;
 
-        private List<FileSystemWatcher> watchers;
+        /// <summary>
+        ///     Windows file system creates multiple events for creation and change events. These are by design but creates pollution.
+        ///     It is impossible to remove all of them but it can be minimized. For this, a buffer is used to check duplicate records.
+        /// </summary>
+        /// <see href="https://devblogs.microsoft.com/oldnewthing/20140507-00/?p=1053"/>
+        private readonly FixedSizeDictionary<string, DateTime> _duplicateCheckBuffer;
 
         public FileSystemMonitor(ILogger logger, bool useDigest)
         {
             _logger = logger;
             _useDigest = useDigest;
+
+            _duplicateCheckBuffer = new FixedSizeDictionary<string, DateTime>(50);
         }
 
         public void Start() => InvokeWatchers();
 
         public void Stop()
         {
-            foreach (var watcher in watchers)
+            foreach (var watcher in _watchers)
             {
                 watcher.EnableRaisingEvents = false;
                 watcher.Changed -= OnChanged;
@@ -34,12 +43,12 @@ namespace IntegrityService.Utils
                 watcher.Error -= OnError;
                 watcher.Dispose();
             }
-            watchers.Clear();
+            _watchers.Clear();
         }
 
         private void InvokeWatchers()
         {
-            watchers = new List<FileSystemWatcher>();
+            _watchers = new List<FileSystemWatcher>();
 
             foreach (var path in Settings.Instance.MonitoredPaths)
             {
@@ -64,7 +73,7 @@ namespace IntegrityService.Utils
                 watcher.Deleted += OnDeleted;
 
                 watcher.Error += OnError;
-                watchers.Add(watcher);
+                _watchers.Add(watcher);
             }
         }
 
@@ -75,9 +84,14 @@ namespace IntegrityService.Utils
                 return;
             }
 
+            if (IsDuplicate(e.FullPath))
+            {
+                return;
+            }
+
             if (_useDigest && IsFile(e.FullPath))
             {
-                var digest = SHA256CheckSum(e.FullPath);
+                var digest = Sha256CheckSum(e.FullPath);
                 _logger.LogInformation("Changed: {path}\nDigest: {digest}", e.FullPath, digest);
             }
             else
@@ -93,9 +107,14 @@ namespace IntegrityService.Utils
                 return;
             }
 
+            if (IsDuplicate(e.FullPath))
+            {
+                return;
+            }
+
             if (_useDigest && IsFile(e.FullPath))
             {
-                var digest = SHA256CheckSum(e.FullPath);
+                var digest = Sha256CheckSum(e.FullPath);
                 _logger.LogInformation("Created: {path}\nDigest: {digest}", e.FullPath, digest);
             }
             else
@@ -113,7 +132,7 @@ namespace IntegrityService.Utils
 
             if (_useDigest && IsFile(e.FullPath))
             {
-                var digest = SHA256CheckSum(e.FullPath);
+                var digest = Sha256CheckSum(e.FullPath);
                 _logger.LogInformation("Delete: {path}\nDigest: {digest}", e.FullPath, digest);
             }
             else
@@ -126,44 +145,54 @@ namespace IntegrityService.Utils
 
         private void PrintException(Exception? ex)
         {
-            if (ex != null)
+            while (true)
             {
-                var sb = new StringBuilder(120)
-                    .Append("Message: ").AppendLine(ex.Message)
-                    .Append("Stacktrace: ").AppendLine(ex.StackTrace);
+                if (ex == null)
+                {
+                    break;
+                }
+
+                var sb = new StringBuilder(120).Append("Message: ")
+                    .AppendLine(ex.Message)
+                    .Append("Stacktrace: ")
+                    .AppendLine(ex.StackTrace);
 
                 _logger.LogError("Exception: {ex}", sb.ToString());
 
-                PrintException(ex.InnerException);
+                ex = ex.InnerException;
             }
         }
 
-        private static bool IsExcluded(string path)
+        private bool IsDuplicate(string fullPath)
         {
-            for (var i = 0; i < Settings.Instance.ExcludedPaths.Count; i++)
+            if (_duplicateCheckBuffer.ContainsKey(fullPath) &&
+                _duplicateCheckBuffer[fullPath] == File.GetLastWriteTime(fullPath))
             {
-                if (path.StartsWith(Settings.Instance.ExcludedPaths[i], StringComparison.OrdinalIgnoreCase) ||
-                    path.EndsWith(Settings.Instance.ExcludedPaths[i], StringComparison.OrdinalIgnoreCase))
-                {
-                    return true;
-                }
+                return true;
             }
 
+            _duplicateCheckBuffer.Add(fullPath, File.GetLastWriteTime(fullPath));
             return false;
         }
 
+        private static bool IsExcluded(string path) =>
+            Settings.Instance.ExcludedPaths
+                .Any(excludedPath => path.StartsWith(excludedPath, StringComparison.OrdinalIgnoreCase))
+            || 
+            Settings.Instance.ExcludedExtensions
+                .Any(excludedPath => path.EndsWith(excludedPath, StringComparison.OrdinalIgnoreCase));
+
         private static bool IsFile(string fullPath) => File.Exists(fullPath); // If it is a directory or a removed file, you cannot get a digest. So return false.
 
-        private string SHA256CheckSum(string filePath)
+        private string Sha256CheckSum(string filePath)
         {
             var digest = string.Empty;
 
             try
             {
-                using var SHA256 = System.Security.Cryptography.SHA256.Create();
+                using var sha256 = SHA256.Create();
                 using var fileStream = File.OpenRead(filePath);
-                digest = Convert.ToHexString(SHA256.ComputeHash(fileStream));
-
+                digest = Convert.ToHexString(sha256.ComputeHash(fileStream));
             }
             catch (Exception ex)
             {
