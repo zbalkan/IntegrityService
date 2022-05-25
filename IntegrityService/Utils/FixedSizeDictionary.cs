@@ -25,9 +25,17 @@ namespace IntegrityService.Utils
 
         public bool ContainsKey(TKey key) => _dictionary.Contains(key);
 
-        public void Add(TKey key, TValue value)
+        public void AddOrUpdate(TKey key, TValue value)
         {
-            _dictionary.Add(key, value);
+            if (_dictionary.Contains(key))
+            {
+                _dictionary[key] = value;
+            }
+            else
+            {
+                _dictionary.Add(key, value);
+            }
+
             if (Count > _maxSize)
             {
                 RemoveAt(0);
