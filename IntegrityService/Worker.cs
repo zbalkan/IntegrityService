@@ -21,7 +21,9 @@ namespace IntegrityService
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            if (Settings.Instance.MonitoredPaths != default)
+            NativeMethods.SetConsoleCtrlHandler(Handler, true);
+
+            if (Settings.Instance.MonitoredPaths.Count > 0)
             {
                 _logger.LogInformation("Read settings successfully");
             }
@@ -38,7 +40,27 @@ namespace IntegrityService
                 await Task.Delay(30000, stoppingToken);
             }
 
-            _fsMonitor.Stop();
+        }
+
+        private bool Handler(CtrlType signal)
+        {
+            switch (signal)
+            {
+                case CtrlType.CtrlBreakEvent:
+                case CtrlType.CtrlCEvent:
+                case CtrlType.CtrlLogoffEvent:
+                case CtrlType.CtrlShutdownEvent:
+                case CtrlType.CtrlCloseEvent:
+                    _logger.LogInformation("Worker stopped at: {time}", DateTimeOffset.Now);
+                    // Cleanup
+                    _fsMonitor.Stop();
+
+                    Environment.Exit(0);
+                    return false;
+
+                default:
+                    return false;
+            }
         }
     }
 }
