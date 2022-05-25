@@ -87,7 +87,7 @@ namespace IntegrityService.Utils
         private void OnChanged(object sender, FileSystemEventArgs e) => ProcessEvent(e.FullPath, ChangeCategory.Changed);
 
         private void OnCreated(object sender, FileSystemEventArgs e) => ProcessEvent(e.FullPath, ChangeCategory.Created);
-        
+
         private void OnDeleted(object sender, FileSystemEventArgs e) => ProcessEvent(e.FullPath, ChangeCategory.Deleted);
 
         private void OnError(object sender, ErrorEventArgs e) => PrintException(e.GetException());
@@ -127,8 +127,21 @@ namespace IntegrityService.Utils
 
         private void WriteLog(string filePath, ChangeCategory category, string digest) => _logger.LogInformation("{category}: {path}\nDigest: {digest}", Enum.GetName(category), filePath, digest);
 
-        private void WriteToDatabase(string filePath, ChangeCategory category, string digest) =>
-            _context.FileSystemChanges.Insert(new FileSystemChange
+        private void WriteToDatabase(string filePath, ChangeCategory category, string digest)
+        {
+            var previousChange = _context.FileSystemChanges
+                .Query()
+                .Where(x => x.FullPath.Equals(filePath))
+                .OrderByDescending(c => c.DateTime)
+                .ToList();
+
+            var previousHash = string.Empty;
+            if (previousChange.Any())
+            {
+                previousHash = previousChange[0]?.CurrentHash ?? string.Empty;
+            }
+
+            var entity = new FileSystemChange
             {
                 Id = Guid.NewGuid(),
                 ChangeCategory = category,
@@ -137,8 +150,12 @@ namespace IntegrityService.Utils
                 DateTime = DateTime.Now,
                 FullPath = filePath,
                 SourceComputer = Environment.MachineName,
-                CurrentHash = digest
-            });
+                CurrentHash = digest,
+                PreviousHash = previousHash
+            };
+
+            _context.FileSystemChanges.Insert(entity);
+        }
 
         private bool IsDuplicate(string fullPath)
         {
@@ -165,28 +182,22 @@ namespace IntegrityService.Utils
         {
             var digest = string.Empty;
 
-            if (_useDigest && IsFile(path))
+            if (!_useDigest || !IsFile(path))
             {
-                digest = Sha256CheckSum(path);
+                return digest;
             }
-
-            return digest;
-        }
-
-        private string Sha256CheckSum(string filePath)
-        {
-            var digest = string.Empty;
 
             try
             {
                 using var sha256 = SHA256.Create();
-                using var fileStream = File.OpenRead(filePath);
+                using var fileStream = File.OpenRead(path);
                 digest = Convert.ToHexString(sha256.ComputeHash(fileStream));
             }
             catch (Exception ex)
             {
                 PrintException(ex);
             }
+
             return digest;
         }
     }
