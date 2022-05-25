@@ -22,8 +22,7 @@ namespace IntegrityService
 
         private static readonly Lazy<Settings> Lazy = new(() => new Settings());
 
-
-        private readonly RegistryKey HklmSoftware = Registry.LocalMachine.OpenSubKey("Software");
+        private readonly RegistryKey HklmSoftware = Registry.LocalMachine.OpenSubKey("Software", true);
 
         private const string fimKeyName = "FIM";
 
@@ -37,34 +36,49 @@ namespace IntegrityService
 
         private void ReadOrCreateSubKeys()
         {
-            if (fimKey.GetValueKind("MonitoredPaths") == default)
+            try
             {
-                fimKey.SetValue("MonitoredPaths", string.Empty);
+                _ = fimKey.GetValueKind("MonitoredPaths");
+            }
+            catch
+
+            {
+                fimKey.SetValue("MonitoredPaths", new string[] { string.Empty }, RegistryValueKind.MultiString);
             }
             MonitoredPaths = (fimKey.GetValue("MonitoredPaths") as string[]).Where(path => !string.IsNullOrEmpty(path)).ToList();
 
-            if (fimKey.GetValueKind("ExcludedPaths") == default)
+            try
             {
-                fimKey.SetValue("ExcludedPaths", string.Empty);
+                _ = fimKey.GetValueKind("ExcludedPaths");
+            }
+            catch
+
+            {
+                fimKey.SetValue("ExcludedPaths", new string[] { string.Empty }, RegistryValueKind.MultiString);
             }
             ExcludedPaths = (fimKey.GetValue("ExcludedPaths") as string[]).Where(path => !string.IsNullOrEmpty(path)).ToList();
 
-            if (fimKey.GetValueKind("ExcludedExtensions") == default)
+            try
             {
-                fimKey.SetValue("ExcludedExtensions", string.Empty);
+                _ = fimKey.GetValueKind("ExcludedExtensions");
+            }
+            catch
+
+            {
+                fimKey.SetValue("ExcludedExtensions", new string[] { string.Empty }, RegistryValueKind.MultiString);
             }
             ExcludedExtensions = (fimKey.GetValue("ExcludedExtensions") as string[]).Where(path => !string.IsNullOrEmpty(path)).ToList();
         }
 
         private void ReadOrCreateFimKey()
         {
-            if (HklmSoftware?.OpenSubKey(fimKeyName) == null)
+            if (HklmSoftware?.OpenSubKey(fimKeyName, true) == null)
             {
-                fimKey = HklmSoftware.CreateSubKey(fimKeyName);
+                fimKey = HklmSoftware.CreateSubKey(fimKeyName, true);
             }
             else
             {
-                fimKey = HklmSoftware.OpenSubKey(fimKeyName);
+                fimKey = HklmSoftware.OpenSubKey(fimKeyName, true);
             }
         }
     }
