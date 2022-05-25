@@ -119,16 +119,6 @@ namespace IntegrityService.Utils
                 return;
             }
 
-            var digest = CalculateFileDigest(filePath);
-
-            WriteToDatabase(filePath, category, digest);
-            WriteLog(filePath, category, digest);
-        }
-
-        private void WriteLog(string filePath, ChangeCategory category, string digest) => _logger.LogInformation("{category}: {path}\nDigest: {digest}", Enum.GetName(category), filePath, digest);
-
-        private void WriteToDatabase(string filePath, ChangeCategory category, string digest)
-        {
             var previousChange = _context.FileSystemChanges
                 .Query()
                 .Where(x => x.FullPath.Equals(filePath))
@@ -150,12 +140,17 @@ namespace IntegrityService.Utils
                 DateTime = DateTime.Now,
                 FullPath = filePath,
                 SourceComputer = Environment.MachineName,
-                CurrentHash = digest,
+                CurrentHash = CalculateFileDigest(filePath),
                 PreviousHash = previousHash
             };
 
-            _context.FileSystemChanges.Insert(entity);
+            WriteToDatabase(entity);
+            WriteLog(entity);
         }
+
+        private void WriteLog(FileSystemChange change) => _logger.LogInformation("Category: {category}\nPath: {path}\nCurrent Hash: {currentHash}\nPreviousHash: {previousHash}", Enum.GetName(change.ChangeCategory), change.FullPath, change.CurrentHash, change.PreviousHash);
+
+        private void WriteToDatabase(FileSystemChange change) => _context.FileSystemChanges.Insert(change);
 
         private bool IsDuplicate(string fullPath)
         {
