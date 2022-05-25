@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.EventLog;
+using Serilog;
 
 namespace IntegrityService
 {
@@ -14,19 +14,19 @@ namespace IntegrityService
 
         private static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
-                .UseWindowsService()
                 .ConfigureLogging(logging =>
                 {
                     logging.ClearProviders();
-                    logging.AddEventLog();
+                    logging.SetMinimumLevel(LogLevel.Information);
+                    // Add Serilog for event logging
+                    _ = logging.AddSerilog((Serilog.Core.Logger?)new LoggerConfiguration()
+                        .WriteTo.EventLog("FIM", "FIM", manageEventSource: true)
+                        .CreateLogger());
                 })
                 .ConfigureServices(services =>
                     {
-                        services.AddHostedService<Worker>()
-                        .Configure<EventLogSettings>(config =>
-                        {
-                            config.SourceName = "File Integrity Monitoring Service";
-                        });
-                    });
+                        _ = services.AddHostedService<Worker>();
+                    })
+                .UseWindowsService();
     }
 }
