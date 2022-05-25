@@ -17,10 +17,19 @@ namespace IntegrityService
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            if (Settings.Instance.MonitoredPaths != default)
+            {
+                _logger.LogInformation("Read settings successfully");
+            }
+            else
+            {
+                _logger.LogError("Failed to read settings.");
+            }
+
             while (!stoppingToken.IsCancellationRequested)
             {
                 _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
-                await Task.Delay(1000, stoppingToken);
+                await Task.Delay(10000, stoppingToken);
             }
         }
     }
