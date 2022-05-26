@@ -8,7 +8,7 @@ using System.Security.Cryptography;
 
 namespace IntegrityService.Utils
 {
-    internal sealed class FileSystemMonitor
+    internal sealed class FileSystemMonitor : IDisposable
     {
         private readonly ILogger _logger;
         private readonly bool _useDigest;
@@ -21,10 +21,13 @@ namespace IntegrityService.Utils
         /// <see href="https://devblogs.microsoft.com/oldnewthing/20140507-00/?p=1053"/>
         private readonly FixedSizeDictionary<string, DateTime> _duplicateCheckBuffer;
 
+        private readonly SHA256 _sha256;
+
         public FileSystemMonitor(ILogger logger, bool useDigest)
         {
             _logger = logger;
             _useDigest = useDigest;
+            _sha256 = SHA256.Create();
 
             _duplicateCheckBuffer = new FixedSizeDictionary<string, DateTime>(50);
         }
@@ -160,9 +163,8 @@ namespace IntegrityService.Utils
 
             try
             {
-                using var sha256 = SHA256.Create();
                 using var fileStream = File.OpenRead(filePath);
-                digest = Convert.ToHexString(sha256.ComputeHash(fileStream));
+                digest = Convert.ToHexString(_sha256.ComputeHash(fileStream));
             }
             catch (Exception ex)
             {
@@ -170,5 +172,7 @@ namespace IntegrityService.Utils
             }
             return digest;
         }
+
+        public void Dispose() => _sha256.Dispose();
     }
 }
