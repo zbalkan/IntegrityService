@@ -23,15 +23,9 @@ namespace IntegrityService.Utils
         /// <see href="https://devblogs.microsoft.com/oldnewthing/20140507-00/?p=1053"/>
         private readonly FixedSizeDictionary<string, DateTime> _duplicateCheckBuffer;
 
-
-        public FileSystemMonitor(
-            ILogger logger,
-            Context context,
-            bool useDigest)
-
         private readonly SHA256 _sha256;
 
-        public FileSystemMonitor(ILogger logger, bool useDigest)
+        public FileSystemMonitor(ILogger logger, Context context, bool useDigest)
 
         {
             _logger = logger;
@@ -200,7 +194,7 @@ namespace IntegrityService.Utils
 
             try
             {
-                using var fileStream = File.OpenRead(filePath);
+                using var fileStream = File.OpenRead(path);
                 digest = Convert.ToHexString(_sha256.ComputeHash(fileStream));
             }
             catch (Exception ex)
