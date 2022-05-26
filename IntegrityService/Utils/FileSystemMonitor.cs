@@ -5,12 +5,14 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Security.Cryptography;
+using IntegrityService.FIM;
 
 namespace IntegrityService.Utils
 {
     internal sealed class FileSystemMonitor : IDisposable
     {
         private readonly ILogger _logger;
+        private readonly Context _context;
         private readonly bool _useDigest;
         private List<FileSystemWatcher> _watchers;
 
@@ -21,15 +23,23 @@ namespace IntegrityService.Utils
         /// <see href="https://devblogs.microsoft.com/oldnewthing/20140507-00/?p=1053"/>
         private readonly FixedSizeDictionary<string, DateTime> _duplicateCheckBuffer;
 
+
+        public FileSystemMonitor(
+            ILogger logger,
+            Context context,
+            bool useDigest)
+
         private readonly SHA256 _sha256;
 
         public FileSystemMonitor(ILogger logger, bool useDigest)
+
         {
             _logger = logger;
+            _context = context;
             _useDigest = useDigest;
             _sha256 = SHA256.Create();
 
-            _duplicateCheckBuffer = new FixedSizeDictionary<string, DateTime>(50);
+            _duplicateCheckBuffer = new FixedSizeDictionary<string, DateTime>();
         }
 
         public void Start() => InvokeWatchers();
@@ -81,11 +91,11 @@ namespace IntegrityService.Utils
             }
         }
 
-        private void OnChanged(object sender, FileSystemEventArgs e) => WriteLog(e, "Changed");
+        private void OnChanged(object sender, FileSystemEventArgs e) => ProcessEvent(e.FullPath, ChangeCategory.Changed);
 
-        private void OnCreated(object sender, FileSystemEventArgs e) => WriteLog(e, "Created");
-        
-        private void OnDeleted(object sender, FileSystemEventArgs e) => WriteLog(e, "Deleted");
+        private void OnCreated(object sender, FileSystemEventArgs e) => ProcessEvent(e.FullPath, ChangeCategory.Created);
+
+        private void OnDeleted(object sender, FileSystemEventArgs e) => ProcessEvent(e.FullPath, ChangeCategory.Deleted);
 
         private void OnError(object sender, ErrorEventArgs e) => PrintException(e.GetException());
 
@@ -109,23 +119,45 @@ namespace IntegrityService.Utils
             }
         }
 
-        private void WriteLog(FileSystemEventArgs e, string category)
+        private void ProcessEvent(string filePath, ChangeCategory category)
         {
-            if (IsExcluded(e.FullPath) || IsDuplicate(e.FullPath))
+            if (IsExcluded(filePath) || IsDuplicate(filePath))
             {
                 return;
             }
 
-            if (_useDigest && IsFile(e.FullPath))
+            var previousChange = _context.FileSystemChanges
+                .Query()
+                .Where(x => x.FullPath.Equals(filePath))
+                .OrderByDescending(c => c.DateTime)
+                .ToList();
+
+            var previousHash = string.Empty;
+            if (previousChange.Any())
             {
-                var digest = Sha256CheckSum(e.FullPath);
-                _logger.LogInformation("{category}: {path}\nDigest: {digest}", category, e.FullPath, digest);
+                previousHash = previousChange[0]?.CurrentHash ?? string.Empty;
             }
-            else
+
+            var entity = new FileSystemChange
             {
-                _logger.LogInformation("{category}: {path}", category, e.FullPath);
-            }
+                Id = Guid.NewGuid(),
+                ChangeCategory = category,
+                ConfigChangeType = ConfigChangeType.FileSystem,
+                Entity = filePath,
+                DateTime = DateTime.Now,
+                FullPath = filePath,
+                SourceComputer = Environment.MachineName,
+                CurrentHash = CalculateFileDigest(filePath),
+                PreviousHash = previousHash
+            };
+
+            WriteToDatabase(entity);
+            WriteLog(entity);
         }
+
+        private void WriteLog(FileSystemChange change) => _logger.LogInformation("Category: {category}\nPath: {path}\nCurrent Hash: {currentHash}\nPreviousHash: {previousHash}", Enum.GetName(change.ChangeCategory), change.FullPath, change.CurrentHash, change.PreviousHash);
+
+        private void WriteToDatabase(FileSystemChange change) => _context.FileSystemChanges.Insert(change);
 
         private bool IsDuplicate(string fullPath)
         {
@@ -157,9 +189,14 @@ namespace IntegrityService.Utils
                     Path.GetDirectoryName(path)!.Contains(Path.GetDirectoryName(excludedPath)!,
                         StringComparison.OrdinalIgnoreCase));
 
-        private string Sha256CheckSum(string filePath)
+        private string CalculateFileDigest(string path)
         {
             var digest = string.Empty;
+
+            if (!_useDigest || !IsFile(path))
+            {
+                return digest;
+            }
 
             try
             {
@@ -170,6 +207,7 @@ namespace IntegrityService.Utils
             {
                 PrintException(ex);
             }
+
             return digest;
         }
 
