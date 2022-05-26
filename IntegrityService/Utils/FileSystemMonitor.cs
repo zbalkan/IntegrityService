@@ -9,7 +9,7 @@ using IntegrityService.FIM;
 
 namespace IntegrityService.Utils
 {
-    internal sealed class FileSystemMonitor
+    internal sealed class FileSystemMonitor : IDisposable
     {
         private readonly ILogger _logger;
         private readonly Context _context;
@@ -23,14 +23,21 @@ namespace IntegrityService.Utils
         /// <see href="https://devblogs.microsoft.com/oldnewthing/20140507-00/?p=1053"/>
         private readonly FixedSizeDictionary<string, DateTime> _duplicateCheckBuffer;
 
+
         public FileSystemMonitor(
             ILogger logger,
             Context context,
             bool useDigest)
+
+        private readonly SHA256 _sha256;
+
+        public FileSystemMonitor(ILogger logger, bool useDigest)
+
         {
             _logger = logger;
             _context = context;
             _useDigest = useDigest;
+            _sha256 = SHA256.Create();
 
             _duplicateCheckBuffer = new FixedSizeDictionary<string, DateTime>();
         }
@@ -164,14 +171,23 @@ namespace IntegrityService.Utils
             return false;
         }
 
-        private static bool IsExcluded(string path) =>
-            Settings.Instance.ExcludedPaths
-                .Any(excludedPath => path.StartsWith(excludedPath, StringComparison.OrdinalIgnoreCase))
-            ||
-            Settings.Instance.ExcludedExtensions
-                .Any(excludedPath => path.EndsWith(excludedPath, StringComparison.OrdinalIgnoreCase));
+        private static bool IsFile(string fullPath) => (File.GetAttributes(fullPath) & FileAttributes.Directory) != FileAttributes.Directory;
 
-        private static bool IsFile(string fullPath) => File.Exists(fullPath); // If it is a directory or a removed file, you cannot get a digest. So return false.
+        private static bool IsExcluded(string path) =>
+            !IsFile(path)
+                ? (Settings.Instance.ExcludedPaths ??
+                   throw new InvalidOperationException()) // If file, sanitize file path and check. Then, check extensions.
+                  .Any(excludedPath =>
+                      Path.GetFileName(path).Contains(Path.GetFileName(excludedPath)!,
+                          StringComparison.OrdinalIgnoreCase)) ||
+                  (Settings.Instance.ExcludedExtensions ?? throw new InvalidOperationException())
+                  .Any(extension =>
+                      extension.Contains(Path.GetExtension(path), StringComparison.OrdinalIgnoreCase))
+                : (Settings.Instance.ExcludedPaths ??
+                   throw new InvalidOperationException()) // If directory, sanitize directory path and check
+                .Any(excludedPath =>
+                    Path.GetDirectoryName(path)!.Contains(Path.GetDirectoryName(excludedPath)!,
+                        StringComparison.OrdinalIgnoreCase));
 
         private string CalculateFileDigest(string path)
         {
@@ -184,9 +200,8 @@ namespace IntegrityService.Utils
 
             try
             {
-                using var sha256 = SHA256.Create();
-                using var fileStream = File.OpenRead(path);
-                digest = Convert.ToHexString(sha256.ComputeHash(fileStream));
+                using var fileStream = File.OpenRead(filePath);
+                digest = Convert.ToHexString(_sha256.ComputeHash(fileStream));
             }
             catch (Exception ex)
             {
@@ -195,5 +210,7 @@ namespace IntegrityService.Utils
 
             return digest;
         }
+
+        public void Dispose() => _sha256.Dispose();
     }
 }
