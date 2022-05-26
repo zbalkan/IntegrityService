@@ -6,7 +6,7 @@ namespace IntegrityService.FIM
 {
     internal class Context : IDisposable
     {
-        public ILiteCollection<FileSystemChange> FileSystemChanges { get; private set; }
+        public ILiteCollection<FileSystemChange> FileSystemChanges { get; }
 
         private readonly LiteDatabase _database;
 

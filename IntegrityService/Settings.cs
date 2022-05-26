@@ -18,67 +18,69 @@ namespace IntegrityService
 
         public List<string> ExcludedExtensions { get; private set; }
 
+        public string ConnectionString { get; set; }
+
         internal static Settings Instance => Lazy.Value;
 
         private static readonly Lazy<Settings> Lazy = new(() => new Settings());
 
-        private readonly RegistryKey HklmSoftware = Registry.LocalMachine.OpenSubKey("Software", true);
+        private readonly RegistryKey _hklmSoftware = Registry.LocalMachine.OpenSubKey("Software", true);
 
-        private const string fimKeyName = "FIM";
+        private const string FimKeyName = "FIM";
 
-        private RegistryKey? fimKey;
+        private RegistryKey? _fimKey;
+
         private Settings()
         {
             ReadOrCreateFimKey();
             ReadOrCreateSubKeys();
-
         }
 
         private void ReadOrCreateSubKeys()
         {
             try
             {
-                _ = fimKey.GetValueKind("MonitoredPaths");
+                _ = _fimKey.GetValueKind("MonitoredPaths");
             }
             catch
 
             {
-                fimKey.SetValue("MonitoredPaths", new string[] { string.Empty }, RegistryValueKind.MultiString);
+                _fimKey.SetValue("MonitoredPaths", new string[] { string.Empty }, RegistryValueKind.MultiString);
             }
-            MonitoredPaths = (fimKey.GetValue("MonitoredPaths") as string[]).Where(path => !string.IsNullOrEmpty(path)).ToList();
+            MonitoredPaths = (_fimKey.GetValue("MonitoredPaths") as string[]).Where(path => !string.IsNullOrEmpty(path)).ToList();
 
             try
             {
-                _ = fimKey.GetValueKind("ExcludedPaths");
+                _ = _fimKey.GetValueKind("ExcludedPaths");
             }
             catch
 
             {
-                fimKey.SetValue("ExcludedPaths", new string[] { string.Empty }, RegistryValueKind.MultiString);
+                _fimKey.SetValue("ExcludedPaths", new string[] { string.Empty }, RegistryValueKind.MultiString);
             }
-            ExcludedPaths = (fimKey.GetValue("ExcludedPaths") as string[]).Where(path => !string.IsNullOrEmpty(path)).ToList();
+            ExcludedPaths = (_fimKey.GetValue("ExcludedPaths") as string[]).Where(path => !string.IsNullOrEmpty(path)).ToList();
 
             try
             {
-                _ = fimKey.GetValueKind("ExcludedExtensions");
+                _ = _fimKey.GetValueKind("ExcludedExtensions");
             }
             catch
 
             {
-                fimKey.SetValue("ExcludedExtensions", new string[] { string.Empty }, RegistryValueKind.MultiString);
+                _fimKey.SetValue("ExcludedExtensions", new string[] { string.Empty }, RegistryValueKind.MultiString);
             }
-            ExcludedExtensions = (fimKey.GetValue("ExcludedExtensions") as string[]).Where(path => !string.IsNullOrEmpty(path)).ToList();
+            ExcludedExtensions = (_fimKey.GetValue("ExcludedExtensions") as string[]).Where(path => !string.IsNullOrEmpty(path)).ToList();
         }
 
         private void ReadOrCreateFimKey()
         {
-            if (HklmSoftware?.OpenSubKey(fimKeyName, true) == null)
+            if (_hklmSoftware?.OpenSubKey(FimKeyName, true) == null)
             {
-                fimKey = HklmSoftware.CreateSubKey(fimKeyName, true);
+                _fimKey = _hklmSoftware.CreateSubKey(FimKeyName, true);
             }
             else
             {
-                fimKey = HklmSoftware.OpenSubKey(fimKeyName, true);
+                _fimKey = _hklmSoftware.OpenSubKey(FimKeyName, true);
             }
         }
     }

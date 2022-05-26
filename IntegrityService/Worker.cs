@@ -15,7 +15,7 @@ namespace IntegrityService
         public Worker(ILogger<Worker> logger)
         {
             _logger = logger;
-            _fsMonitor = new FileSystemMonitor(_logger, @"fim.db", true);
+            _fsMonitor = new FileSystemMonitor(_logger, true);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)

@@ -21,14 +21,12 @@ namespace IntegrityService.Utils
         private readonly SHA256 _sha256;
         private readonly ILogger _logger;
         private readonly bool _useDigest;
-        private readonly string _connectionString;
         private readonly List<FileSystemWatcher> _watchers;
         private Context _context;
 
-        public FileSystemMonitor(ILogger logger, string connectionString, bool useDigest)
+        public FileSystemMonitor(ILogger logger,  bool useDigest)
         {
             _logger = logger;
-            _connectionString = connectionString;
             _useDigest = useDigest;
             _sha256 = SHA256.Create();
             _duplicateCheckBuffer = new FixedSizeDictionary<string, DateTime>();
@@ -37,10 +35,10 @@ namespace IntegrityService.Utils
 
         public void Start()
         {
-            if (!Context.DatabaseExists(_connectionString))
+            if (!Context.DatabaseExists(Settings.Instance.ConnectionString))
             {
                 _logger.LogInformation("Could not find the database file. Initiating file system discovery. It will take up to 10 minutes.");
-                _context = new Context(_connectionString);
+                _context = new Context(Settings.Instance.ConnectionString);
                 var files = FileSystem.StartSearch(Settings.Instance.MonitoredPaths, Settings.Instance.ExcludedPaths,
                     Settings.Instance.ExcludedExtensions);
                 if (files.IsEmpty)
@@ -162,11 +160,9 @@ namespace IntegrityService.Utils
                 PreviousHash = previousHash
             };
 
-            WriteToDatabase(change);
+            _context.FileSystemChanges.Insert(change);
             _logger.LogInformation("Category: {category}\nPath: {path}\nCurrent Hash: {currentHash}\nPreviousHash: {previousHash}", Enum.GetName(change.ChangeCategory), change.FullPath, change.CurrentHash, change.PreviousHash);
         }
-
-        private void WriteToDatabase(FileSystemChange change) => _context.FileSystemChanges.Insert(change);
 
         private bool IsDuplicate(string fullPath)
         {
@@ -214,23 +210,21 @@ namespace IntegrityService.Utils
                 throw new ArgumentException("Value cannot be an empty collection.", nameof(files));
             }
 
-            foreach (var file in files)
+            var changes = new List<FileSystemChange>(files.Count);
+            changes.AddRange(files.Select(file => new FileSystemChange
             {
-                var change = new FileSystemChange
-                {
-                    Id = Guid.NewGuid(),
-                    ChangeCategory = ChangeCategory.Discovery,
-                    ConfigChangeType = ConfigChangeType.FileSystem,
-                    Entity = file,
-                    DateTime = DateTime.Now,
-                    FullPath = file,
-                    SourceComputer = Environment.MachineName,
-                    CurrentHash = CalculateFileDigest(file),
-                    PreviousHash = string.Empty
-                };
+                Id = Guid.NewGuid(),
+                ChangeCategory = ChangeCategory.Discovery,
+                ConfigChangeType = ConfigChangeType.FileSystem,
+                Entity = file,
+                DateTime = DateTime.Now,
+                FullPath = file,
+                SourceComputer = Environment.MachineName,
+                CurrentHash = CalculateFileDigest(file),
+                PreviousHash = string.Empty
+            }));
 
-                WriteToDatabase(change);
-            }
+            _context.FileSystemChanges.InsertBulk(changes, changes.Count);
         }
 
         public void Dispose() => _sha256.Dispose();
