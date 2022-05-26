@@ -1,45 +1,63 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using IntegrityService.FIM;
+using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Security.Cryptography;
-using IntegrityService.FIM;
+using System.Text;
 
 namespace IntegrityService.Utils
 {
     internal sealed class FileSystemMonitor : IDisposable
     {
-        private readonly ILogger _logger;
-        private readonly Context _context;
-        private readonly bool _useDigest;
-        private List<FileSystemWatcher> _watchers;
-
         /// <summary>
         ///     Windows file system creates multiple events for creation and change events. These are by design but creates pollution.
         ///     It is impossible to remove all of them but it can be minimized. For this, a buffer is used to check duplicate records.
         /// </summary>
         /// <see href="https://devblogs.microsoft.com/oldnewthing/20140507-00/?p=1053"/>
         private readonly FixedSizeDictionary<string, DateTime> _duplicateCheckBuffer;
-
         private readonly SHA256 _sha256;
+        private readonly ILogger _logger;
+        private readonly bool _useDigest;
+        private readonly string _connectionString;
+        private readonly List<FileSystemWatcher> _watchers;
+        private Context _context;
 
-        public FileSystemMonitor(ILogger logger, Context context, bool useDigest)
-
+        public FileSystemMonitor(ILogger logger, string connectionString, bool useDigest)
         {
             _logger = logger;
-            _context = context;
+            _connectionString = connectionString;
             _useDigest = useDigest;
             _sha256 = SHA256.Create();
-
             _duplicateCheckBuffer = new FixedSizeDictionary<string, DateTime>();
+            _watchers = new List<FileSystemWatcher>();
         }
 
-        public void Start() => InvokeWatchers();
+        public void Start()
+        {
+            if (!Context.DatabaseExists(_connectionString))
+            {
+                _logger.LogInformation("Could not find the database file. Initiating file system discovery. It will take up to 10 minutes.");
+                _context = new Context(_connectionString);
+                var files = FileSystem.StartSearch(Settings.Instance.MonitoredPaths, Settings.Instance.ExcludedPaths,
+                    Settings.Instance.ExcludedExtensions);
+                if (files.IsEmpty)
+                {
+                    _logger.LogError("Could not access files.");
+                }
+                SeedDatabase(files);
+                _logger.LogInformation("File system discovery completed.");
+            }
+
+            InvokeWatchers();
+        }
 
         public void Stop()
         {
+            if (!_watchers.Any()) return;
+
             foreach (var watcher in _watchers)
             {
                 watcher.EnableRaisingEvents = false;
@@ -55,8 +73,6 @@ namespace IntegrityService.Utils
 
         private void InvokeWatchers()
         {
-            _watchers = new List<FileSystemWatcher>();
-
             foreach (var path in Settings.Instance.MonitoredPaths)
             {
                 var watcher = new FileSystemWatcher(path)
@@ -82,6 +98,7 @@ namespace IntegrityService.Utils
                 watcher.Error += OnError;
 
                 _watchers.Add(watcher);
+                _logger.LogInformation("Initiated file system watcher for director {directory}", path);
             }
         }
 
@@ -115,7 +132,7 @@ namespace IntegrityService.Utils
 
         private void ProcessEvent(string filePath, ChangeCategory category)
         {
-            if (IsExcluded(filePath) || IsDuplicate(filePath))
+            if (FileSystem.IsExcluded(filePath, Settings.Instance.ExcludedPaths, Settings.Instance.ExcludedExtensions) || IsDuplicate(filePath))
             {
                 return;
             }
@@ -132,7 +149,7 @@ namespace IntegrityService.Utils
                 previousHash = previousChange[0]?.CurrentHash ?? string.Empty;
             }
 
-            var entity = new FileSystemChange
+            var change = new FileSystemChange
             {
                 Id = Guid.NewGuid(),
                 ChangeCategory = category,
@@ -145,11 +162,9 @@ namespace IntegrityService.Utils
                 PreviousHash = previousHash
             };
 
-            WriteToDatabase(entity);
-            WriteLog(entity);
+            WriteToDatabase(change);
+            _logger.LogInformation("Category: {category}\nPath: {path}\nCurrent Hash: {currentHash}\nPreviousHash: {previousHash}", Enum.GetName(change.ChangeCategory), change.FullPath, change.CurrentHash, change.PreviousHash);
         }
-
-        private void WriteLog(FileSystemChange change) => _logger.LogInformation("Category: {category}\nPath: {path}\nCurrent Hash: {currentHash}\nPreviousHash: {previousHash}", Enum.GetName(change.ChangeCategory), change.FullPath, change.CurrentHash, change.PreviousHash);
 
         private void WriteToDatabase(FileSystemChange change) => _context.FileSystemChanges.Insert(change);
 
@@ -165,29 +180,11 @@ namespace IntegrityService.Utils
             return false;
         }
 
-        private static bool IsFile(string fullPath) => (File.GetAttributes(fullPath) & FileAttributes.Directory) != FileAttributes.Directory;
-
-        private static bool IsExcluded(string path) =>
-            !IsFile(path)
-                ? (Settings.Instance.ExcludedPaths ??
-                   throw new InvalidOperationException()) // If file, sanitize file path and check. Then, check extensions.
-                  .Any(excludedPath =>
-                      Path.GetFileName(path).Contains(Path.GetFileName(excludedPath)!,
-                          StringComparison.OrdinalIgnoreCase)) ||
-                  (Settings.Instance.ExcludedExtensions ?? throw new InvalidOperationException())
-                  .Any(extension =>
-                      extension.Contains(Path.GetExtension(path), StringComparison.OrdinalIgnoreCase))
-                : (Settings.Instance.ExcludedPaths ??
-                   throw new InvalidOperationException()) // If directory, sanitize directory path and check
-                .Any(excludedPath =>
-                    Path.GetDirectoryName(path)!.Contains(Path.GetDirectoryName(excludedPath)!,
-                        StringComparison.OrdinalIgnoreCase));
-
         private string CalculateFileDigest(string path)
         {
             var digest = string.Empty;
 
-            if (!_useDigest || !IsFile(path))
+            if (!_useDigest || !(FileSystem.IsFile(path) != null && FileSystem.IsFile(path)!.Value))
             {
                 return digest;
             }
@@ -203,6 +200,37 @@ namespace IntegrityService.Utils
             }
 
             return digest;
+        }
+
+        private void SeedDatabase(ConcurrentBag<string> files)
+        {
+            if (files == null)
+            {
+                throw new ArgumentNullException(nameof(files));
+            }
+
+            if (files.IsEmpty)
+            {
+                throw new ArgumentException("Value cannot be an empty collection.", nameof(files));
+            }
+
+            foreach (var file in files)
+            {
+                var change = new FileSystemChange
+                {
+                    Id = Guid.NewGuid(),
+                    ChangeCategory = ChangeCategory.Discovery,
+                    ConfigChangeType = ConfigChangeType.FileSystem,
+                    Entity = file,
+                    DateTime = DateTime.Now,
+                    FullPath = file,
+                    SourceComputer = Environment.MachineName,
+                    CurrentHash = CalculateFileDigest(file),
+                    PreviousHash = string.Empty
+                };
+
+                WriteToDatabase(change);
+            }
         }
 
         public void Dispose() => _sha256.Dispose();

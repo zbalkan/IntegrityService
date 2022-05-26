@@ -2,10 +2,8 @@ using IntegrityService.Utils;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using IntegrityService.FIM;
 
 namespace IntegrityService
 {
@@ -17,10 +15,7 @@ namespace IntegrityService
         public Worker(ILogger<Worker> logger)
         {
             _logger = logger;
-
-            var context = new Context(@"fim.db");
-
-            _fsMonitor = new FileSystemMonitor(_logger, context, true);
+            _fsMonitor = new FileSystemMonitor(_logger, @"fim.db", true);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)

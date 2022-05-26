@@ -4,6 +4,7 @@
     {
         Created,
         Changed,
-        Deleted
+        Deleted,
+        Discovery
     }
 }
