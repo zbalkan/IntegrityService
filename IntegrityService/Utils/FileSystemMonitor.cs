@@ -136,14 +136,23 @@ namespace IntegrityService.Utils
             return false;
         }
 
-        private static bool IsExcluded(string path) =>
-            Settings.Instance.ExcludedPaths
-                .Any(excludedPath => path.StartsWith(excludedPath, StringComparison.OrdinalIgnoreCase))
-            ||
-            Settings.Instance.ExcludedExtensions
-                .Any(excludedPath => path.EndsWith(excludedPath, StringComparison.OrdinalIgnoreCase));
+        private static bool IsFile(string fullPath) => (File.GetAttributes(fullPath) & FileAttributes.Directory) != FileAttributes.Directory;
 
-        private static bool IsFile(string fullPath) => File.Exists(fullPath); // If it is a directory or a removed file, you cannot get a digest. So return false.
+        private static bool IsExcluded(string path) =>
+            !IsFile(path)
+                ? (Settings.Instance.ExcludedPaths ??
+                   throw new InvalidOperationException()) // If file, sanitize file path and check. Then, check extensions.
+                  .Any(excludedPath =>
+                      Path.GetFileName(path).Contains(Path.GetFileName(excludedPath)!,
+                          StringComparison.OrdinalIgnoreCase)) ||
+                  (Settings.Instance.ExcludedExtensions ?? throw new InvalidOperationException())
+                  .Any(extension =>
+                      extension.Contains(Path.GetExtension(path), StringComparison.OrdinalIgnoreCase))
+                : (Settings.Instance.ExcludedPaths ??
+                   throw new InvalidOperationException()) // If directory, sanitize directory path and check
+                .Any(excludedPath =>
+                    Path.GetDirectoryName(path)!.Contains(Path.GetDirectoryName(excludedPath)!,
+                        StringComparison.OrdinalIgnoreCase));
 
         private string Sha256CheckSum(string filePath)
         {
