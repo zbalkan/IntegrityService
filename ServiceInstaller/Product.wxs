@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The name of the product -->
+<?define Name = "FIM" ?>
+<!-- The manufacturer, for setup package publisher and folder info -->
+<?define Manufacturer = "Zafer Balkan" ?>
+<!-- The version number of this setup package-->
+<?define Version = "1.0.0" ?>
+<!-- UpgradeCode must be unique and not changed once the first version of the program is installed. -->
+<?define UpgradeCode = "{f63a79ce-f49e-4883-8cca-d877b33cb981}" ?>
+<!-- Source folder for the single-file executable -->
+<?define SourceFolder="..\IntegrityService\bin\Release\net6.0-windows\publish\win-x64\"?>
+<!-- Executable name -->
+<?define Executable="IntegrityService.exe"?>
+
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	<Product Id="*" Name="$(var.Name)" Manufacturer="$(var.Manufacturer)" UpgradeCode="$(var.UpgradeCode)" Version="$(var.Version)" Language="1033">
+		<!-- Create a folder inside FIM called IntegrityService -->
+		<Package InstallerVersion="300" Compressed="yes" InstallScope="perMachine"/>
+		<!-- Create a folder inside FIM called IntegrityService -->
+		<Media Id="1" Cabinet="IntegrityService.cab" EmbedCab="yes" />
+		<!-- Allow upgrades and prevent downgrades -->
+		<MajorUpgrade DowngradeErrorMessage="A later version of [ProductName] is already installed. Setup will now exit." />
+		<!-- Define the directory structure -->
+		<Directory Id="TARGETDIR" Name="SourceDir">
+			<Directory Id="ProgramFilesFolder">
+				<!-- Create a folder inside program files called FIM -->
+				<Directory Id="ROOTDIRECTORY" Name="$(var.Manufacturer)">
+					<!-- Create a folder inside FIM called IntegrityService -->
+					<Directory Id="INSTALLFOLDER" Name="$(var.Name)" />
+				</Directory>
+			</Directory>
+		</Directory>
+		<!-- The files inside this DirectoryRef are linked to the IntegrityService directory via INSTALLFOLDER -->
+		<DirectoryRef Id="INSTALLFOLDER">
+			<!-- Create a single component which is the IntegrityService.exe file -->
+			<Component Id="$(var.Executable)" Guid="47e6a2d5-2af1-4eaa-a473-9699ffc6d5cf">
+				<!-- Copies the IntegrityService.exe file using the project reference preprocessor variables -->
+				<File Id="$(var.Executable)" Source="$(var.SourceFolder)IntegrityService.exe" KeyPath="yes"  Checksum="yes"/>
+				<!-- Remove all files from the INSTALLFOLDER on uninstall -->
+				<RemoveFile Id="ALLFILES" Name="*.*" On="both" />
+				<!-- Tell WiX to install the Service -->
+				<ServiceInstall Id="ServiceInstaller" 
+					Type="ownProcess" 
+					Name="FIM" 
+					DisplayName="$(var.Name)" 
+					Description="A File Integrity Monitoring service that keeps track of file changes in specified folders." 
+					Start="auto" 
+					ErrorControl="normal"
+					Interactive="no"
+					Vital="yes"/>
+					<!-- Tell WiX to start the Service -->
+					<!--<ServiceControl Id="StartService" Start="install" Stop="both" Remove="uninstall" Name="IntegrityService" Wait="yes" />-->
+				</Component>
+			</DirectoryRef>
+			<!-- Tell WiX to install the files -->
+			<Feature Id="MainApplication" Title="Main Application" Level="1">
+				<ComponentRef Id="$(var.Executable)" />
+			</Feature>
+		</Product>
+	</Wix>
