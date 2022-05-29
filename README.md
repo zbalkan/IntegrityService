@@ -60,13 +60,35 @@ Event ID 7780 – Other events (heartbeat checks in every 60 seconds, service st
 
 
 ## Installation
-Use the IntegrityService.Installer.msi
+Use the `IntegrityService.Installer.msi` file to install. This is specifically used for ease of deployment. It will install the service with an automatic start setting. It does not start the service immediately. It is up to the administrators to let it start on next boot or an immediate start.
 
 ### Details
 The second project called `IntegrityService.Installer` is a Wix project to create the uninstaller. Currently, it seeks for a single-file executable in path ".\publish\", which is the Publish path in my profile. You just need to change it to match yours.
 
+### Suggested PublishProfile.pubxml setup
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+https://go.microsoft.com/fwlink/?LinkID=208121.
+-->
+<Project>
+  <PropertyGroup>
+    <Configuration>Release</Configuration>
+    <Platform>Any CPU</Platform>
+    <PublishDir>..\publish\</PublishDir>
+    <PublishProtocol>FileSystem</PublishProtocol>
+    <TargetFramework>net6.0-windows</TargetFramework>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <PublishReadyToRun>true</PublishReadyToRun>
+  </PropertyGroup>
+</Project>
+```
+
 
 ## Roadmap
-- [ ] Include ACLs
+- [x] Include ACLs
 - [ ] Monitor Registry
 - [x] Generate installer, preferably in MSI format.
+- [ ] Keep a log of inaccessible paths
