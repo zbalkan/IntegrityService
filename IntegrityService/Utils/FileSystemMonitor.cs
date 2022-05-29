@@ -157,7 +157,8 @@ namespace IntegrityService.Utils
                 FullPath = filePath,
                 SourceComputer = Environment.MachineName,
                 CurrentHash = CalculateFileDigest(filePath),
-                PreviousHash = previousHash
+                PreviousHash = previousHash,
+                ACLs = filePath.GetACL()
             };
 
             _context.FileSystemChanges.Insert(change);
@@ -221,7 +222,8 @@ namespace IntegrityService.Utils
                 FullPath = file,
                 SourceComputer = Environment.MachineName,
                 CurrentHash = CalculateFileDigest(file),
-                PreviousHash = string.Empty
+                PreviousHash = string.Empty,
+                ACLs = file.GetACL()
             }));
 
             _context.FileSystemChanges.InsertBulk(changes, changes.Count);

@@ -24,6 +24,44 @@ namespace IntegrityService.Utils
             return files;
         }
 
+        internal static bool IsExcluded(string path, IEnumerable<string> excludedPaths, IEnumerable<string> excludedExtensions)
+        {
+            bool result;
+            if (IsFile(path)!.Value)
+            {
+                result = (excludedPaths ??
+                          throw new InvalidOperationException()) // If file, sanitize file path and check. Then, check extensions.
+                         .Any(excludedPath =>
+                             Path.GetFileName(path).Contains(Path.GetFileName(excludedPath)!,
+                                 StringComparison.OrdinalIgnoreCase)) ||
+                         (excludedExtensions ?? throw new InvalidOperationException())
+                         .Any(extension =>
+                             extension.Contains(Path.GetExtension(path), StringComparison.OrdinalIgnoreCase));
+            }
+            else
+            {
+                result = (excludedPaths ??
+                          throw new InvalidOperationException()) // If directory, sanitize directory path and check
+                    .Any(excludedPath =>
+                        Path.GetDirectoryName(path)!.Contains(Path.GetDirectoryName(excludedPath)!,
+                            StringComparison.OrdinalIgnoreCase));
+            }
+
+            return result;
+        }
+
+        internal static bool? IsFile(string fullPath)
+        {
+            try
+            {
+               return (File.GetAttributes(fullPath) & FileAttributes.Directory) != FileAttributes.Directory;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         /// <summary> 
         ///     A safe way to get all the files in a directory and sub directory without crashing on UnauthorizedException or PathTooLongException 
         /// </summary> 
@@ -80,44 +118,5 @@ namespace IntegrityService.Utils
             return files;
         }
 
-        internal static bool IsExcluded(string path, IEnumerable<string> excludedPaths, IEnumerable<string> excludedExtensions)
-        {
-            //if (IsFile(path) == null) return true;
-
-            bool result;
-            if (IsFile(path)!.Value)
-            {
-                result = (excludedPaths ??
-                          throw new InvalidOperationException()) // If file, sanitize file path and check. Then, check extensions.
-                         .Any(excludedPath =>
-                             Path.GetFileName(path).Contains(Path.GetFileName(excludedPath)!,
-                                 StringComparison.OrdinalIgnoreCase)) ||
-                         (excludedExtensions ?? throw new InvalidOperationException())
-                         .Any(extension =>
-                             extension.Contains(Path.GetExtension(path), StringComparison.OrdinalIgnoreCase));
-            }
-            else
-            {
-                result = (excludedPaths ??
-                          throw new InvalidOperationException()) // If directory, sanitize directory path and check
-                    .Any(excludedPath =>
-                        Path.GetDirectoryName(path)!.Contains(Path.GetDirectoryName(excludedPath)!,
-                            StringComparison.OrdinalIgnoreCase));
-            }
-
-            return result;
-        }
-
-        internal static bool? IsFile(string fullPath)
-        {
-            try
-            {
-               return (File.GetAttributes(fullPath) & FileAttributes.Directory) != FileAttributes.Directory;
-            }
-            catch
-            {
-                return null;
-            }
-        }
     }
 }

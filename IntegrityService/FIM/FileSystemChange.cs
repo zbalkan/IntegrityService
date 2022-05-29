@@ -4,9 +4,7 @@
     {
         public string FullPath { get; set; }
 
-        public string Process { get; set; }
-
-        public string User { get; set; }
+        public string ACLs { get; set; }
 
         public string PreviousHash { get; set; }
 
