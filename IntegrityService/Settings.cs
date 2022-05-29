@@ -18,7 +18,11 @@ namespace IntegrityService
 
         public List<string> ExcludedExtensions { get; private set; }
 
-        public string ConnectionString { get; set; }
+        /// <summary>
+        ///     Hardcoded database file name is fim.db. Initial database size is set to 50MB for performance reasons.
+        /// </summary>
+        // ReSharper disable once MemberCanBeMadeStatic.Global
+        public string ConnectionString => "Filename=fim.db;InitialSize=50MB";
 
         internal static Settings Instance => Lazy.Value;
 
