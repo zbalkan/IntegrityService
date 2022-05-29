@@ -8,7 +8,7 @@
 <!-- UpgradeCode must be unique and not changed once the first version of the program is installed. -->
 <?define UpgradeCode = "{f63a79ce-f49e-4883-8cca-d877b33cb981}" ?>
 <!-- Source folder for the single-file executable -->
-<?define SourceFolder="..\IntegrityService\bin\Release\net6.0-windows\publish\win-x64\"?>
+<?define SourceFolder="..\publish\"?>
 <!-- Executable name -->
 <?define Executable="IntegrityService.exe"?>
 
@@ -23,11 +23,8 @@
 		<!-- Define the directory structure -->
 		<Directory Id="TARGETDIR" Name="SourceDir">
 			<Directory Id="ProgramFilesFolder">
-				<!-- Create a folder inside program files called FIM -->
-				<Directory Id="ROOTDIRECTORY" Name="$(var.Manufacturer)">
-					<!-- Create a folder inside FIM called IntegrityService -->
+				<!-- Create a folder inside FIM called IntegrityService -->
 					<Directory Id="INSTALLFOLDER" Name="$(var.Name)" />
-				</Directory>
 			</Directory>
 		</Directory>
 		<!-- The files inside this DirectoryRef are linked to the IntegrityService directory via INSTALLFOLDER -->
@@ -41,16 +38,14 @@
 				<!-- Tell WiX to install the Service -->
 				<ServiceInstall Id="ServiceInstaller" 
 					Type="ownProcess" 
-					Name="FIM" 
+					Name="$(var.Name)"
 					DisplayName="$(var.Name)" 
 					Description="A File Integrity Monitoring service that keeps track of file changes in specified folders." 
 					Start="auto" 
 					ErrorControl="normal"
 					Interactive="no"
 					Vital="yes"/>
-					<!-- Tell WiX to start the Service -->
-					<!--<ServiceControl Id="StartService" Start="install" Stop="both" Remove="uninstall" Name="IntegrityService" Wait="yes" />-->
-				</Component>
+			</Component>
 			</DirectoryRef>
 			<!-- Tell WiX to install the files -->
 			<Feature Id="MainApplication" Title="Main Application" Level="1">
