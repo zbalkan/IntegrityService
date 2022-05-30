@@ -59,6 +59,12 @@ Event ID 7777 – File modification
 
 Event ID 7778 – File / Directory deletion
 
+Event ID 7786 – Registry key creation
+
+Event ID 7787 – Registry key/value modification
+
+Event ID 7788 – Registry key deletion
+
 Event ID 7780 – Other events (heartbeat checks in every 60 seconds, service start and stop, etc.)
 
 

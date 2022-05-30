@@ -140,7 +140,7 @@ namespace IntegrityService.Utils
             };
 
             Database.Context.FileSystemChanges.Insert(change);
-            _logger.LogInformation("Category: {category}\nPath: {path}\nCurrent Hash: {currentHash}\nPreviousHash: {previousHash}", Enum.GetName(change.ChangeCategory), change.FullPath, change.CurrentHash, change.PreviousHash);
+            _logger.LogInformation("Category: {category}\nChange Type: {changeType}\nPath: {path}\nCurrent Hash: {currentHash}\nPreviousHash: {previousHash}", Enum.GetName(change.ChangeCategory), Enum.GetName(ConfigChangeType.FileSystem), change.FullPath, change.CurrentHash, change.PreviousHash);
         }
 
         private bool IsDuplicate(string fullPath)

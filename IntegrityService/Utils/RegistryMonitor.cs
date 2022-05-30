@@ -42,37 +42,42 @@ namespace IntegrityService.Utils
 
         public void Start() =>
             // No baseline database for registry keys
-            StartSession();// TODO: Missing error handling
+            StartSession();
 
         public void Stop() => _cancellationTokenSource.Cancel();
 
         private void StartSession()
         {
             var session = new TraceEventSession(_sessionName);
+            _logger.LogInformation("Started ETW session {session} for Registry changes.", _sessionName);
             _ = session.EnableKernelProvider(traceFlags, stackFlags);
             MakeKernelParserStateless(session.Source);
             RundownSession(_sessionName + "-rundown");
 
+            // KCB vents
             session.Source.Kernel.RegistryKCBCreate += (sender) => ProcessKCBCreateEvent(sender);
             session.Source.Kernel.RegistryKCBDelete += (sender) => ProcessKCBDeleteEvent(sender);
 
             // Key events
-            session.Source.Kernel.RegistryCreate += (ev) => ProcessEvent(ev);
-            session.Source.Kernel.RegistryOpen += (ev) => ProcessEvent(ev);
-            session.Source.Kernel.RegistryClose += (ev) => ProcessEvent(ev);
-            session.Source.Kernel.RegistryFlush += (ev) => ProcessEvent(ev);
-            session.Source.Kernel.RegistryEnumerateKey += (ev) => ProcessEvent(ev);
-            session.Source.Kernel.RegistryQuery += (ev) => ProcessEvent(ev);
-            session.Source.Kernel.RegistrySetInformation += (ev) => ProcessEvent(ev);
-            session.Source.Kernel.RegistryVirtualize += (ev) => ProcessEvent(ev);
-            session.Source.Kernel.RegistryDelete += (ev) => ProcessEvent(ev);
+            session.Source.Kernel.RegistryCreate += (ev) => ProcessEvent(ev, ChangeCategory.Created);
+            session.Source.Kernel.RegistryFlush += (ev) => ProcessEvent(ev, ChangeCategory.Changed);
+            session.Source.Kernel.RegistrySetInformation += (ev) => ProcessEvent(ev, ChangeCategory.Changed);
+            session.Source.Kernel.RegistryDelete += (ev) => ProcessEvent(ev, ChangeCategory.Deleted);
 
             // Value events
-            session.Source.Kernel.RegistryEnumerateValueKey += (ev) => ProcessEvent(ev);
-            session.Source.Kernel.RegistryQueryValue += (ev) => ProcessEvent(ev);
-            session.Source.Kernel.RegistryQueryMultipleValue += (ev) => ProcessEvent(ev);
-            session.Source.Kernel.RegistrySetValue += (ev) => ProcessEvent(ev);
-            session.Source.Kernel.RegistryDeleteValue += (ev) => ProcessEvent(ev);
+            session.Source.Kernel.RegistrySetValue += (ev) => ProcessEvent(ev, ChangeCategory.Changed);
+            session.Source.Kernel.RegistryDeleteValue += (ev) => ProcessEvent(ev, ChangeCategory.Deleted);
+
+            // Ignored read/numerate/query events
+            //session.Source.Kernel.RegistryOpen += (ev) => ProcessEvent(ev);
+            //session.Source.Kernel.RegistryClose += (ev) => ProcessEvent(ev);
+            //session.Source.Kernel.RegistryEnumerateKey += (ev) => ProcessEvent(ev);
+            //session.Source.Kernel.RegistryQuery += (ev) => ProcessEvent(ev);
+            //session.Source.Kernel.RegistryVirtualize += (ev) => ProcessEvent(ev);
+            //session.Source.Kernel.RegistryEnumerateValueKey += (ev) => ProcessEvent(ev);
+            //session.Source.Kernel.RegistryQueryValue += (ev) => ProcessEvent(ev);
+            //session.Source.Kernel.RegistryQueryMultipleValue += (ev) => ProcessEvent(ev);
+
             var r = _cancellationTokenSource.Token.Register(() => session.Stop());
             _ = session.Source.Process();
         }
@@ -80,6 +85,7 @@ namespace IntegrityService.Utils
         private void RundownSession(string sessionName)
         {
             var session = new TraceEventSession(sessionName);
+            _logger.LogInformation("Started ETW session {session} for Registry changes.", _sessionName);
             session.EnableKernelProvider(traceFlags, stackFlags);
             session.Source.Kernel.RegistryKCBRundownBegin += (sender) => ProcessKCBCreateEvent(ev: sender);
             session.Source.Kernel.RegistryKCBRundownEnd += (sender) => ProcessKCBDeleteEvent(ev: sender);
@@ -91,16 +97,16 @@ namespace IntegrityService.Utils
         private void ProcessKCBCreateEvent(RegistryTraceData ev)
         {
             _logger
-                .LogInformation("Description: Key Control Block Created.\nTimestamp: {timestamp}\nEvent Name: {event}\nKey Handle: {keyHandle}\nKey Name: {keyName}",
-                ev.TimeStampRelativeMSec, ev.EventName, ev.KeyHandle, ev.KeyName);
+                .LogInformation("Category: {category}\nChange Type: {changeType}\nDescription: Key Control Block Created.\nTimestamp: {timestamp}\nEvent Name: {event}\nKey Handle: {keyHandle}\nKey Name: {keyName}",
+                Enum.GetName(ChangeCategory.Created), Enum.GetName(ConfigChangeType.Registry), ev.TimeStampRelativeMSec, ev.EventName, ev.KeyHandle, ev.KeyName);
             _regHandleToKeyName[ev.KeyHandle] = ev.KeyName;
         }
 
         private void ProcessKCBDeleteEvent(RegistryTraceData ev)
         {
             _logger
-                .LogInformation("Description: Key Control Block Deleted.\nTimestamp: {timestamp}\nEvent Name: {event}\nKey Handle: {keyHandle}\nKey Name: {keyName}",
-                ev.TimeStampRelativeMSec, ev.EventName, ev.KeyHandle, ev.KeyName);
+                .LogInformation("Category: {category}\nChange Type: {changeType}\nDescription: Key Control Block Deleted.\nTimestamp: {timestamp}\nEvent Name: {event}\nKey Handle: {keyHandle}\nKey Name: {keyName}",
+                Enum.GetName(ChangeCategory.Deleted), Enum.GetName(ConfigChangeType.Registry), ev.TimeStampRelativeMSec, ev.EventName, ev.KeyHandle, ev.KeyName);
             _ = _regHandleToKeyName.Remove(ev.KeyHandle);
         }
 
@@ -139,7 +145,7 @@ namespace IntegrityService.Utils
             }
             return false;
         }
-        
+
         private bool IsMonitored(RegistryTraceData ev)
         {
             var keyName = GetFullKeyName(ev.KeyHandle, ev.KeyName);
@@ -152,7 +158,7 @@ namespace IntegrityService.Utils
             return false;
         }
 
-        private void ProcessEvent(RegistryTraceData ev)
+        private void ProcessEvent(RegistryTraceData ev, ChangeCategory changeCategory)
         {
             try
             {
@@ -160,8 +166,8 @@ namespace IntegrityService.Utils
                 {
                     var keyName = GetFullKeyName(ev.KeyHandle, ev.ValueName);
                     _logger
-                   .LogInformation("Description: Key event.\nTimestamp: {timestamp}\nEvent Name: {event}\nKey Handle: {keyHandle}\nKey Name: {keyName}\nProcess Id: {processId}\nThread ID: {threadId}\nIndex: {index}\nStatus:{status}\nElapsed: {elapsed}",
-                   ev.TimeStampRelativeMSec, ev.EventName, ev.KeyHandle, keyName, ev.ProcessID, ev.ThreadID, ev.Index, Enum.GetName((RegistryEventCategory)ev.Status), ev.ElapsedTimeMSec);
+                   .LogInformation("Category: {category}\nChange Type: {changeType}\nDescription: Key event.\nTimestamp: {timestamp}\nEvent Name: {event}\nKey Handle: {keyHandle}\nKey Name: {keyName}\nProcess Id: {processId}\nThread ID: {threadId}\nIndex: {index}\nStatus:{status}\nElapsed: {elapsed}",
+                   Enum.GetName(changeCategory), Enum.GetName(ConfigChangeType.Registry), ev.TimeStampRelativeMSec, ev.EventName, ev.KeyHandle, keyName, ev.ProcessID, ev.ThreadID, ev.Index, Enum.GetName((RegistryEventCategory)ev.Status), ev.ElapsedTimeMSec);
                     _ = _regHandleToKeyName.Remove(ev.KeyHandle);
 
                     var key = RegistryKey.FromHandle(new Microsoft.Win32.SafeHandles.SafeRegistryHandle(new IntPtr((long)ev.KeyHandle), true));
@@ -169,7 +175,7 @@ namespace IntegrityService.Utils
                     var change = new RegistryChange
                     {
                         Id = Guid.NewGuid(),
-                        ChangeCategory = ChangeCategory.Changed,
+                        ChangeCategory = changeCategory,
                         ConfigChangeType = ConfigChangeType.Registry,
                         Entity = keyName,
                         DateTime = DateTime.Now,
