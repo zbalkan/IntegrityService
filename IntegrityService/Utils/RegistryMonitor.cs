@@ -40,12 +40,9 @@ namespace IntegrityService.Utils
             _cancellationTokenSource = new CancellationTokenSource();
         }
 
-        public void Start()
-        {
+        public void Start() =>
             // No baseline database for registry keys
-            StartSession();
-            // TODO: Missing error handling
-        }
+            StartSession();// TODO: Missing error handling
 
         public void Stop() => _cancellationTokenSource.Cancel();
 
@@ -60,22 +57,22 @@ namespace IntegrityService.Utils
             session.Source.Kernel.RegistryKCBDelete += (sender) => ProcessKCBDeleteEvent(sender);
 
             // Key events
-            session.Source.Kernel.RegistryCreate += (ev) => ProcessKeyEvent(ev);
-            session.Source.Kernel.RegistryOpen += (ev) => ProcessKeyEvent(ev);
-            session.Source.Kernel.RegistryClose += (ev) => ProcessKeyEvent(ev);
-            session.Source.Kernel.RegistryFlush += (ev) => ProcessKeyEvent(ev);
-            session.Source.Kernel.RegistryEnumerateKey += (ev) => ProcessKeyEvent(ev);
-            session.Source.Kernel.RegistryQuery += (ev) => ProcessKeyEvent(ev);
-            session.Source.Kernel.RegistrySetInformation += (ev) => ProcessKeyEvent(ev);
-            session.Source.Kernel.RegistryVirtualize += (ev) => ProcessKeyEvent(ev);
-            session.Source.Kernel.RegistryDelete += (ev) => ProcessKeyEvent(ev);
+            session.Source.Kernel.RegistryCreate += (ev) => ProcessEvent(ev);
+            session.Source.Kernel.RegistryOpen += (ev) => ProcessEvent(ev);
+            session.Source.Kernel.RegistryClose += (ev) => ProcessEvent(ev);
+            session.Source.Kernel.RegistryFlush += (ev) => ProcessEvent(ev);
+            session.Source.Kernel.RegistryEnumerateKey += (ev) => ProcessEvent(ev);
+            session.Source.Kernel.RegistryQuery += (ev) => ProcessEvent(ev);
+            session.Source.Kernel.RegistrySetInformation += (ev) => ProcessEvent(ev);
+            session.Source.Kernel.RegistryVirtualize += (ev) => ProcessEvent(ev);
+            session.Source.Kernel.RegistryDelete += (ev) => ProcessEvent(ev);
 
             // Value events
-            session.Source.Kernel.RegistryEnumerateValueKey += (ev) => ProcessValueEvent(ev);
-            session.Source.Kernel.RegistryQueryValue += (ev) => ProcessValueEvent(ev);
-            session.Source.Kernel.RegistryQueryMultipleValue += (ev) => ProcessValueEvent(ev);
-            session.Source.Kernel.RegistrySetValue += (ev) => ProcessValueEvent(ev);
-            session.Source.Kernel.RegistryDeleteValue += (ev) => ProcessValueEvent(ev);
+            session.Source.Kernel.RegistryEnumerateValueKey += (ev) => ProcessEvent(ev);
+            session.Source.Kernel.RegistryQueryValue += (ev) => ProcessEvent(ev);
+            session.Source.Kernel.RegistryQueryMultipleValue += (ev) => ProcessEvent(ev);
+            session.Source.Kernel.RegistrySetValue += (ev) => ProcessEvent(ev);
+            session.Source.Kernel.RegistryDeleteValue += (ev) => ProcessEvent(ev);
             var r = _cancellationTokenSource.Token.Register(() => session.Stop());
             _ = session.Source.Process();
         }
@@ -150,64 +147,41 @@ namespace IntegrityService.Utils
             return false;
         }
 
-        private void ProcessKeyEvent(RegistryTraceData ev)
+        private void ProcessEvent(RegistryTraceData ev)
         {
-            if (Filter(ev))
+            try
             {
-                var keyName = GetFullKeyName(ev.KeyHandle, ev.ValueName);
-                _logger
-               .LogInformation("Description: Key event.\nTimestamp: {timestamp}\nEvent Name: {event}\nKey Handle: {keyHandle}\nKey Name: {keyName}\nProcess Id: {processId}\nThread ID: {threadId}\nIndex: {index}\nStatus:{status}\nElapsed: {elapsed}",
-               ev.TimeStampRelativeMSec, ev.EventName, ev.KeyHandle, keyName, ev.ProcessID, ev.ThreadID, ev.Index, Enum.GetName((RegistryEventCategory)ev.Status), ev.ElapsedTimeMSec);
-                _ = _regHandleToKeyName.Remove(ev.KeyHandle);
-
-                var key = RegistryKey.FromHandle(new Microsoft.Win32.SafeHandles.SafeRegistryHandle(new IntPtr((long)ev.KeyHandle), true));
-
-                var change = new RegistryChange
+                if (Filter(ev))
                 {
-                    Id = Guid.NewGuid(),
-                    ChangeCategory = ChangeCategory.Changed,
-                    ConfigChangeType = ConfigChangeType.Registry,
-                    Entity = keyName,
-                    DateTime = DateTime.Now,
-                    Key = keyName,
-                    Hive = Enum.GetName(ParseHive(keyName)) ?? string.Empty,
-                    SourceComputer = Environment.MachineName,
-                    ValueName = ev.ValueName,
-                    ValueData = key.GetValue(ev.ValueName)?.ToString() ?? string.Empty,
-                    ACLs = key.GetACL()
+                    var keyName = GetFullKeyName(ev.KeyHandle, ev.ValueName);
+                    _logger
+                   .LogInformation("Description: Key event.\nTimestamp: {timestamp}\nEvent Name: {event}\nKey Handle: {keyHandle}\nKey Name: {keyName}\nProcess Id: {processId}\nThread ID: {threadId}\nIndex: {index}\nStatus:{status}\nElapsed: {elapsed}",
+                   ev.TimeStampRelativeMSec, ev.EventName, ev.KeyHandle, keyName, ev.ProcessID, ev.ThreadID, ev.Index, Enum.GetName((RegistryEventCategory)ev.Status), ev.ElapsedTimeMSec);
+                    _ = _regHandleToKeyName.Remove(ev.KeyHandle);
 
-                };
-                Database.Context.RegistryChanges.Insert(change);
+                    var key = RegistryKey.FromHandle(new Microsoft.Win32.SafeHandles.SafeRegistryHandle(new IntPtr((long)ev.KeyHandle), true));
+
+                    var change = new RegistryChange
+                    {
+                        Id = Guid.NewGuid(),
+                        ChangeCategory = ChangeCategory.Changed,
+                        ConfigChangeType = ConfigChangeType.Registry,
+                        Entity = keyName,
+                        DateTime = DateTime.Now,
+                        Key = keyName,
+                        Hive = Enum.GetName(ParseHive(keyName)) ?? string.Empty,
+                        SourceComputer = Environment.MachineName,
+                        ValueName = ev.ValueName,
+                        ValueData = key.GetValue(ev.ValueName)?.ToString() ?? string.Empty,
+                        ACLs = key.GetACL()
+
+                    };
+                    Database.Context.RegistryChanges.Insert(change);
+                }
             }
-        }
-
-        private void ProcessValueEvent(RegistryTraceData ev)
-        {
-            if (Filter(ev))
+            catch (Exception ex)
             {
-                var keyName = GetFullKeyName(ev.KeyHandle, ev.ValueName);
-                _logger
-                    .LogInformation("Description: Key event.\nTimestamp: {timestamp}\nEvent Name: {event}\nKey Handle: {keyHandle}\nKey Name: {keyName}\nProcess Id: {processId}\nThread ID: {threadId}\nIndex: {index}\nStatus:{status}\nElapsed: {elapsed}",
-               ev.TimeStampRelativeMSec, ev.EventName, ev.KeyHandle, keyName, ev.ProcessID, ev.ThreadID, ev.Index, Enum.GetName((RegistryEventCategory)ev.Status), ev.ElapsedTimeMSec);
-
-                var key = RegistryKey.FromHandle(new Microsoft.Win32.SafeHandles.SafeRegistryHandle(new IntPtr((long)ev.KeyHandle), true));
-
-                var change = new RegistryChange
-                {
-                    Id = Guid.NewGuid(),
-                    ChangeCategory = ChangeCategory.Changed,
-                    ConfigChangeType = ConfigChangeType.Registry,
-                    Entity = keyName,
-                    DateTime = DateTime.Now,
-                    Key = keyName,
-                    Hive = Enum.GetName(ParseHive(keyName)) ?? string.Empty,
-                    SourceComputer = Environment.MachineName,
-                    ValueName = ev.ValueName,
-                    ValueData = key.GetValue(ev.ValueName)?.ToString() ?? string.Empty,
-                    ACLs = key.GetACL()
-
-                };
-                Database.Context.RegistryChanges.Insert(change);
+                ex.Log(_logger);
             }
         }
 
