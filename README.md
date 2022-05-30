@@ -5,7 +5,7 @@ File Integrity Monitoring (FIM) is a security related requirement for monitoring
 * directories in Linux
 * directories and Registry keys in Windows.
 
-This application is a FIM servce for Windows.
+This application is a FIM service for Windows.
 
 ## Usage
 It is designed to be a Windows Service. In first use, it will start a scan based on the settings. Settings are read from Windows Registry.
@@ -14,7 +14,7 @@ For ease of use, an ADMX file is created -it needs cleanup. So, the monitored pa
 
 If there is no path to monitor defined in the Registry, service will not do any action (no default value hard-coded).
 
-In the first use, it will run a full discovery, search for all the files, calculate SHA256 checksum and save it in a local database. This wil be the baseline. Then, it will invoke FileSystemWatcher instances and when any changes occur, it will create an event log and update the database. You can see the SHA256 hashes for the current and previous versions.
+In the first use, it will run a full discovery, search for all the files, calculate SHA256 checksum and save it in a local database. This will be the baseline. Then, it will invoke FileSystemWatcher instances and when any changes occur, it will create an event log and update the database. You can see the SHA256 hashes for the current and previous versions.
 
 Windows has a lot of quirks when it comes to low level callbacks, especially for NTFS. Many of the use cases are handled but it needs to be fine-tuned for edge cases.
 
@@ -51,21 +51,16 @@ Windows has a lot of quirks when it comes to low level callbacks, especially for
 ### Event Logs
 Event logs IDs are taken from [WINFIM.NET](https://github.com/redblueteam/WinFIM.NET). Thanks [redblueteam](https://github.com/redblueteam) for inspiration.
 
-Event ID 7770 - An exception occurred
-
-Event ID 7776 – File / Directory creation
-
-Event ID 7777 – File modification
-
-Event ID 7778 – File / Directory deletion
-
-Event ID 7786 – Registry key creation
-
-Event ID 7787 – Registry key/value modification
-
-Event ID 7788 – Registry key deletion
-
-Event ID 7780 – Other events (heartbeat checks in every 60 seconds, service start and stop, etc.)
+| Event ID | Description |
+|----------|-------------|
+| 7770 | An exception occurred |
+| 7776 | File / Directory creation |
+| 7777 | File modification |
+| 7778 | File / Directory deletion |
+| 7786 | Registry key creation |
+| 7787 | Registry key/value modification |
+| 7788 | Registry key deletion |
+| 7780 | Other events (heartbeat checks in every 60 seconds, service start and stop, etc.) |
 
 
 ## Installation
