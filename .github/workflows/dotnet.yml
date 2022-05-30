@@ -47,7 +47,11 @@ jobs:
         ls -r
         cd IntegrityService.Installer
         &"$source\wix\tools\Light.exe" "$source\obj\Product.wixobj" -nologo -out $source\publish\IntegrityService.Installer.msi -pdbout $source\publish\IntegrityService.Installer.wixpdb -cultures:null -spdb -contentsfile $source\obj\IntegrityService.Installer.wixproj.BindContentsFileListnull.txt -outputsfile $source\obj\IntegrityService.Installer.wixproj.BindOutputsFileListnull.txt -builtoutputsfile $source\obj\IntegrityService.Installer.wixproj.BindBuiltOutputsFileListnull.txt -wixprojectfile $source\IntegrityService.Installer\IntegrityService.Installer.wixproj -pedantic -v
-
+      
+    - name: Generate hashes
+      shell: powershell
+      run: Get-ChildItem -Path .\"publish" -File | ForEach-Object { $hash = Get-FileHash -Path $_.FullName -Algorithm SHA256; $line= "(SHA256)`t$($hash.Hash)`t$($_.Name)"; $line | Out-File -FilePath .\publish\hashes.txt -Append -Encoding unicode -NoClobber }
+    
     - name: Enumerate root folder
       shell: powershell
       run: ls -r
@@ -60,5 +64,6 @@ jobs:
         files: |
                publish\IntegrityService.exe
                publish\IntegrityService.Installer.msi
+               publish\hashes.txt
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
