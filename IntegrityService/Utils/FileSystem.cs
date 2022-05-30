@@ -29,6 +29,7 @@ namespace IntegrityService.Utils
             bool result;
             if (IsFile(path)!.Value)
             {
+#pragma warning disable U2U1212 // Capture intermediate results in lambda expressions
                 result = (excludedPaths ??
                           throw new InvalidOperationException()) // If file, sanitize file path and check. Then, check extensions.
                          .Any(excludedPath =>
@@ -37,6 +38,7 @@ namespace IntegrityService.Utils
                          (excludedExtensions ?? throw new InvalidOperationException())
                          .Any(extension =>
                              extension.Contains(Path.GetExtension(path), StringComparison.OrdinalIgnoreCase));
+#pragma warning restore U2U1212 // Capture intermediate results in lambda expressions
             }
             else
             {
