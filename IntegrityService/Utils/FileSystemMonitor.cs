@@ -10,7 +10,7 @@ using System.Text;
 
 namespace IntegrityService.Utils
 {
-    internal sealed class FileSystemMonitor : IDisposable
+    internal sealed class FileSystemMonitor : IDisposable, IMonitor
     {
         /// <summary>
         ///     Windows file system creates multiple events for creation and change events. These are by design but creates pollution.
@@ -24,7 +24,7 @@ namespace IntegrityService.Utils
         private readonly List<FileSystemWatcher> _watchers;
         private Context _context;
 
-        public FileSystemMonitor(ILogger logger,  bool useDigest)
+        public FileSystemMonitor(ILogger logger, bool useDigest)
         {
             _logger = logger;
             _useDigest = useDigest;

@@ -18,6 +18,10 @@ namespace IntegrityService
 
         public List<string> ExcludedExtensions { get; private set; }
 
+        public List<string> MonitoredKeys { get; private set; }
+
+        public List<string> ExcludedKeys { get; private set; }
+
         /// <summary>
         ///     Hardcoded database file name is fim.db. Initial database size is set to 50MB for performance reasons.
         /// </summary>
@@ -74,6 +78,28 @@ namespace IntegrityService
                 _fimKey.SetValue("ExcludedExtensions", new string[] { string.Empty }, RegistryValueKind.MultiString);
             }
             ExcludedExtensions = (_fimKey.GetValue("ExcludedExtensions") as string[]).Where(path => !string.IsNullOrEmpty(path)).ToList();
+
+            try
+            {
+                _ = _fimKey.GetValueKind("MonitoredKeys");
+            }
+            catch
+
+            {
+                _fimKey.SetValue("MonitoredKeys", new string[] { string.Empty }, RegistryValueKind.MultiString);
+            }
+            ExcludedExtensions = (_fimKey.GetValue("MonitoredKeys") as string[]).Where(path => !string.IsNullOrEmpty(path)).ToList();
+
+            try
+            {
+                _ = _fimKey.GetValueKind("ExcludedKeys");
+            }
+            catch
+
+            {
+                _fimKey.SetValue("ExcludedKeys", new string[] { string.Empty }, RegistryValueKind.MultiString);
+            }
+            ExcludedExtensions = (_fimKey.GetValue("ExcludedKeys") as string[]).Where(path => !string.IsNullOrEmpty(path)).ToList();
         }
 
         private void ReadOrCreateFimKey()

@@ -11,11 +11,12 @@ namespace IntegrityService
     {
         private readonly ILogger<Worker> _logger;
         private readonly FileSystemMonitor _fsMonitor;
-
+        private readonly RegistryMonitor _regMonitor;
         public Worker(ILogger<Worker> logger)
         {
             _logger = logger;
             _fsMonitor = new FileSystemMonitor(_logger, true);
+            _regMonitor = new RegistryMonitor(_logger);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -32,6 +33,7 @@ namespace IntegrityService
             }
 
             _fsMonitor.Start();
+            _regMonitor.Start();
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -50,15 +52,22 @@ namespace IntegrityService
                 case CtrlType.CtrlShutdownEvent:
                 case CtrlType.CtrlCloseEvent:
                     _logger.LogInformation("Worker stopped at: {time}", DateTimeOffset.Now);
-                    // Cleanup
-                    _fsMonitor.Stop();
-
+                    Cleanup();
                     Environment.Exit(0);
                     return false;
 
                 default:
                     return false;
             }
+        }
+
+        private void Cleanup()
+        {
+            // Cleanup members here
+            _fsMonitor.Stop();
+            _fsMonitor.Dispose();
+            _regMonitor.Stop();
+            _regMonitor.Dispose();
         }
     }
 }
