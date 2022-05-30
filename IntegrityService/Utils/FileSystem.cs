@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using System.Threading.Tasks;
 
 namespace IntegrityService.Utils
@@ -71,7 +73,7 @@ namespace IntegrityService.Utils
         {
             try
             {
-               return (File.GetAttributes(fullPath) & FileAttributes.Directory) != FileAttributes.Directory;
+                return (File.GetAttributes(fullPath) & FileAttributes.Directory) != FileAttributes.Directory;
             }
             catch
             {
@@ -136,5 +138,59 @@ namespace IntegrityService.Utils
             return files;
         }
 
+        public static string OwnerName(FileSecurity fileSecurity)
+        {
+            if (fileSecurity is null)
+            {
+                throw new ArgumentNullException(nameof(fileSecurity));
+            }
+            IdentityReference? sid = null;
+            try
+            {
+                sid = fileSecurity.GetOwner(typeof(SecurityIdentifier));
+                if (sid == null) return string.Empty;
+
+                var ntAccount = sid.Translate(typeof(NTAccount)) as NTAccount;
+                if (ntAccount == null) return string.Empty;
+
+                return ntAccount.Value;
+            }
+            catch (IdentityNotMappedException)
+            {
+                return sid != null ? sid.ToString() : string.Empty;
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
+
+        public static string PrimaryGroupOfOwnerName(FileSecurity fileSecurity)
+        {
+            if (fileSecurity is null)
+            {
+                throw new ArgumentNullException(nameof(fileSecurity));
+            }
+
+            IdentityReference? primaryGroup = null;
+            try
+            {
+                primaryGroup = fileSecurity.GetGroup(typeof(SecurityIdentifier));
+                if (primaryGroup == null) return string.Empty;
+
+                var ntAccount = primaryGroup.Translate(typeof(NTAccount)) as NTAccount;
+                if (ntAccount == null) return string.Empty;
+
+                return ntAccount.Value;
+            }
+            catch (IdentityNotMappedException)
+            {
+                return primaryGroup != null ? primaryGroup.ToString() : string.Empty;
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
     }
 }
