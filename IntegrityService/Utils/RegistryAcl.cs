@@ -1,32 +1,23 @@
 ﻿using Microsoft.Win32;
-using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Security.AccessControl;
 using System.Security.Principal;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace IntegrityService.Utils
 {
-    internal sealed class RegistryAcl
+    internal sealed class RegistryAcl : AclBase
     {
-        public string Owner { get; set; }
-
-        public string? PrimaryGroupOfOwner { get; set; }
-
-        public List<RegistryAce> Permissions { get; set; }
-
         public RegistryAcl(RegistryKey key)
         {
-            var ac = key.GetAccessControl(AccessControlSections.All);
-            Owner = ac.GetOwner(typeof(NTAccount))?.Value ?? string.Empty;
-            PrimaryGroupOfOwner = ac.GetGroup(typeof(NTAccount))?.Value ?? string.Empty;
+            var registryPermissions = key.GetAccessControl(AccessControlSections.All);
+            Owner = registryPermissions.GetOwner(typeof(NTAccount))?.Value ?? string.Empty;
+            PrimaryGroupOfOwner = registryPermissions.GetGroup(typeof(NTAccount))?.Value ?? string.Empty;
 
-            Permissions = ac
+            Permissions = registryPermissions
                 .GetAccessRules(true, true, typeof(NTAccount))
                 .Cast<RegistryAccessRule>()
                 .Select(rule => new RegistryAce(rule))
+                .Cast<AceBase>()
                 .ToList();
         }
     }
