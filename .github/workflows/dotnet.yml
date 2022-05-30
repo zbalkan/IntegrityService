@@ -1,4 +1,4 @@
-name: .NET
+name: Release
 
 on:
   push:
@@ -28,7 +28,7 @@ jobs:
       uses: microsoft/setup-msbuild@v1.1
       with:
         msbuild-architecture: x64
-  
+
     - name: Restore and publish main project
       run: |
            msbuild IntegrityService\IntegrityService.csproj /t:restore /t:publish /p:Configuration=Release /p:SelfContained=true /p:RuntimeIdentifier=win-x64 /p:PublishsingleFile=true
