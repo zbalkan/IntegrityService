@@ -10,8 +10,23 @@ namespace IntegrityService.Utils
 {
     internal static class FileSystem
     {
-        internal static ConcurrentBag<string> StartSearch(IEnumerable<string> pathsToSearch, IEnumerable<string> excludedPaths, IEnumerable<string> excludedExtensions)
+        internal static ConcurrentBag<string> StartSearch(List<string> pathsToSearch, List<string> excludedPaths, List<string> excludedExtensions)
         {
+            if (pathsToSearch is null)
+            {
+                throw new ArgumentNullException(nameof(pathsToSearch));
+            }
+
+            if (excludedPaths is null)
+            {
+                throw new ArgumentNullException(nameof(excludedPaths));
+            }
+
+            if (excludedExtensions is null)
+            {
+                throw new ArgumentNullException(nameof(excludedExtensions));
+            }
+
             var defaultEnumOptions = new EnumerationOptions
             {
                 IgnoreInaccessible = true,
@@ -24,7 +39,7 @@ namespace IntegrityService.Utils
             return files;
         }
 
-        internal static bool IsExcluded(string path, IEnumerable<string> excludedPaths, IEnumerable<string> excludedExtensions)
+        internal static bool IsExcluded(string path, List<string> excludedPaths, List<string> excludedExtensions)
         {
             bool result;
             if (IsFile(path)!.Value)
@@ -72,7 +87,7 @@ namespace IntegrityService.Utils
         /// <param name="excludedPaths"></param>
         /// <param name="excludedExtensions"></param>
         /// <returns>List of files</returns> 
-        private static List<string> SearchFiles(string path, EnumerationOptions options, IEnumerable<string> excludedPaths, IEnumerable<string> excludedExtensions)
+        private static List<string> SearchFiles(string path, EnumerationOptions options, List<string> excludedPaths, List<string> excludedExtensions)
         {
             const int minimumNumberOfFiles = 100000;
             var files = new List<string>(minimumNumberOfFiles);

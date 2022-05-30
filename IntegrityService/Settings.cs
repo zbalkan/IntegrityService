@@ -8,7 +8,6 @@ namespace IntegrityService
 #pragma warning disable CS8601 // Possible null reference assignment.
 #pragma warning disable CS8602 // Dereference of a possibly null reference.
 #pragma warning disable CS8604 // Possible null reference argument.
-#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
     internal sealed class Settings
     {
@@ -26,7 +25,9 @@ namespace IntegrityService
         ///     Hardcoded database file name is fim.db. Initial database size is set to 50MB for performance reasons.
         /// </summary>
         // ReSharper disable once MemberCanBeMadeStatic.Global
+#pragma warning disable CA1822 // Mark members as static
         public string ConnectionString => "Filename=fim.db;InitialSize=50MB";
+#pragma warning restore CA1822 // Mark members as static
 
         internal static Settings Instance => Lazy.Value;
 
@@ -114,7 +115,6 @@ namespace IntegrityService
             }
         }
     }
-#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 #pragma warning restore CS8604 // Possible null reference argument.
 #pragma warning restore CS8602 // Dereference of a possibly null reference.
 #pragma warning restore CS8601 // Possible null reference assignment.

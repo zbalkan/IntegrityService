@@ -4,7 +4,7 @@ using Serilog.Sinks.EventLog;
 
 namespace IntegrityService.Utils
 {
-    internal class EventIdProvider : IEventIdProvider
+    internal sealed class EventIdProvider : IEventIdProvider
     {
         /// <summary>
         ///     Returns event ID based on log content

@@ -104,8 +104,13 @@ namespace IntegrityService.Utils
             _ = _regHandleToKeyName.Remove(ev.KeyHandle);
         }
 
-        private static void MakeKernelParserStateless(TraceEventSource traceSessionSource)
+        private static void MakeKernelParserStateless(ETWTraceEventSource traceSessionSource)
         {
+            if (traceSessionSource is null)
+            {
+                throw new ArgumentNullException(nameof(traceSessionSource));
+            }
+
             const KernelTraceEventParser.ParserTrackingOptions options = KernelTraceEventParser.ParserTrackingOptions.None;
             var kernelParser = new KernelTraceEventParser(traceSessionSource, options);
 
