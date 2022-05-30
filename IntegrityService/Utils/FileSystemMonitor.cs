@@ -10,7 +10,7 @@ using System.Text;
 
 namespace IntegrityService.Utils
 {
-    internal sealed class FileSystemMonitor : IDisposable, IMonitor
+    internal sealed class FileSystemMonitor : IMonitor
     {
         /// <summary>
         ///     Windows file system creates multiple events for creation and change events. These are by design but creates pollution.
@@ -22,6 +22,7 @@ namespace IntegrityService.Utils
         private readonly ILogger _logger;
         private readonly bool _useDigest;
         private readonly List<FileSystemWatcher> _watchers;
+        private bool disposedValue;
 
         public FileSystemMonitor(ILogger logger, bool useDigest)
         {
@@ -227,6 +228,24 @@ namespace IntegrityService.Utils
             Database.Context.FileSystemChanges.InsertBulk(changes, changes.Count);
         }
 
-        public void Dispose() => _sha256.Dispose();
+        private void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    _sha256.Dispose();
+                }
+
+                disposedValue = true;
+            }
+        }
+
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
     }
 }

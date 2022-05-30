@@ -18,7 +18,7 @@ namespace IntegrityService.Utils
     ///     A class capturing Registry events.
     /// </summary>
     /// <see href="https://github.com/lowleveldesign/lowleveldesign-blog-samples/blob/master/monitoring-registry-activity-with-etw/Program.fs"/>
-    internal sealed class RegistryMonitor : IMonitor, IDisposable
+    internal sealed class RegistryMonitor : IMonitor
     {
         private readonly ILogger _logger;
         private readonly Dictionary<ulong, string> _regHandleToKeyName;

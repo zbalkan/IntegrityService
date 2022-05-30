@@ -1,8 +1,9 @@
-﻿namespace IntegrityService.Utils
+﻿using System;
+
+namespace IntegrityService.Utils
 {
-    internal interface IMonitor
+    internal interface IMonitor: IDisposable
     {
-        void Dispose();
         void Start();
         void Stop();
     }
