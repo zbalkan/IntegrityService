@@ -10,8 +10,6 @@
 
         public string ValueData { get; set; }
 
-        public int Size { get; set; }
-
         public string ACLs { get; set; }
     }
 }

@@ -22,7 +22,6 @@ namespace IntegrityService.Utils
         private readonly ILogger _logger;
         private readonly bool _useDigest;
         private readonly List<FileSystemWatcher> _watchers;
-        private Context _context;
 
         public FileSystemMonitor(ILogger logger, bool useDigest)
         {
@@ -35,10 +34,9 @@ namespace IntegrityService.Utils
 
         public void Start()
         {
-            if (!Context.DatabaseExists(Settings.Instance.ConnectionString))
+            if (Database.Context.FileSystemChanges.Count() == 0)
             {
                 _logger.LogInformation("Could not find the database file. Initiating file system discovery. It will take up to 10 minutes.");
-                _context = new Context(Settings.Instance.ConnectionString);
                 var files = FileSystem.StartSearch(Settings.Instance.MonitoredPaths, Settings.Instance.ExcludedPaths,
                     Settings.Instance.ExcludedExtensions);
                 if (files.IsEmpty)
@@ -54,7 +52,7 @@ namespace IntegrityService.Utils
 
         public void Stop()
         {
-            if (!_watchers.Any()) return;
+            if (_watchers.Count == 0) return;
 
             foreach (var watcher in _watchers)
             {
@@ -135,14 +133,14 @@ namespace IntegrityService.Utils
                 return;
             }
 
-            var previousChange = _context.FileSystemChanges
+            var previousChange = Database.Context.FileSystemChanges
                 .Query()
                 .Where(x => x.FullPath.Equals(filePath))
                 .OrderByDescending(c => c.DateTime)
                 .ToList();
 
             var previousHash = string.Empty;
-            if (previousChange.Any())
+            if (previousChange.Count > 0)
             {
                 previousHash = previousChange[0]?.CurrentHash ?? string.Empty;
             }
@@ -161,7 +159,7 @@ namespace IntegrityService.Utils
                 ACLs = filePath.GetACL()
             };
 
-            _context.FileSystemChanges.Insert(change);
+            Database.Context.FileSystemChanges.Insert(change);
             _logger.LogInformation("Category: {category}\nPath: {path}\nCurrent Hash: {currentHash}\nPreviousHash: {previousHash}", Enum.GetName(change.ChangeCategory), change.FullPath, change.CurrentHash, change.PreviousHash);
         }
 
@@ -226,7 +224,7 @@ namespace IntegrityService.Utils
                 ACLs = file.GetACL()
             }));
 
-            _context.FileSystemChanges.InsertBulk(changes, changes.Count);
+            Database.Context.FileSystemChanges.InsertBulk(changes, changes.Count);
         }
 
         public void Dispose() => _sha256.Dispose();

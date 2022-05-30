@@ -1,8 +1,10 @@
-﻿using Microsoft.Diagnostics.Tracing;
+﻿using IntegrityService.FIM;
+using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tracing.Parsers;
 using Microsoft.Diagnostics.Tracing.Parsers.Kernel;
 using Microsoft.Diagnostics.Tracing.Session;
 using Microsoft.Extensions.Logging;
+using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -19,11 +21,12 @@ namespace IntegrityService.Utils
     internal sealed class RegistryMonitor : IMonitor, IDisposable
     {
         private readonly ILogger _logger;
+        private readonly Dictionary<ulong, string> _regHandleToKeyName;
+        private readonly string _sessionName;
+        private readonly int _pid;
+        private readonly CancellationTokenSource _cancellationTokenSource;
+
         private bool disposedValue;
-        private readonly Dictionary<ulong, string> regHandleToKeyName;
-        private readonly string sessionName;
-        private readonly int pid;
-        private readonly CancellationTokenSource cancellationTokenSource;
 
         const NtKeywords traceFlags = NtKeywords.Registry;
         const NtKeywords stackFlags = NtKeywords.None;
@@ -31,18 +34,27 @@ namespace IntegrityService.Utils
         public RegistryMonitor(ILogger logger)
         {
             _logger = logger;
-            regHandleToKeyName = new Dictionary<ulong, string>();
-            sessionName = "RegistryWatcher";
-            pid = Environment.ProcessId;
-            cancellationTokenSource = new CancellationTokenSource();
+            _regHandleToKeyName = new Dictionary<ulong, string>();
+            _sessionName = "RegistryWatcher";
+            _pid = Environment.ProcessId;
+            _cancellationTokenSource = new CancellationTokenSource();
         }
 
         public void Start()
         {
-            var session = new TraceEventSession(sessionName);
+            // No baseline database for registry keys
+            StartSession();
+            // TODO: Missing error handling
+        }
+
+        public void Stop() => _cancellationTokenSource.Cancel();
+
+        private void StartSession()
+        {
+            var session = new TraceEventSession(_sessionName);
             _ = session.EnableKernelProvider(traceFlags, stackFlags);
             MakeKernelParserStateless(session.Source);
-            RundownSession(sessionName + "-rundown");
+            RundownSession(_sessionName + "-rundown");
 
             session.Source.Kernel.RegistryKCBCreate += (sender) => ProcessKCBCreateEvent(sender);
             session.Source.Kernel.RegistryKCBDelete += (sender) => ProcessKCBDeleteEvent(sender);
@@ -64,12 +76,9 @@ namespace IntegrityService.Utils
             session.Source.Kernel.RegistryQueryMultipleValue += (ev) => ProcessValueEvent(ev);
             session.Source.Kernel.RegistrySetValue += (ev) => ProcessValueEvent(ev);
             session.Source.Kernel.RegistryDeleteValue += (ev) => ProcessValueEvent(ev);
-
-            using var r = cancellationTokenSource.Token.Register(() => session.Stop());
+            var r = _cancellationTokenSource.Token.Register(() => session.Stop());
             _ = session.Source.Process();
         }
-
-        public void Stop() => cancellationTokenSource.Cancel();
 
         private void RundownSession(string sessionName)
         {
@@ -78,7 +87,7 @@ namespace IntegrityService.Utils
             session.Source.Kernel.RegistryKCBRundownBegin += (sender) => ProcessKCBCreateEvent(ev: sender);
             session.Source.Kernel.RegistryKCBRundownEnd += (sender) => ProcessKCBDeleteEvent(ev: sender);
 
-            using var r = cancellationTokenSource.Token.Register(() => session.Stop());
+            using var r = _cancellationTokenSource.Token.Register(() => session.Stop());
             _ = session.Source.Process();
         }
 
@@ -87,7 +96,7 @@ namespace IntegrityService.Utils
             _logger
                 .LogInformation("Description: Key Control Block Created.\nTimestamp: {timestamp}\nEvent Name: {event}\nKey Handle: {keyHandle}\nKey Name: {keyName}",
                 ev.TimeStampRelativeMSec, ev.EventName, ev.KeyHandle, ev.KeyName);
-            regHandleToKeyName[ev.KeyHandle] = ev.KeyName;
+            _regHandleToKeyName[ev.KeyHandle] = ev.KeyName;
         }
 
         private void ProcessKCBDeleteEvent(RegistryTraceData ev)
@@ -95,7 +104,7 @@ namespace IntegrityService.Utils
             _logger
                 .LogInformation("Description: Key Control Block Deleted.\nTimestamp: {timestamp}\nEvent Name: {event}\nKey Handle: {keyHandle}\nKey Name: {keyName}",
                 ev.TimeStampRelativeMSec, ev.EventName, ev.KeyHandle, ev.KeyName);
-            _ = regHandleToKeyName.Remove(ev.KeyHandle);
+            _ = _regHandleToKeyName.Remove(ev.KeyHandle);
         }
 
         private static void MakeKernelParserStateless(TraceEventSource traceSessionSource)
@@ -108,13 +117,14 @@ namespace IntegrityService.Utils
             kernelField?.SetValue(traceSessionSource, kernelParser);
         }
 
-        private bool Filter(RegistryTraceData ev) => ev.ProcessID == pid
-                ||
-                ev.ProcessID == -1
-                ||
-                IsMonitored(ev)
-                ||
-                !IsExcluded(ev);
+        private bool Filter(RegistryTraceData ev) =>
+            ev.ProcessID == _pid
+            ||
+            ev.ProcessID == -1
+            ||
+            IsMonitored(ev)
+            ||
+            !IsExcluded(ev);
 
         private bool IsExcluded(RegistryTraceData ev)
         {
@@ -127,6 +137,7 @@ namespace IntegrityService.Utils
             }
             return false;
         }
+        
         private bool IsMonitored(RegistryTraceData ev)
         {
             var keyName = GetFullKeyName(ev.KeyHandle, ev.KeyName);
@@ -147,7 +158,26 @@ namespace IntegrityService.Utils
                 _logger
                .LogInformation("Description: Key event.\nTimestamp: {timestamp}\nEvent Name: {event}\nKey Handle: {keyHandle}\nKey Name: {keyName}\nProcess Id: {processId}\nThread ID: {threadId}\nIndex: {index}\nStatus:{status}\nElapsed: {elapsed}",
                ev.TimeStampRelativeMSec, ev.EventName, ev.KeyHandle, keyName, ev.ProcessID, ev.ThreadID, ev.Index, Enum.GetName((RegistryEventCategory)ev.Status), ev.ElapsedTimeMSec);
-                _ = regHandleToKeyName.Remove(ev.KeyHandle);
+                _ = _regHandleToKeyName.Remove(ev.KeyHandle);
+
+                var key = RegistryKey.FromHandle(new Microsoft.Win32.SafeHandles.SafeRegistryHandle(new IntPtr((long)ev.KeyHandle), true));
+
+                var change = new RegistryChange
+                {
+                    Id = Guid.NewGuid(),
+                    ChangeCategory = ChangeCategory.Changed,
+                    ConfigChangeType = ConfigChangeType.Registry,
+                    Entity = keyName,
+                    DateTime = DateTime.Now,
+                    Key = keyName,
+                    Hive = Enum.GetName(ParseHive(keyName)) ?? string.Empty,
+                    SourceComputer = Environment.MachineName,
+                    ValueName = ev.ValueName,
+                    ValueData = key.GetValue(ev.ValueName)?.ToString() ?? string.Empty,
+                    ACLs = key.GetACL()
+
+                };
+                Database.Context.RegistryChanges.Insert(change);
             }
         }
 
@@ -159,18 +189,64 @@ namespace IntegrityService.Utils
                 _logger
                     .LogInformation("Description: Key event.\nTimestamp: {timestamp}\nEvent Name: {event}\nKey Handle: {keyHandle}\nKey Name: {keyName}\nProcess Id: {processId}\nThread ID: {threadId}\nIndex: {index}\nStatus:{status}\nElapsed: {elapsed}",
                ev.TimeStampRelativeMSec, ev.EventName, ev.KeyHandle, keyName, ev.ProcessID, ev.ThreadID, ev.Index, Enum.GetName((RegistryEventCategory)ev.Status), ev.ElapsedTimeMSec);
+
+                var key = RegistryKey.FromHandle(new Microsoft.Win32.SafeHandles.SafeRegistryHandle(new IntPtr((long)ev.KeyHandle), true));
+
+                var change = new RegistryChange
+                {
+                    Id = Guid.NewGuid(),
+                    ChangeCategory = ChangeCategory.Changed,
+                    ConfigChangeType = ConfigChangeType.Registry,
+                    Entity = keyName,
+                    DateTime = DateTime.Now,
+                    Key = keyName,
+                    Hive = Enum.GetName(ParseHive(keyName)) ?? string.Empty,
+                    SourceComputer = Environment.MachineName,
+                    ValueName = ev.ValueName,
+                    ValueData = key.GetValue(ev.ValueName)?.ToString() ?? string.Empty,
+                    ACLs = key.GetACL()
+
+                };
+                Database.Context.RegistryChanges.Insert(change);
             }
         }
 
         private string GetFullKeyName(ulong keyHandle, string eventKeyName)
         {
             var baseKeyName = string.Empty;
-            if (regHandleToKeyName.TryGetValue(keyHandle, out var result))
+            if (_regHandleToKeyName.TryGetValue(keyHandle, out var result))
             {
                 baseKeyName = result;
             }
 
             return Path.Combine(baseKeyName, eventKeyName);
+        }
+
+        private static RegistryHive ParseHive(string keyName)
+        {
+            if (keyName.Contains("HKEY_LOCAL_MACHINE"))
+            {
+                return RegistryHive.LocalMachine;
+            }
+
+            if (keyName.Contains("HKEY_CURRENT_USER"))
+            {
+                return RegistryHive.CurrentUser;
+            }
+
+            if (keyName.Contains("HKEY_CURRENT_CONFIG"))
+            {
+                return RegistryHive.CurrentConfig;
+            }
+
+            if (keyName.Contains("HKEY_CLASSES_ROOT"))
+            {
+                return RegistryHive.ClassesRoot;
+            }
+            else
+            {
+                return RegistryHive.Users;
+            }
         }
 
         private void Dispose(bool disposing)
@@ -179,7 +255,7 @@ namespace IntegrityService.Utils
             {
                 if (disposing)
                 {
-                    cancellationTokenSource.Dispose();
+                    _cancellationTokenSource.Dispose();
                 }
 
                 disposedValue = true;

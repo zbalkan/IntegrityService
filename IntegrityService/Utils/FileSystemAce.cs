@@ -5,7 +5,7 @@ using System.Security.AccessControl;
 
 namespace IntegrityService.Utils
 {
-    public class AceDto
+    public class FileSystemAce
     {
         public string UserOrGroup { get; set; }
 
@@ -13,7 +13,7 @@ namespace IntegrityService.Utils
 
         public bool IsInherited { get; set; }
 
-        public AceDto(FileSystemAccessRule rule)
+        public FileSystemAce(FileSystemAccessRule rule)
         {
             UserOrGroup = rule.IdentityReference.Value;
             Permissions = rule.FileSystemRights.ListFlags().ToList();

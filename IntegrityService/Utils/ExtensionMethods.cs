@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Win32;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -20,7 +21,23 @@ namespace IntegrityService.Utils
 
         public static string GetACL(this string path)
         {
-            var ac = new AclDto(new FileInfo(path).GetAccessControl());
+            var ac = new FileSystemAcl(new FileInfo(path));
+            var options = new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                ReadCommentHandling = JsonCommentHandling.Skip,
+                DictionaryKeyPolicy = JsonNamingPolicy.CamelCase
+            };
+
+            var json = JsonSerializer.Serialize(ac, options);
+
+            return json;
+        }
+
+        public static string GetACL(this RegistryKey key)
+        {
+            var ac = new RegistryAcl(key);
             var options = new JsonSerializerOptions
             {
                 WriteIndented = true,

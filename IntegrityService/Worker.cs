@@ -32,6 +32,7 @@ namespace IntegrityService
                 _logger.LogError("Failed to read settings.");
             }
 
+            Database.Start();
             _fsMonitor.Start();
             _regMonitor.Start();
 
@@ -68,6 +69,7 @@ namespace IntegrityService
             _fsMonitor.Dispose();
             _regMonitor.Stop();
             _regMonitor.Dispose();
+            Database.Stop();
         }
     }
 }

@@ -70,9 +70,10 @@ namespace IntegrityService.Utils
         /// <param name="excludedPaths"></param>
         /// <param name="excludedExtensions"></param>
         /// <returns>List of files</returns> 
-        private static IEnumerable<string> SearchFiles(string path, EnumerationOptions options, IEnumerable<string> excludedPaths, IEnumerable<string> excludedExtensions)
+        private static List<string> SearchFiles(string path, EnumerationOptions options, IEnumerable<string> excludedPaths, IEnumerable<string> excludedExtensions)
         {
-            var files = new List<string>();
+            const int minimumNumberOfFiles = 100000;
+            var files = new List<string>(minimumNumberOfFiles);
             var excPaths = excludedPaths.ToList();
             var excExtensions = excludedExtensions.ToList();
 
