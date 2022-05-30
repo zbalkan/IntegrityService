@@ -99,4 +99,4 @@ https://go.microsoft.com/fwlink/?LinkID=208121.
 - [x] Include ACLs
 - [x] Monitor Registry (Partial)
 - [x] Generate installer, preferably in MSI format.
-- [ ] Keep a log of exceptions
+- [ ] Translate AD addresses (resource consuming task)
