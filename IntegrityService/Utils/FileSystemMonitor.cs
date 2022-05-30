@@ -105,27 +105,7 @@ namespace IntegrityService.Utils
 
         private void OnDeleted(object sender, FileSystemEventArgs e) => ProcessEvent(e.FullPath, ChangeCategory.Deleted);
 
-        private void OnError(object sender, ErrorEventArgs e) => PrintException(e.GetException());
-
-        private void PrintException(Exception? ex)
-        {
-            while (true)
-            {
-                if (ex == null)
-                {
-                    break;
-                }
-
-                var sb = new StringBuilder(120).Append("Message: ")
-                    .AppendLine(ex.Message)
-                    .Append("Stacktrace: ")
-                    .AppendLine(ex.StackTrace);
-
-                _logger.LogError("Exception: {ex}", sb.ToString());
-
-                ex = ex.InnerException;
-            }
-        }
+        private void OnError(object sender, ErrorEventArgs e) => e.GetException().Log(_logger);
 
         private void ProcessEvent(string filePath, ChangeCategory category)
         {
@@ -192,7 +172,7 @@ namespace IntegrityService.Utils
             }
             catch (Exception ex)
             {
-                PrintException(ex);
+                ex.Log(_logger);
             }
 
             return digest;

@@ -1,10 +1,12 @@
-﻿using Microsoft.Win32;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.Win32;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Security.AccessControl;
 using System.Security.Principal;
+using System.Text;
 using System.Text.Json;
 
 namespace IntegrityService.Utils
@@ -64,6 +66,26 @@ namespace IntegrityService.Utils
             foreach (var flag in names)
             {
                 yield return flag;
+            }
+        }
+
+        public static void Log(this Exception? ex, ILogger logger)
+        {
+            while (true)
+            {
+                if (ex == null)
+                {
+                    break;
+                }
+
+                var sb = new StringBuilder(120).Append("Message: ")
+                    .AppendLine(ex.Message)
+                    .Append("Stacktrace: ")
+                    .AppendLine(ex.StackTrace);
+
+                logger.LogError("Exception: {ex}", sb.ToString());
+
+                ex = ex.InnerException;
             }
         }
     }
