@@ -1,8 +1,11 @@
-name: Release
+name: Release when tagged
 
 on:
   push:
     branches: [ master ]
+    tags:
+      - "v*.*.*"
+      
   pull_request:
     branches: [ master ]
 
@@ -59,7 +62,7 @@ jobs:
     - name: Release
       uses: softprops/action-gh-release@v1
       with:
-        tag_name: "alpha"
+        tag_name: ${{ steps.tag.outputs.release_tag }}
         generate_release_notes: true
         files: |
                publish\IntegrityService.exe
