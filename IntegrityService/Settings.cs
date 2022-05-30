@@ -26,7 +26,7 @@ namespace IntegrityService
         /// </summary>
         // ReSharper disable once MemberCanBeMadeStatic.Global
 #pragma warning disable CA1822 // Mark members as static
-        public string ConnectionString => "Filename=fim.db;InitialSize=50MB";
+        public string ConnectionString => "Filename=fim.db;InitialSize=50MB;";
 #pragma warning restore CA1822 // Mark members as static
 
         internal static Settings Instance => Lazy.Value;

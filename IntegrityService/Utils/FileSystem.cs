@@ -43,8 +43,11 @@ namespace IntegrityService.Utils
 
         internal static bool IsExcluded(string path, List<string> excludedPaths, List<string> excludedExtensions)
         {
+            var isFile = IsFile(path);
+            if (isFile == null) return true;
+
             bool result;
-            if (IsFile(path)!.Value)
+            if (isFile.Value)
             {
 #pragma warning disable U2U1212 // Capture intermediate results in lambda expressions
                 result = (excludedPaths ??
@@ -75,8 +78,10 @@ namespace IntegrityService.Utils
             {
                 return (File.GetAttributes(fullPath) & FileAttributes.Directory) != FileAttributes.Directory;
             }
-            catch
+            catch (Exception ex)
             {
+               // TODO: Log properly
+                Debug.WriteLine(ex.Message);
                 return null;
             }
         }
