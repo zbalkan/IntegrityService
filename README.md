@@ -5,6 +5,8 @@ File Integrity Monitoring (FIM) is a security related requirement for monitoring
 * directories in Linux
 * directories and Registry keys in Windows.
 
+This application is a FIM servce for Windows.
+
 ## Usage
 It is designed to be a Windows Service. In first use, it will start a scan based on the settings. Settings are read from Windows Registry.
 
@@ -47,6 +49,7 @@ Windows has a lot of quirks when it comes to low level callbacks, especially for
 * .etl
 
 ### Event Logs
+Event logs IDs are taken from [WINFIM.NET](https://github.com/redblueteam/WinFIM.NET). Thanks [redblueteam](https://github.com/redblueteam) for inspiration.
 
 Event ID 7770 - An exception occurred
 
@@ -60,6 +63,10 @@ Event ID 7780 – Other events (heartbeat checks in every 60 seconds, service st
 
 
 ## Installation
+### Plain installation
+1. Download the executable.
+2. Use the `install.bat` and `uninstall.bat` for your purposes.
+### MSI package installation
 Use the `IntegrityService.Installer.msi` file to install. This is specifically used for ease of deployment. It will install the service with an automatic start setting. It does not start the service immediately. It is up to the administrators to let it start on next boot or an immediate start.
 
 ### Details
@@ -89,6 +96,6 @@ https://go.microsoft.com/fwlink/?LinkID=208121.
 
 ## Roadmap
 - [x] Include ACLs
-- [ ] Monitor Registry
+- [x] Monitor Registry (Partial)
 - [x] Generate installer, preferably in MSI format.
-- [ ] Keep a log of inaccessible paths
+- [ ] Keep a log of exceptions
