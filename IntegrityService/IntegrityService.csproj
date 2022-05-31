@@ -6,6 +6,15 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <UserSecretsId>dotnet-IntegrityService-393DD967-2EB1-49CF-AC41-ECF289DC3BB8</UserSecretsId>
     <StartupObject>IntegrityService.Program</StartupObject>
+    <ApplicationIcon>fim.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <CheckForOverflowUnderflow>False</CheckForOverflowUnderflow>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <CheckForOverflowUnderflow>False</CheckForOverflowUnderflow>
   </PropertyGroup>
 
   <ItemGroup>
@@ -23,6 +32,10 @@
       <Isolated>false</Isolated>
       <EmbedInteropTypes>true</EmbedInteropTypes>
     </COMReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="fim.ico" />
   </ItemGroup>
 
   <ItemGroup>
