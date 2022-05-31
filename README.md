@@ -8,45 +8,93 @@ File Integrity Monitoring (FIM) is a security related requirement for monitoring
 This application is a FIM service for Windows.
 
 ## Usage
-It is designed to be a Windows Service. In first use, it will start a scan based on the settings. Settings are read from Windows Registry.
-
-For ease of use, an ADMX file is created -it needs cleanup. So, the monitored paths, excluded paths (such as log folders), and excluded file extensions (such as log, evtx, etl) can be set via Group Policy. Default paths in the ADMX file can be found below.
+It is designed to be a Windows Service. In first use, it will start a scan based on the settings from Windows Registry, under `HKLM\SOFTWARE\FIM`.
 
 If there is no path to monitor defined in the Registry, service will not do any action (no default value hard-coded).
 
-In the first use, it will run a full discovery, search for all the files, calculate SHA256 checksum and save it in a local database. This will be the baseline. Then, it will invoke FileSystemWatcher instances and when any changes occur, it will create an event log and update the database. You can see the SHA256 hashes for the current and previous versions.
+In the first use, it will run a full discovery, search for all the files, calculate SHA256 checksum and save it in a local database as the baseline. The file search will generally catch at least 100.000 files and folders on a fresh Windows 10 installation and take about 5 minutes to search. Calculating hashes and writing to database take more time depending on the number of files and the system specifications.
+
+Then, it will invoke FileSystemWatcher instances and when any changes occur, it will create an event log and update the database. You can see the SHA256 hashes for the current and previous versions.
 
 Windows has a lot of quirks when it comes to low level callbacks, especially for NTFS. Many of the use cases are handled but it needs to be fine-tuned for edge cases.
 
-## Default Paths
-### Monitored Paths
-* C:\Windows\System32
-* C:\Windows\SysWOW64
-* C:\Program Files
-* C:\Program Files (x86)
-### Excluded Paths
-* C:\Windows\System32\winevt
-* C:\Windows\System32\sru
-* C:\Windows\System32\config
-* C:\Windows\System32\catroot2
-* C:\Windows\System32\LogFiles
-* C:\Windows\System32\wbem
-* C:\Windows\System32\WDI\LogFiles
-* C:\Windows\System32\Microsoft\Protect\Recovery
-* C:\Windows\SysWOW64\winevt
-* C:\Windows\SysWOW64\sru
-* C:\Windows\SysWOW64\config
-* C:\Windows\SysWOW64\catroot2
-* C:\Windows\SysWOW64\LogFiles
-* C:\Windows\SysWOW64\wbem
-* C:\Windows\SysWOW64\WDI\LogFiles
-* C:\Windows\SysWOW64\Microsoft\Protect\Recovery
-* C:\Program Files\Windows Defender Advanced Threat Protection\Classification\Configuration
-* C:\Program Files\Microsoft OneDrive\StandaloneUpdater\logs
-### Excluded Extensions
-* .log
-* .evtx
-* .etl
+For ease of use, an ADMX file is created -it needs cleanup. So, the monitored paths, excluded paths (such as log folders), and excluded file extensions (such as log, evtx, etl) can be set via Group Policy. Default paths in the ADMX file can be found below.
+
+## Values defined in ADMX
+<table style="border-collapse: collapse; width: 100%; height: 144px;" border="1">
+<tbody>
+<tr style="height: 18px;">
+<td style="width: 23.1657%; height: 18px;"><h3>Registry Value</h3></td>
+<td style="width: 76.8343%; height: 18px;"><h3>Registry ValueData</h3></td>
+</tr>
+<tr style="height: 18px;">
+<td style="width: 23.1657%; height: 18px;">Monitored Paths</td>
+<td style="width: 76.8343%; height: 18px;">
+<ul>
+<li>C:\Windows\System32</li>
+<li>C:\Windows\SysWOW64</li>
+<li>C:\Program Files</li>
+<li>C:\Program Files (x86)</li>
+</ul>
+</td>
+</tr>
+<tr style="height: 18px;">
+<td style="width: 23.1657%; height: 18px;">Excluded Paths</td>
+<td style="width: 76.8343%; height: 18px;">
+<ul>
+<li>C:\Windows\System32\winevt</li>
+<li>C:\Windows\System32\sru</li>
+<li>C:\Windows\System32\config</li>
+<li>C:\Windows\System32\catroot2</li>
+<li>C:\Windows\System32\LogFiles</li>
+<li>C:\Windows\System32\wbem</li>
+<li>C:\Windows\System32\WDI\LogFiles</li>
+<li>C:\Windows\System32\Microsoft\Protect\Recovery</li>
+<li>C:\Windows\SysWOW64\winevt</li>
+<li>C:\Windows\SysWOW64\sru</li>
+<li>C:\Windows\SysWOW64\config</li>
+<li>C:\Windows\SysWOW64\catroot2</li>
+<li>C:\Windows\SysWOW64\LogFiles</li>
+<li>C:\Windows\SysWOW64\wbem</li>
+<li>C:\Windows\SysWOW64\WDI\LogFiles</li>
+<li>C:\Windows\SysWOW64\Microsoft\Protect\Recovery</li>
+<li>C:\Program Files\Windows Defender Advanced Threat Protection\Classification\Configuration</li>
+<li>C:\Program Files\Microsoft OneDrive\StandaloneUpdater\logs</li>
+</ul>
+</td>
+</tr>
+<tr style="height: 18px;">
+<td style="width: 23.1657%; height: 18px;">Excluded Extensions</td>
+<td style="width: 76.8343%; height: 18px;">
+<ul>
+<li>.log</li>
+<li>.evtx</li>
+<li>.etl</li>
+</ul>
+</td>
+</tr>
+<tr style="height: 18px;">
+<td style="width: 23.1657%; height: 18px;">Enable Registry Monitoring</td>
+<td style="width: 76.8343%; height: 18px;">
+<p>0 (false)</p>
+</td>
+</tr>
+<tr style="height: 18px;">
+<td style="width: 23.1657%; height: 18px;">Monitored Keys</td>
+<td style="width: 76.8343%; height: 18px;">
+<p dir="auto">(empty)</p>
+</td>
+</tr>
+<tr style="height: 18px;">
+<td style="width: 23.1657%; height: 18px;">Excluded keys</td>
+<td style="width: 76.8343%; height: 18px;">(empty)</td>
+</tr>
+<tr style="height: 18px;">
+<td style="width: 23.1657%; height: 18px;">Heartbeat interval</td>
+<td style="width: 76.8343%; height: 18px;">60</td>
+</tr>
+</tbody>
+</table>
 
 ### Event Logs
 Event logs IDs are taken from [WINFIM.NET](https://github.com/redblueteam/WinFIM.NET). Thanks [redblueteam](https://github.com/redblueteam) for inspiration.
@@ -94,9 +142,14 @@ https://go.microsoft.com/fwlink/?LinkID=208121.
 </Project>
 ```
 
+## Development
+You need to have .NET 6 for the service. The installer project requires Wix Toolset, and that requires enabling .NET 3.5 on development machine.
 
 ## Roadmap
 - [x] Include ACLs
 - [x] Monitor Registry (Partial)
 - [x] Generate installer, preferably in MSI format.
 - [ ] Translate AD addresses (resource consuming task)
+
+## Special thanks to Icons8
+<a target="_blank" href="https://icons8.com/icon/6883/film-noir">Film Noir</a> icon by <a target="_blank" href="https://icons8.com">Icons8</a> is used for the executable.
