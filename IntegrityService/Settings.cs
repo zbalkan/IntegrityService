@@ -17,9 +17,13 @@ namespace IntegrityService
 
         public List<string> ExcludedExtensions { get; private set; }
 
+        public bool EnableRegistryMonitoring { get; private set; }
+
         public List<string> MonitoredKeys { get; private set; }
 
         public List<string> ExcludedKeys { get; private set; }
+
+        public int HeartbeatInterval { get; private set; }
 
         /// <summary>
         ///     Hardcoded database file name is fim.db. Initial database size is set to 50MB for performance reasons.
@@ -54,7 +58,7 @@ namespace IntegrityService
             catch
 
             {
-                _fimKey.SetValue("MonitoredPaths", new string[] { string.Empty }, RegistryValueKind.MultiString);
+                _fimKey.SetValue("MonitoredPaths", new[] { string.Empty }, RegistryValueKind.MultiString);
             }
             MonitoredPaths = (_fimKey.GetValue("MonitoredPaths") as string[]).Where(path => !string.IsNullOrEmpty(path)).ToList();
 
@@ -65,7 +69,7 @@ namespace IntegrityService
             catch
 
             {
-                _fimKey.SetValue("ExcludedPaths", new string[] { string.Empty }, RegistryValueKind.MultiString);
+                _fimKey.SetValue("ExcludedPaths", new[] { string.Empty }, RegistryValueKind.MultiString);
             }
             ExcludedPaths = (_fimKey.GetValue("ExcludedPaths") as string[]).Where(path => !string.IsNullOrEmpty(path)).ToList();
 
@@ -76,9 +80,26 @@ namespace IntegrityService
             catch
 
             {
-                _fimKey.SetValue("ExcludedExtensions", new string[] { string.Empty }, RegistryValueKind.MultiString);
+                _fimKey.SetValue("ExcludedExtensions", new[] { string.Empty }, RegistryValueKind.MultiString);
             }
             ExcludedExtensions = (_fimKey.GetValue("ExcludedExtensions") as string[]).Where(path => !string.IsNullOrEmpty(path)).ToList();
+
+            try
+            {
+                _ = _fimKey.GetValueKind("EnableRegistryMonitoring");
+            }
+            catch
+
+            {
+                _fimKey.SetValue("EnableRegistryMonitoring", 0, RegistryValueKind.DWord);
+            }
+
+            if (_fimKey.GetValue("EnableRegistryMonitoring") != null &&
+                int.TryParse(_fimKey.GetValue("EnableRegistryMonitoring") as string, out var val) &&
+                val == 1)
+            {
+                EnableRegistryMonitoring = true;
+            }
 
             try
             {
@@ -87,9 +108,9 @@ namespace IntegrityService
             catch
 
             {
-                _fimKey.SetValue("MonitoredKeys", new string[] { string.Empty }, RegistryValueKind.MultiString);
+                _fimKey.SetValue("MonitoredKeys", new[] { string.Empty }, RegistryValueKind.MultiString);
             }
-            ExcludedExtensions = (_fimKey.GetValue("MonitoredKeys") as string[]).Where(path => !string.IsNullOrEmpty(path)).ToList();
+            MonitoredKeys = (_fimKey.GetValue("MonitoredKeys") as string[]).Where(path => !string.IsNullOrEmpty(path)).ToList();
 
             try
             {
@@ -98,22 +119,37 @@ namespace IntegrityService
             catch
 
             {
-                _fimKey.SetValue("ExcludedKeys", new string[] { string.Empty }, RegistryValueKind.MultiString);
+                _fimKey.SetValue("ExcludedKeys", new[] { string.Empty }, RegistryValueKind.MultiString);
             }
-            ExcludedExtensions = (_fimKey.GetValue("ExcludedKeys") as string[]).Where(path => !string.IsNullOrEmpty(path)).ToList();
-        }
+            ExcludedKeys = (_fimKey.GetValue("ExcludedKeys") as string[])
+                .Where(path => !string.IsNullOrEmpty(path))
+                .ToList();
 
-        private void ReadOrCreateFimKey()
-        {
-            if (_hklmSoftware?.OpenSubKey(FimKeyName, true) == null)
+            try
             {
-                _fimKey = _hklmSoftware.CreateSubKey(FimKeyName, true);
+                _ = _fimKey.GetValueKind("HeartbeatInterval");
+            }
+            catch
+
+            {
+                _fimKey.SetValue("HeartbeatInterval", 60, RegistryValueKind.DWord);
+            }
+
+            if (_fimKey.GetValue("HeartbeatInterval") != null &&
+                int.TryParse(_fimKey.GetValue("HeartbeatInterval") as string, out var heartbeat) &&
+                heartbeat >= 0)
+            {
+                HeartbeatInterval = heartbeat;
             }
             else
             {
-                _fimKey = _hklmSoftware.OpenSubKey(FimKeyName, true);
+                HeartbeatInterval = 60;
             }
         }
+
+        private void ReadOrCreateFimKey() => _fimKey = _hklmSoftware?.OpenSubKey(FimKeyName, true) == null
+            ? _hklmSoftware.CreateSubKey(FimKeyName, true)
+            : _hklmSoftware.OpenSubKey(FimKeyName, true);
     }
 #pragma warning restore CS8604 // Possible null reference argument.
 #pragma warning restore CS8602 // Dereference of a possibly null reference.

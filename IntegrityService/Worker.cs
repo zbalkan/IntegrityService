@@ -34,12 +34,15 @@ namespace IntegrityService
 
             Database.Start();
             _fsMonitor.Start();
-            _regMonitor.Start();
+            if (Settings.Instance.EnableRegistryMonitoring)
+            {
+                _regMonitor.Start();
+            }
 
             while (!stoppingToken.IsCancellationRequested)
             {
                 _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
-                await Task.Delay(30000, stoppingToken);
+                await Task.Delay(Settings.Instance.HeartbeatInterval * 1000, stoppingToken);
             }
         }
 
@@ -67,8 +70,13 @@ namespace IntegrityService
             // Cleanup members here
             _fsMonitor.Stop();
             _fsMonitor.Dispose();
-            _regMonitor.Stop();
-            _regMonitor.Dispose();
+
+            if (Settings.Instance.EnableRegistryMonitoring)
+            {
+                _regMonitor.Stop();
+                _regMonitor.Dispose();
+            }
+
             Database.Stop();
         }
     }
