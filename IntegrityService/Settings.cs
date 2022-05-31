@@ -11,18 +11,46 @@ namespace IntegrityService
 
     internal sealed class Settings
     {
+        /// <summary>
+        ///     Filesystem directories to monitor.
+        ///     Default: Empty list.
+        /// </summary>
         public List<string> MonitoredPaths { get; private set; }
 
+        /// <summary>
+        ///     Filesystem directories to exclude from monitoring.
+        ///     Default: Empty list.
+        /// </summary>
         public List<string> ExcludedPaths { get; private set; }
 
+        /// <summary>
+        ///     File extensions to exclude from monitoring.
+        ///     Default: Empty list.
+        /// </summary>
         public List<string> ExcludedExtensions { get; private set; }
 
+        /// <summary>
+        ///     Switch to enable/disable Registry monitoring.
+        ///     Default: false.
+        /// </summary>
         public bool EnableRegistryMonitoring { get; private set; }
 
+        /// <summary>
+        ///     Registry keys to monitor.
+        ///     Default: Empty list.
+        /// </summary>
         public List<string> MonitoredKeys { get; private set; }
 
+        /// <summary>
+        ///     Registry keys to exclude from monitoring.
+        ///     Default: Empty list.
+        /// </summary>
         public List<string> ExcludedKeys { get; private set; }
 
+        /// <summary>
+        ///     Interval in seconds to send an informational heartbeat log entry to allow monitoring of the service itself. It can be disabled by setting it 0.
+        ///     Default: 60
+        /// </summary>
         public int HeartbeatInterval { get; private set; }
 
         /// <summary>

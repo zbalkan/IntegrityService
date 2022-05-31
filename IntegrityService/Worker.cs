@@ -39,9 +39,12 @@ namespace IntegrityService
                 _regMonitor.Start();
             }
 
+            // This loop must continue until service is stopped.
             while (!stoppingToken.IsCancellationRequested)
             {
-                _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
+                if (Settings.Instance.HeartbeatInterval >= 0)
+                    _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
+
                 await Task.Delay(Settings.Instance.HeartbeatInterval * 1000, stoppingToken);
             }
         }
