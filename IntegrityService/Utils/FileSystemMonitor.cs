@@ -35,13 +35,9 @@ namespace IntegrityService.Utils
             {
                 _logger.LogInformation("Could not find the database file. Initiating file system discovery. It will take up to 10 minutes.");
                 Registry.WriteDwordValue("FileDiscoveryCompleted", 0, true);
-                var files = FileSystem.StartSearch(Settings.Instance.MonitoredPaths, Settings.Instance.ExcludedPaths,
+                FileSystem.StartSearch(Settings.Instance.MonitoredPaths, Settings.Instance.ExcludedPaths,
                     Settings.Instance.ExcludedExtensions);
-                if (files.IsEmpty)
-                {
-                    _logger.LogError("Could not access files.");
-                }
-                SeedDatabase(files);
+
                 Registry.WriteDwordValue("FileDiscoveryCompleted", 1, true);
                 _logger.LogInformation("File system discovery completed.");
             }
@@ -133,7 +129,7 @@ namespace IntegrityService.Utils
                 DateTime = DateTime.Now,
                 FullPath = path,
                 SourceComputer = Environment.MachineName,
-                CurrentHash = FileSystem.CalculateFileDigest(path),
+                CurrentHash = _useDigest ? FileSystem.CalculateFileDigest(path) : string.Empty,
                 PreviousHash = previousHash,
                 ACLs = path.GetACL()
             };
@@ -152,36 +148,6 @@ namespace IntegrityService.Utils
 
             _duplicateCheckBuffer.AddOrUpdate(fullPath, File.GetLastWriteTime(fullPath));
             return false;
-        }
-
-        private void SeedDatabase(ConcurrentBag<string> files)
-        {
-            if (files == null)
-            {
-                throw new ArgumentNullException(nameof(files));
-            }
-
-            if (files.IsEmpty)
-            {
-                throw new ArgumentException("Value cannot be an empty collection.", nameof(files));
-            }
-
-            var changes = new List<FileSystemChange>(files.Count);
-            changes.AddRange(files.Select(file => new FileSystemChange
-            {
-                Id = Guid.NewGuid(),
-                ChangeCategory = ChangeCategory.Discovery,
-                ConfigChangeType = ConfigChangeType.FileSystem,
-                Entity = file,
-                DateTime = DateTime.Now,
-                FullPath = file,
-                SourceComputer = Environment.MachineName,
-                CurrentHash = _useDigest ? FileSystem.CalculateFileDigest(file) : string.Empty,
-                PreviousHash = string.Empty,
-                ACLs = file.GetACL()
-            }));
-
-            Database.Context.FileSystemChanges.InsertBulk(changes, changes.Count);
         }
 
         private void Dispose(bool disposing)

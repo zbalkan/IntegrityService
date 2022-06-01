@@ -16,7 +16,7 @@ namespace IntegrityService.Utils
     {
         private static readonly SHA256 _sha256 = SHA256.Create();
 
-        internal static ConcurrentBag<string> StartSearch(List<string> pathsToSearch, List<string> excludedPaths, List<string> excludedExtensions)
+        internal static void StartSearch(List<string> pathsToSearch, List<string> excludedPaths, List<string> excludedExtensions, bool useDigest= true)
         {
             if (pathsToSearch is null)
             {
@@ -40,9 +40,7 @@ namespace IntegrityService.Utils
                 ReturnSpecialDirectories = false
             };
 
-            var files = new ConcurrentBag<string>();
-            Parallel.ForEach(pathsToSearch, path => files.AddRange(SearchFiles(path, defaultEnumOptions, excludedPaths, excludedExtensions)));
-            return files;
+            Parallel.ForEach(pathsToSearch, path => SearchFiles(path, defaultEnumOptions, excludedPaths, excludedExtensions, useDigest));
         }
 
         internal static bool IsExcluded(string path, List<string> excludedPaths, List<string> excludedExtensions)
@@ -98,20 +96,16 @@ namespace IntegrityService.Utils
         /// <param name="excludedPaths"></param>
         /// <param name="excludedExtensions"></param>
         /// <returns>List of files</returns> 
-        private static List<string> SearchFiles(string path, EnumerationOptions options, List<string> excludedPaths, List<string> excludedExtensions)
+        private static void SearchFiles(string path, EnumerationOptions options, List<string> excludedPaths, List<string> excludedExtensions, bool useDigest)
         {
-            const int minimumNumberOfFiles = 100000;
-            var filesAndFolders = new List<string>(minimumNumberOfFiles);
-            var excPaths = excludedPaths.ToList();
-            var excExtensions = excludedExtensions.ToList();
-
-            if (IsExcluded(path, excPaths, excExtensions)) return filesAndFolders;
+            if (IsExcluded(path, excludedPaths, excludedExtensions)) return;
 
             try
             {
                 foreach (var directory in Directory.EnumerateDirectories(path))
                 {
-                    filesAndFolders.AddRange(SearchFiles(directory, options, excPaths, excExtensions));
+                    WriteDatabase(directory, useDigest);
+                    SearchFiles(directory, options, excludedPaths, excludedExtensions, useDigest);
                 }
             }
             catch (UnauthorizedAccessException ex)
@@ -129,7 +123,10 @@ namespace IntegrityService.Utils
 
             try
             {
-                filesAndFolders.AddRange(Directory.EnumerateFiles(path, "*.*", options).Where(f => !IsExcluded(f, excPaths, excExtensions)));
+                foreach (var file  in Directory.EnumerateFiles(path, "*.*", options).Where(f => !IsExcluded(f, excludedPaths, excludedExtensions)))
+                {
+                    WriteDatabase(file, useDigest);
+                }
             }
             catch (UnauthorizedAccessException ex)
             {
@@ -143,8 +140,6 @@ namespace IntegrityService.Utils
             {
                 Debug.WriteLine(ex.Message);
             }
-
-            return filesAndFolders;
         }
 
         public static string OwnerName(FileSecurity fileSecurity)
@@ -202,7 +197,7 @@ namespace IntegrityService.Utils
             }
         }
 
-        private static void WriteDatabase(string path)
+        private static void WriteDatabase(string path, bool useDigest)
         {
             var change = new FileSystemChange
             {
@@ -213,7 +208,7 @@ namespace IntegrityService.Utils
                 DateTime = DateTime.Now,
                 FullPath = path,
                 SourceComputer = Environment.MachineName,
-                CurrentHash = CalculateFileDigest(path),
+                CurrentHash = useDigest ? CalculateFileDigest(path) : string.Empty,
                 PreviousHash = string.Empty,
                 ACLs = path.GetACL()
             };
