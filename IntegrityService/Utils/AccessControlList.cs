@@ -2,12 +2,12 @@
 
 namespace IntegrityService.Utils
 {
-    internal class AclBase
+    public class AccessControlList
     {
         public string Owner { get; set; }
 
         public string? PrimaryGroupOfOwner { get; set; }
 
-        public List<AceBase> Permissions { get; set; }
+        public List<AccessControlEntry> Permissions { get; set; }
     }
 }

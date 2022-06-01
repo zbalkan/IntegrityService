@@ -2,7 +2,7 @@
 
 namespace IntegrityService.Utils
 {
-    internal class AceBase
+    public class AccessControlEntry
     {
         public string UserOrGroup { get; set; }
 

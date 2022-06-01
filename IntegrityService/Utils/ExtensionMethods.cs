@@ -4,6 +4,9 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
 
@@ -19,37 +22,51 @@ namespace IntegrityService.Utils
             }
         }
 
-        public static string GetACL(this string path)
+        public static AccessControlList OfRegistryKey(this AccessControlList acl, RegistryKey key)
         {
-            var ac = new FileSystemAcl(new FileInfo(path));
-            var options = new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                ReadCommentHandling = JsonCommentHandling.Skip,
-                DictionaryKeyPolicy = JsonNamingPolicy.CamelCase
-            };
+            var registryPermissions = key.GetAccessControl(AccessControlSections.All);
+            acl.Owner = registryPermissions.GetOwner(typeof(NTAccount))?.Value ?? string.Empty;
+            acl.PrimaryGroupOfOwner = registryPermissions.GetGroup(typeof(NTAccount))?.Value ?? string.Empty;
+            acl.Permissions = registryPermissions
+                .GetAccessRules(true, true, typeof(NTAccount))
+                .Cast<RegistryAccessRule>()
+                .Select(rule => rule.ToAce())
+                .ToList();
 
-            var json = JsonSerializer.Serialize(ac, options);
-
-            return json;
+            return acl;
         }
 
-        public static string GetACL(this RegistryKey key)
+        public static AccessControlList OfFileSystem(this AccessControlList acl, FileInfo fileInfo)
         {
-            var ac = new RegistryAcl(key);
-            var options = new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                ReadCommentHandling = JsonCommentHandling.Skip,
-                DictionaryKeyPolicy = JsonNamingPolicy.CamelCase
-            };
+            var fileSystemSecurity = fileInfo.GetAccessControl();
+            acl.Owner = FileSystem.OwnerName(fileSystemSecurity);
+            acl.PrimaryGroupOfOwner = FileSystem.PrimaryGroupOfOwnerName(fileSystemSecurity);
+            acl.Permissions = fileSystemSecurity
+                .GetAccessRules(true, true, typeof(NTAccount))
+                .Cast<FileSystemAccessRule>()
+                .Select(rule => rule.ToAce())
+                .ToList();
 
-            var json = JsonSerializer.Serialize(ac, options);
-
-            return json;
+            return acl;
         }
+
+        public static AccessControlEntry ToAce(this RegistryAccessRule rule) => new()
+        {
+            UserOrGroup = rule.IdentityReference.Value,
+            Permissions = rule.RegistryRights.ListFlags().ToList(),
+            IsInherited = rule.IsInherited
+        };
+
+        public static AccessControlEntry ToAce(this FileSystemAccessRule rule) => new()
+        {
+            UserOrGroup = rule.IdentityReference.Value,
+            Permissions = rule.FileSystemRights.ListFlags().ToList(),
+            IsInherited = rule.IsInherited
+        };
+
+        public static string GetACL(this string path) => ToJson(new AccessControlList().OfFileSystem(new FileInfo(path)));
+
+        public static string GetACL(this RegistryKey key) => ToJson(new AccessControlList().OfRegistryKey(key));
 
         public static IEnumerable<string> ListFlags<T>(this T value) where T : struct, Enum
         {
@@ -86,5 +103,21 @@ namespace IntegrityService.Utils
                 ex = ex.InnerException;
             }
         }
+
+        private static string ToJson(AccessControlList ac)
+        {
+            var options = new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                ReadCommentHandling = JsonCommentHandling.Skip,
+                DictionaryKeyPolicy = JsonNamingPolicy.CamelCase
+            };
+
+            var json = JsonSerializer.Serialize(ac, options);
+
+            return json ?? string.Empty;
+        }
+
     }
 }
