@@ -1,10 +1,12 @@
-﻿using System;
+﻿using IntegrityService.FIM;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.AccessControl;
+using System.Security.Cryptography;
 using System.Security.Principal;
 using System.Threading.Tasks;
 
@@ -12,6 +14,8 @@ namespace IntegrityService.Utils
 {
     internal static class FileSystem
     {
+        private static readonly SHA256 _sha256 = SHA256.Create();
+
         internal static ConcurrentBag<string> StartSearch(List<string> pathsToSearch, List<string> excludedPaths, List<string> excludedExtensions)
         {
             if (pathsToSearch is null)
@@ -97,17 +101,17 @@ namespace IntegrityService.Utils
         private static List<string> SearchFiles(string path, EnumerationOptions options, List<string> excludedPaths, List<string> excludedExtensions)
         {
             const int minimumNumberOfFiles = 100000;
-            var files = new List<string>(minimumNumberOfFiles);
+            var filesAndFolders = new List<string>(minimumNumberOfFiles);
             var excPaths = excludedPaths.ToList();
             var excExtensions = excludedExtensions.ToList();
 
-            if (IsExcluded(path, excPaths, excExtensions)) return files;
+            if (IsExcluded(path, excPaths, excExtensions)) return filesAndFolders;
 
             try
             {
                 foreach (var directory in Directory.EnumerateDirectories(path))
                 {
-                    files.AddRange(SearchFiles(directory, options, excPaths, excExtensions));
+                    filesAndFolders.AddRange(SearchFiles(directory, options, excPaths, excExtensions));
                 }
             }
             catch (UnauthorizedAccessException ex)
@@ -125,7 +129,7 @@ namespace IntegrityService.Utils
 
             try
             {
-                files.AddRange(Directory.EnumerateFiles(path, "*.*", options).Where(f => !IsExcluded(f, excPaths, excExtensions)));
+                filesAndFolders.AddRange(Directory.EnumerateFiles(path, "*.*", options).Where(f => !IsExcluded(f, excPaths, excExtensions)));
             }
             catch (UnauthorizedAccessException ex)
             {
@@ -140,7 +144,7 @@ namespace IntegrityService.Utils
                 Debug.WriteLine(ex.Message);
             }
 
-            return files;
+            return filesAndFolders;
         }
 
         public static string OwnerName(FileSecurity fileSecurity)
@@ -196,6 +200,47 @@ namespace IntegrityService.Utils
             {
                 return string.Empty;
             }
+        }
+
+        private static void WriteDatabase(string path)
+        {
+            var change = new FileSystemChange
+            {
+                Id = Guid.NewGuid(),
+                ChangeCategory = ChangeCategory.Discovery,
+                ConfigChangeType = ConfigChangeType.FileSystem,
+                Entity = path,
+                DateTime = DateTime.Now,
+                FullPath = path,
+                SourceComputer = Environment.MachineName,
+                CurrentHash = CalculateFileDigest(path),
+                PreviousHash = string.Empty,
+                ACLs = path.GetACL()
+            };
+
+            Database.Context.FileSystemChanges.Insert(change);
+        }
+
+        public static string CalculateFileDigest(string path)
+        {
+            var digest = string.Empty;
+
+            if (!(IsFile(path) != null && IsFile(path)!.Value))
+            {
+                return digest;
+            }
+
+            try
+            {
+                using var fileStream = File.OpenRead(path);
+                digest = Convert.ToHexString(_sha256.ComputeHash(fileStream));
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+            }
+
+            return digest;
         }
     }
 }

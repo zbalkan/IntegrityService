@@ -5,7 +5,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 
 namespace IntegrityService.Utils
 {
@@ -17,7 +16,6 @@ namespace IntegrityService.Utils
         /// </summary>
         /// <see href="https://devblogs.microsoft.com/oldnewthing/20140507-00/?p=1053"/>
         private readonly FixedSizeDictionary<string, DateTime> _duplicateCheckBuffer;
-        private readonly SHA256 _sha256;
         private readonly ILogger _logger;
         private readonly bool _useDigest;
         private readonly List<FileSystemWatcher> _watchers;
@@ -27,7 +25,6 @@ namespace IntegrityService.Utils
         {
             _logger = logger;
             _useDigest = useDigest;
-            _sha256 = SHA256.Create();
             _duplicateCheckBuffer = new FixedSizeDictionary<string, DateTime>();
             _watchers = new List<FileSystemWatcher>();
         }
@@ -108,16 +105,16 @@ namespace IntegrityService.Utils
 
         private void OnError(object sender, ErrorEventArgs e) => e.GetException().Log(_logger);
 
-        private void ProcessEvent(string filePath, ChangeCategory category)
+        private void ProcessEvent(string path, ChangeCategory category)
         {
-            if (FileSystem.IsExcluded(filePath, Settings.Instance.ExcludedPaths, Settings.Instance.ExcludedExtensions) || IsDuplicate(filePath))
+            if (FileSystem.IsExcluded(path, Settings.Instance.ExcludedPaths, Settings.Instance.ExcludedExtensions) || IsDuplicate(path))
             {
                 return;
             }
 
             var previousChange = Database.Context.FileSystemChanges
                 .Query()
-                .Where(x => x.FullPath.Equals(filePath))
+                .Where(x => x.FullPath.Equals(path))
                 .OrderByDescending(c => c.DateTime)
                 .ToList();
 
@@ -132,13 +129,13 @@ namespace IntegrityService.Utils
                 Id = Guid.NewGuid(),
                 ChangeCategory = category,
                 ConfigChangeType = ConfigChangeType.FileSystem,
-                Entity = filePath,
+                Entity = path,
                 DateTime = DateTime.Now,
-                FullPath = filePath,
+                FullPath = path,
                 SourceComputer = Environment.MachineName,
-                CurrentHash = CalculateFileDigest(filePath),
+                CurrentHash = FileSystem.CalculateFileDigest(path),
                 PreviousHash = previousHash,
-                ACLs = filePath.GetACL()
+                ACLs = path.GetACL()
             };
 
             Database.Context.FileSystemChanges.Insert(change);
@@ -155,28 +152,6 @@ namespace IntegrityService.Utils
 
             _duplicateCheckBuffer.AddOrUpdate(fullPath, File.GetLastWriteTime(fullPath));
             return false;
-        }
-
-        private string CalculateFileDigest(string path)
-        {
-            var digest = string.Empty;
-
-            if (!_useDigest || !(FileSystem.IsFile(path) != null && FileSystem.IsFile(path)!.Value))
-            {
-                return digest;
-            }
-
-            try
-            {
-                using var fileStream = File.OpenRead(path);
-                digest = Convert.ToHexString(_sha256.ComputeHash(fileStream));
-            }
-            catch (Exception ex)
-            {
-                ex.Log(_logger);
-            }
-
-            return digest;
         }
 
         private void SeedDatabase(ConcurrentBag<string> files)
@@ -201,7 +176,7 @@ namespace IntegrityService.Utils
                 DateTime = DateTime.Now,
                 FullPath = file,
                 SourceComputer = Environment.MachineName,
-                CurrentHash = CalculateFileDigest(file),
+                CurrentHash = _useDigest ? FileSystem.CalculateFileDigest(file) : string.Empty,
                 PreviousHash = string.Empty,
                 ACLs = file.GetACL()
             }));
@@ -215,7 +190,7 @@ namespace IntegrityService.Utils
             {
                 if (disposing)
                 {
-                    _sha256.Dispose();
+                    // Dispose managed resources
                 }
 
                 disposedValue = true;
