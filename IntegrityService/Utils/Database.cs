@@ -8,7 +8,7 @@
             {
                 if (_context == null)
                 {
-                    _context = new Context(Settings.Instance.ConnectionString);
+                    _context = new Context();
                 }
                 return _context;
             }
@@ -16,7 +16,7 @@
 
         private static Context _context;
 
-        public static void Start() => _ = _context; // Just initiate it.
+        public static void Start() => _ = Context; // Just initiate it.
 
         public static void Stop() => _context.Dispose();
     }

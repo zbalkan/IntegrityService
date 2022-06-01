@@ -13,9 +13,18 @@ namespace IntegrityService.Utils
 
         private readonly LiteDatabase _database;
 
-        public Context(string connectionString)
+        /// <summary>
+        ///     Hardcoded database file name is fim.db. Initial database size is set to 50MB for performance reasons.
+        /// </summary>
+        public Context()
         {
-            _database = new LiteDatabase(connectionString);
+            _database = new LiteDatabase(new ConnectionString()
+            {
+                Filename = @"fim.db",
+                Connection = ConnectionType.Shared,
+                InitialSize = 8192 * 100 * 1000
+            });
+
             FileSystemChanges = _database.GetCollection<FileSystemChange>("fileSystemChanges");
             FileSystemChanges.EnsureIndex(x => x.Id);
             FileSystemChanges.EnsureIndex(x => x.Entity);

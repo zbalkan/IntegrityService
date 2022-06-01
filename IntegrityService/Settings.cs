@@ -48,14 +48,6 @@ namespace IntegrityService
         /// </summary>
         public int HeartbeatInterval { get; private set; }
 
-        /// <summary>
-        ///     Hardcoded database file name is fim.db. Initial database size is set to 50MB for performance reasons.
-        /// </summary>
-        // ReSharper disable once MemberCanBeMadeStatic.Global
-#pragma warning disable CA1822 // Mark members as static
-        public string ConnectionString => "Filename=fim.db;InitialSize=50MB;";
-#pragma warning restore CA1822 // Mark members as static
-
         internal static Settings Instance => Lazy.Value;
 
         private static readonly Lazy<Settings> Lazy = new(() => new Settings());

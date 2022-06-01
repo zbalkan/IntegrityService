@@ -16,7 +16,7 @@ namespace IntegrityService.Utils
     {
         private static readonly SHA256 _sha256 = SHA256.Create();
 
-        internal static void StartSearch(List<string> pathsToSearch, List<string> excludedPaths, List<string> excludedExtensions, bool useDigest= true)
+        internal static void StartSearch(List<string> pathsToSearch, List<string> excludedPaths, List<string> excludedExtensions, bool useDigest = true)
         {
             if (pathsToSearch is null)
             {
@@ -82,7 +82,7 @@ namespace IntegrityService.Utils
             }
             catch (Exception ex)
             {
-               // TODO: Log properly
+                // TODO: Log properly
                 Debug.WriteLine(ex.Message);
                 return null;
             }
@@ -123,7 +123,7 @@ namespace IntegrityService.Utils
 
             try
             {
-                foreach (var file  in Directory.EnumerateFiles(path, "*.*", options).Where(f => !IsExcluded(f, excludedPaths, excludedExtensions)))
+                foreach (var file in Directory.EnumerateFiles(path, "*.*", options).Where(f => !IsExcluded(f, excludedPaths, excludedExtensions)))
                 {
                     WriteDatabase(file, useDigest);
                 }

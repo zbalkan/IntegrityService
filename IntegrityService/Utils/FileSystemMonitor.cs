@@ -36,7 +36,7 @@ namespace IntegrityService.Utils
                 _logger.LogInformation("Could not find the database file. Initiating file system discovery. It will take up to 10 minutes.");
                 Registry.WriteDwordValue("FileDiscoveryCompleted", 0, true);
                 FileSystem.StartSearch(Settings.Instance.MonitoredPaths, Settings.Instance.ExcludedPaths,
-                    Settings.Instance.ExcludedExtensions);
+                    Settings.Instance.ExcludedExtensions, _useDigest);
 
                 Registry.WriteDwordValue("FileDiscoveryCompleted", 1, true);
                 _logger.LogInformation("File system discovery completed.");
