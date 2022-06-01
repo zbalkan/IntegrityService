@@ -26,10 +26,10 @@ namespace IntegrityService.Utils
         private readonly int _pid;
         private readonly CancellationTokenSource _cancellationTokenSource;
 
-        private bool disposedValue;
+        private bool _disposedValue;
 
-        const NtKeywords traceFlags = NtKeywords.Registry;
-        const NtKeywords stackFlags = NtKeywords.None;
+        const NtKeywords TraceFlags = NtKeywords.Registry;
+        const NtKeywords StackFlags = NtKeywords.None;
 
         public RegistryMonitor(ILogger logger)
         {
@@ -50,13 +50,13 @@ namespace IntegrityService.Utils
         {
             var session = new TraceEventSession(_sessionName);
             _logger.LogInformation("Started ETW session {session} for Registry changes.", _sessionName);
-            _ = session.EnableKernelProvider(traceFlags, stackFlags);
+            _ = session.EnableKernelProvider(TraceFlags, StackFlags);
             MakeKernelParserStateless(session.Source);
             RundownSession(_sessionName + "-rundown");
 
             // KCB vents
-            session.Source.Kernel.RegistryKCBCreate += (sender) => ProcessKCBCreateEvent(sender);
-            session.Source.Kernel.RegistryKCBDelete += (sender) => ProcessKCBDeleteEvent(sender);
+            session.Source.Kernel.RegistryKCBCreate += (sender) => ProcessKcbCreateEvent(sender);
+            session.Source.Kernel.RegistryKCBDelete += (sender) => ProcessKcbDeleteEvent(sender);
 
             // Key events
             session.Source.Kernel.RegistryCreate += (ev) => ProcessEvent(ev, ChangeCategory.Created);
@@ -86,15 +86,15 @@ namespace IntegrityService.Utils
         {
             var session = new TraceEventSession(sessionName);
             _logger.LogInformation("Started ETW session {session} for Registry changes.", _sessionName);
-            session.EnableKernelProvider(traceFlags, stackFlags);
-            session.Source.Kernel.RegistryKCBRundownBegin += (sender) => ProcessKCBCreateEvent(ev: sender);
-            session.Source.Kernel.RegistryKCBRundownEnd += (sender) => ProcessKCBDeleteEvent(ev: sender);
+            session.EnableKernelProvider(TraceFlags, StackFlags);
+            session.Source.Kernel.RegistryKCBRundownBegin += (sender) => ProcessKcbCreateEvent(ev: sender);
+            session.Source.Kernel.RegistryKCBRundownEnd += (sender) => ProcessKcbDeleteEvent(ev: sender);
 
             using var r = _cancellationTokenSource.Token.Register(() => session.Stop());
             _ = session.Source.Process();
         }
 
-        private void ProcessKCBCreateEvent(RegistryTraceData ev)
+        private void ProcessKcbCreateEvent(RegistryTraceData ev)
         {
             _logger
                 .LogInformation("Category: {category}\nChange Type: {changeType}\nDescription: Key Control Block Created.\nTimestamp: {timestamp}\nEvent Name: {event}\nKey Handle: {keyHandle}\nKey Name: {keyName}",
@@ -102,7 +102,7 @@ namespace IntegrityService.Utils
             _regHandleToKeyName[ev.KeyHandle] = ev.KeyName;
         }
 
-        private void ProcessKCBDeleteEvent(RegistryTraceData ev)
+        private void ProcessKcbDeleteEvent(RegistryTraceData ev)
         {
             _logger
                 .LogInformation("Category: {category}\nChange Type: {changeType}\nDescription: Key Control Block Deleted.\nTimestamp: {timestamp}\nEvent Name: {event}\nKey Handle: {keyHandle}\nKey Name: {keyName}",
@@ -236,14 +236,14 @@ namespace IntegrityService.Utils
 
         private void Dispose(bool disposing)
         {
-            if (!disposedValue)
+            if (!_disposedValue)
             {
                 if (disposing)
                 {
                     _cancellationTokenSource.Dispose();
                 }
 
-                disposedValue = true;
+                _disposedValue = true;
             }
         }
 

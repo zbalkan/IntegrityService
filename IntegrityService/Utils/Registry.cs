@@ -8,7 +8,7 @@ namespace IntegrityService.Utils
     internal static class Registry
     {
 #pragma warning disable CS8601 // Possible null reference assignment.
-        private static readonly RegistryKey _hklmSoftware = Microsoft.Win32.Registry.LocalMachine.OpenSubKey("Software", true);
+        private static readonly RegistryKey HklmSoftware = Microsoft.Win32.Registry.LocalMachine.OpenSubKey("Software", true);
 #pragma warning restore CS8601 // Possible null reference assignment.
 
         private const string FimKeyName = "FIM";
@@ -22,14 +22,14 @@ namespace IntegrityService.Utils
             {
                 RegistryKey result;
 
-                if (_hklmSoftware?.OpenSubKey(FimKeyName, true) == null)
+                if (HklmSoftware?.OpenSubKey(FimKeyName, true) == null)
                 {
-                    result = _hklmSoftware.CreateSubKey(FimKeyName, true);
+                    result = HklmSoftware.CreateSubKey(FimKeyName, true);
 
                 }
                 else
                 {
-                    result = _hklmSoftware.OpenSubKey(FimKeyName, true);
+                    result = HklmSoftware.OpenSubKey(FimKeyName, true);
                 }
 
                 return result;

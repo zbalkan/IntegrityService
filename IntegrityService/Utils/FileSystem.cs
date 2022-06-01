@@ -1,6 +1,5 @@
 ﻿using IntegrityService.FIM;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -14,7 +13,7 @@ namespace IntegrityService.Utils
 {
     internal static class FileSystem
     {
-        private static readonly SHA256 _sha256 = SHA256.Create();
+        private static readonly SHA256 Sha256 = SHA256.Create();
 
         internal static void StartSearch(List<string> pathsToSearch, List<string> excludedPaths, List<string> excludedExtensions, bool useDigest = true)
         {
@@ -228,7 +227,7 @@ namespace IntegrityService.Utils
             try
             {
                 using var fileStream = File.OpenRead(path);
-                digest = Convert.ToHexString(_sha256.ComputeHash(fileStream));
+                digest = Convert.ToHexString(Sha256.ComputeHash(fileStream));
             }
             catch (Exception ex)
             {

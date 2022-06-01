@@ -1,10 +1,8 @@
 ﻿using IntegrityService.FIM;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 
 namespace IntegrityService.Utils
 {
@@ -19,7 +17,7 @@ namespace IntegrityService.Utils
         private readonly ILogger _logger;
         private readonly bool _useDigest;
         private readonly List<FileSystemWatcher> _watchers;
-        private bool disposedValue;
+        private bool _disposedValue;
 
         public FileSystemMonitor(ILogger logger, bool useDigest)
         {
@@ -33,7 +31,7 @@ namespace IntegrityService.Utils
         {
             if (Registry.ReadDwordValue("FileDiscoveryCompleted") == 0)
             {
-                _logger.LogInformation("Could not find the database file. Initiating file system discovery. It will take up to 10 minutes.");
+                _logger.LogInformation("Could not find the database file. Initiating file system discovery. It will take time.");
                 Registry.WriteDwordValue("FileDiscoveryCompleted", 0, true);
                 FileSystem.StartSearch(Settings.Instance.MonitoredPaths, Settings.Instance.ExcludedPaths,
                     Settings.Instance.ExcludedExtensions, _useDigest);
@@ -152,14 +150,14 @@ namespace IntegrityService.Utils
 
         private void Dispose(bool disposing)
         {
-            if (!disposedValue)
+            if (!_disposedValue)
             {
                 if (disposing)
                 {
                     // Dispose managed resources
                 }
 
-                disposedValue = true;
+                _disposedValue = true;
             }
         }
 
