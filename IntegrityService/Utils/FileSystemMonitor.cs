@@ -25,10 +25,7 @@ namespace IntegrityService.Utils
             _watchers = new List<FileSystemWatcher>();
         }
         // This should run async
-        public void Start()
-        {
-            InvokeWatchers();
-        }
+        public void Start() => InvokeWatchers();
 
         public void Stop()
         {

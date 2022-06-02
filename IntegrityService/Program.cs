@@ -21,7 +21,11 @@ namespace IntegrityService
                         .WriteTo.EventLog("FIM", "FIM", manageEventSource: true,eventIdProvider: new EventIdProvider())
                         .CreateLogger());
                 })
-                .ConfigureServices(services => _ = services.AddHostedService<Worker>())
+                .ConfigureServices(services =>
+                {
+                    _ = services.AddHostedService<Worker>();
+                    _ = services.AddSingleton<BackgroundWorkerQueue>();
+                })
                 .UseWindowsService();
     }
 }

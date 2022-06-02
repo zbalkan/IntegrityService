@@ -15,12 +15,6 @@ namespace IntegrityService.Utils
     {
         private static readonly SHA256 Sha256 = SHA256.Create();
 
-#pragma warning disable AsyncFixer01 // Unnecessary async/await usage
-#pragma warning disable U2U1006 // Await tasks correctly
-        internal static async Task StartSearchAsync(List<string> pathsToSearch, List<string> excludedPaths, List<string> excludedExtensions) => await Task.Run(() => StartSearch(pathsToSearch, excludedPaths, excludedExtensions));
-#pragma warning restore U2U1006 // Await tasks correctly
-#pragma warning restore AsyncFixer01 // Unnecessary async/await usage
-
         internal static void StartSearch(List<string> pathsToSearch, List<string> excludedPaths, List<string> excludedExtensions)
         {
             if (pathsToSearch is null)
