@@ -13,6 +13,11 @@ namespace IntegrityService.Utils
 
         public async Task<Func<CancellationToken, Task>> DequeueAsync(CancellationToken cancellationToken)
         {
+            if (_workItems.IsEmpty)
+            {
+                return null;
+            }
+
             await _signal.WaitAsync(cancellationToken);
             _workItems.TryDequeue(out var workItem);
 

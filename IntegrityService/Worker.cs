@@ -35,9 +35,13 @@ namespace IntegrityService
                 Environment.Exit(1);
             }
 
-            _backgroundWorkerQueue.QueueBackgroundWorkItem(token => StartFilesystemDiscoveryAsync());
+            if (!Settings.Instance.DisableLocalDatabase && Registry.ReadDwordValue("FileDiscoveryCompleted") == 0)
+                _backgroundWorkerQueue.QueueBackgroundWorkItem(token => StartFilesystemDiscoveryAsync());
+
             await StartFileMonitoringAsync().ConfigureAwait(false);
-            await StartRegistryMonitoringAsync().ConfigureAwait(false);
+
+            if (Settings.Instance.EnableRegistryMonitoring)
+                await StartRegistryMonitoringAsync().ConfigureAwait(false);
 
             // This loop must continue until service is stopped.
             while (!stoppingToken.IsCancellationRequested)
@@ -45,49 +49,36 @@ namespace IntegrityService
                 if (Settings.Instance.HeartbeatInterval >= 0)
                     _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
 
-                // TODO: This runs once. Then starts waiting
                 var workItem = await _backgroundWorkerQueue.DequeueAsync(stoppingToken);
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                workItem(stoppingToken);
+                if (workItem?.Target != null)
+                {
+                    workItem(stoppingToken);
+                }
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 await Task.Delay(Settings.Instance.HeartbeatInterval * 1000, stoppingToken);
             }
         }
 
-        private async Task StartFilesystemDiscoveryAsync()
-        {
-            _ = await Task.Run(async () =>
+        private async Task StartFilesystemDiscoveryAsync() =>
+            await Task.Run(() =>
             {
-                if (!Settings.Instance.DisableLocalDatabase && Registry.ReadDwordValue("FileDiscoveryCompleted") == 0)
-                {
-                    _logger.LogInformation("Could not find the database file. Initiating file system discovery. It will take time.");
-                    Database.Start();
-                    Registry.WriteDwordValue("FileDiscoveryCompleted", 0, true);
-                    FileSystem.StartSearch(Settings.Instance.MonitoredPaths, Settings.Instance.ExcludedPaths,
-                        Settings.Instance.ExcludedExtensions);
+                _logger.LogInformation(
+                    "Could not find the database file. Initiating file system discovery. It will take time.");
+                Database.Start();
+                Registry.WriteDwordValue("FileDiscoveryCompleted", 0, true);
+                FileSystem.StartSearch(Settings.Instance.MonitoredPaths, Settings.Instance.ExcludedPaths,
+                    Settings.Instance.ExcludedExtensions);
 
-                    Registry.WriteDwordValue("FileDiscoveryCompleted", 1, true);
-                    _logger.LogInformation("File system discovery completed.");
-                }
-                return true; // This is kept here just to suppress warnings
-            }).ConfigureAwait(false);
-        }
+                Registry.WriteDwordValue("FileDiscoveryCompleted", 1, true);
+                _logger.LogInformation("File system discovery completed.");
+            });
 
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-        private async Task StartFileMonitoringAsync() => Task.Run(() => _fsMonitor.Start()).ConfigureAwait(false);
-#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+        private async Task StartFileMonitoringAsync() =>
+            await Task.Run(() => _fsMonitor.Start()).ConfigureAwait(false);
 
-        private async Task StartRegistryMonitoringAsync()
-        {
-            _ = await Task.Run(() =>
-            {
-                if (Settings.Instance.EnableRegistryMonitoring)
-                {
-                    _regMonitor.Start();
-                }
-                return true; // This is kept here just to suppress warnings
-            }).ConfigureAwait(false);
-        }
+        private async Task StartRegistryMonitoringAsync() =>
+            await Task.Run(() => _regMonitor.Start()).ConfigureAwait(false);
 
         private bool Handler(CtrlType signal)
         {
