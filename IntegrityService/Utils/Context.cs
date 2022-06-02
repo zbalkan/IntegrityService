@@ -10,11 +10,12 @@ namespace IntegrityService.Utils
 
         public ILiteCollection<RegistryChange> RegistryChanges { get; }
 
-
         private readonly LiteDatabase _database;
 
+        private const long initialDatabaseSize = 800 * 1000 * 1024; // 800MB
+
         /// <summary>
-        ///     Hardcoded database file name is fim.db. Initial database size is set to 50MB for performance reasons.
+        ///     Hardcoded database file name is fim.db. Initial database size is set to 800MB for performance reasons.
         /// </summary>
         public Context()
         {
@@ -22,7 +23,7 @@ namespace IntegrityService.Utils
             {
                 Filename = @"fim.db",
                 Connection = ConnectionType.Shared,
-                InitialSize = 8192 * 100 * 1000
+                InitialSize = initialDatabaseSize
             });
 
             FileSystemChanges = _database.GetCollection<FileSystemChange>("fileSystemChanges");
