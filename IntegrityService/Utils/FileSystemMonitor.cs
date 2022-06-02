@@ -24,7 +24,7 @@ namespace IntegrityService.Utils
             _duplicateCheckBuffer = new FixedSizeDictionary<string, DateTime>();
             _watchers = new List<FileSystemWatcher>();
         }
-
+        // This should run async
         public void Start()
         {
             if (!Settings.Instance.DisableLocalDatabase && Registry.ReadDwordValue("FileDiscoveryCompleted") == 0)

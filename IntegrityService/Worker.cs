@@ -30,6 +30,7 @@ namespace IntegrityService
             else
             {
                 _logger.LogError("Failed to read settings.");
+                Environment.Exit(1);
             }
 
             if (!Settings.Instance.DisableLocalDatabase)
@@ -37,11 +38,8 @@ namespace IntegrityService
                 Database.Start();
             }
 
-            _fsMonitor.Start();
-            if (Settings.Instance.EnableRegistryMonitoring)
-            {
-                _regMonitor.Start();
-            }
+            await StartFileMonitoringAsync().ConfigureAwait(false);
+            await StartRegistryMonitoringAsync().ConfigureAwait(false);
 
             // This loop must continue until service is stopped.
             while (!stoppingToken.IsCancellationRequested)
@@ -51,6 +49,29 @@ namespace IntegrityService
 
                 await Task.Delay(Settings.Instance.HeartbeatInterval * 1000, stoppingToken);
             }
+        }
+
+        private async Task StartFileMonitoringAsync()
+        {
+            var task = Task.Run(() =>
+            {
+                _fsMonitor.Start();
+                return true;
+            });
+            var result = await task;
+        }
+
+        private async Task StartRegistryMonitoringAsync()
+        {
+            var task = Task.Run(() =>
+            {
+                if (Settings.Instance.EnableRegistryMonitoring)
+                {
+                    _regMonitor.Start();
+                }
+                return true;
+            });
+            var result = await task;
         }
 
         private bool Handler(CtrlType signal)
