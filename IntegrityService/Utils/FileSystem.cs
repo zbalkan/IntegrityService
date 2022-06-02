@@ -90,20 +90,20 @@ namespace IntegrityService.Utils
         /// <summary> 
         ///     A safe way to get all the files in a directory and sub directory without crashing on UnauthorizedException or PathTooLongException 
         /// </summary> 
-        /// <param name="path">Starting directory</param>
+        /// <param name="directoryPath">Starting directory</param>
         /// <param name="options">Enumeration options</param>
         /// <param name="excludedPaths"></param>
         /// <param name="excludedExtensions"></param>
         /// <returns>List of files</returns> 
-        private static void SearchFiles(string path, EnumerationOptions options, List<string> excludedPaths, List<string> excludedExtensions, bool useDigest)
+        private static void SearchFiles(string directoryPath, EnumerationOptions options, List<string> excludedPaths, List<string> excludedExtensions, bool useDigest)
         {
-            if (IsExcluded(path, excludedPaths, excludedExtensions)) return;
+            if (IsExcluded(directoryPath, excludedPaths, excludedExtensions)) return;
 
             try
             {
-                foreach (var directory in Directory.EnumerateDirectories(path))
+                foreach (var directory in Directory.EnumerateDirectories(directoryPath))
                 {
-                    WriteDatabase(directory, useDigest);
+                    WriteDiscoveryToDatabase(directory, useDigest);
                     SearchFiles(directory, options, excludedPaths, excludedExtensions, useDigest);
                 }
             }
@@ -122,9 +122,9 @@ namespace IntegrityService.Utils
 
             try
             {
-                foreach (var file in Directory.EnumerateFiles(path, "*.*", options).Where(f => !IsExcluded(f, excludedPaths, excludedExtensions)))
+                foreach (var file in Directory.EnumerateFiles(directoryPath, "*.*", options).Where(f => !IsExcluded(f, excludedPaths, excludedExtensions)))
                 {
-                    WriteDatabase(file, useDigest);
+                    WriteDiscoveryToDatabase(file, useDigest);
                 }
             }
             catch (UnauthorizedAccessException ex)
@@ -196,7 +196,7 @@ namespace IntegrityService.Utils
             }
         }
 
-        private static void WriteDatabase(string path, bool useDigest)
+        private static void WriteDiscoveryToDatabase(string path, bool useDigest)
         {
             var change = new FileSystemChange
             {
@@ -218,22 +218,19 @@ namespace IntegrityService.Utils
         public static string CalculateFileDigest(string path)
         {
             var digest = string.Empty;
-
-            if (!(IsFile(path) != null && IsFile(path)!.Value))
+            var isFile = IsFile(path);
+            if (isFile != null && isFile.Value)
             {
-                return digest;
+                try
+                {
+                    using var fileStream = File.OpenRead(path);
+                    digest = Convert.ToHexString(Sha256.ComputeHash(fileStream));
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine(ex.Message);
+                }
             }
-
-            try
-            {
-                using var fileStream = File.OpenRead(path);
-                digest = Convert.ToHexString(Sha256.ComputeHash(fileStream));
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine(ex.Message);
-            }
-
             return digest;
         }
     }
