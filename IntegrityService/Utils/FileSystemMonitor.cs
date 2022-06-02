@@ -15,26 +15,24 @@ namespace IntegrityService.Utils
         /// <see href="https://devblogs.microsoft.com/oldnewthing/20140507-00/?p=1053"/>
         private readonly FixedSizeDictionary<string, DateTime> _duplicateCheckBuffer;
         private readonly ILogger _logger;
-        private readonly bool _useDigest;
         private readonly List<FileSystemWatcher> _watchers;
         private bool _disposedValue;
 
-        public FileSystemMonitor(ILogger logger, bool useDigest)
+        public FileSystemMonitor(ILogger logger)
         {
             _logger = logger;
-            _useDigest = useDigest;
             _duplicateCheckBuffer = new FixedSizeDictionary<string, DateTime>();
             _watchers = new List<FileSystemWatcher>();
         }
 
         public void Start()
         {
-            if (Registry.ReadDwordValue("FileDiscoveryCompleted") == 0)
+            if (!Settings.Instance.DisableLocalDatabase && Registry.ReadDwordValue("FileDiscoveryCompleted") == 0)
             {
                 _logger.LogInformation("Could not find the database file. Initiating file system discovery. It will take time.");
                 Registry.WriteDwordValue("FileDiscoveryCompleted", 0, true);
                 FileSystem.StartSearch(Settings.Instance.MonitoredPaths, Settings.Instance.ExcludedPaths,
-                    Settings.Instance.ExcludedExtensions, _useDigest);
+                    Settings.Instance.ExcludedExtensions);
 
                 Registry.WriteDwordValue("FileDiscoveryCompleted", 1, true);
                 _logger.LogInformation("File system discovery completed.");
@@ -106,34 +104,38 @@ namespace IntegrityService.Utils
                 return;
             }
 
-            var previousChange = Database.Context.FileSystemChanges
-                .Query()
-                .Where(x => x.FullPath.Equals(path))
-                .OrderByDescending(c => c.DateTime)
-                .ToList();
 
-            var previousHash = string.Empty;
-            if (previousChange.Count > 0)
+
+            if (!Settings.Instance.DisableLocalDatabase)
             {
-                previousHash = previousChange[0]?.CurrentHash ?? string.Empty;
+                var previousChange = Database.Context.FileSystemChanges.Query()
+                                                                       .Where(x => x.FullPath.Equals(path))
+                                                                       .OrderByDescending(c => c.DateTime)
+                                                                       .ToList();
+                var previousHash = string.Empty;
+                if (previousChange.Count > 0)
+                {
+                    previousHash = previousChange[0]?.CurrentHash ?? string.Empty;
+                }
+
+                var change = new FileSystemChange
+                {
+                    Id = Guid.NewGuid(),
+                    ChangeCategory = category,
+                    ConfigChangeType = ConfigChangeType.FileSystem,
+                    Entity = path,
+                    DateTime = DateTime.Now,
+                    FullPath = path,
+                    SourceComputer = Environment.MachineName,
+                    CurrentHash = FileSystem.CalculateFileDigest(path),
+                    PreviousHash = previousHash,
+                    ACLs = path.GetACL()
+                };
+
+                Database.Context.FileSystemChanges.Insert(change);
+                _logger.LogInformation("Category: {category}\nChange Type: {changeType}\nPath: {path}\nCurrent Hash: {currentHash}\nPreviousHash: {previousHash}", Enum.GetName(category), Enum.GetName(ConfigChangeType.FileSystem), path, change.CurrentHash, change.PreviousHash);
             }
-
-            var change = new FileSystemChange
-            {
-                Id = Guid.NewGuid(),
-                ChangeCategory = category,
-                ConfigChangeType = ConfigChangeType.FileSystem,
-                Entity = path,
-                DateTime = DateTime.Now,
-                FullPath = path,
-                SourceComputer = Environment.MachineName,
-                CurrentHash = _useDigest ? FileSystem.CalculateFileDigest(path) : string.Empty,
-                PreviousHash = previousHash,
-                ACLs = path.GetACL()
-            };
-
-            Database.Context.FileSystemChanges.Insert(change);
-            _logger.LogInformation("Category: {category}\nChange Type: {changeType}\nPath: {path}\nCurrent Hash: {currentHash}\nPreviousHash: {previousHash}", Enum.GetName(change.ChangeCategory), Enum.GetName(ConfigChangeType.FileSystem), change.FullPath, change.CurrentHash, change.PreviousHash);
+            _logger.LogInformation("Category: {category}\nChange Type: {changeType}\nPath: {path}\nCurrent Hash: {currentHash}\nPreviousHash: {previousHash}", Enum.GetName(category), Enum.GetName(ConfigChangeType.FileSystem), path, FileSystem.CalculateFileDigest(path), string.Empty);
         }
 
         private bool IsDuplicate(string fullPath)

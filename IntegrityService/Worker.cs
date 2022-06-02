@@ -15,7 +15,7 @@ namespace IntegrityService
         public Worker(ILogger<Worker> logger)
         {
             _logger = logger;
-            _fsMonitor = new FileSystemMonitor(_logger, true);
+            _fsMonitor = new FileSystemMonitor(_logger);
             _regMonitor = new RegistryMonitor(_logger);
         }
 

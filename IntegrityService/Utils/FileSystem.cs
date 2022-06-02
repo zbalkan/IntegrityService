@@ -15,7 +15,7 @@ namespace IntegrityService.Utils
     {
         private static readonly SHA256 Sha256 = SHA256.Create();
 
-        internal static void StartSearch(List<string> pathsToSearch, List<string> excludedPaths, List<string> excludedExtensions, bool useDigest = true)
+        internal static void StartSearch(List<string> pathsToSearch, List<string> excludedPaths, List<string> excludedExtensions)
         {
             if (pathsToSearch is null)
             {
@@ -39,7 +39,7 @@ namespace IntegrityService.Utils
                 ReturnSpecialDirectories = false
             };
 
-            Parallel.ForEach(pathsToSearch, path => SearchFiles(path, defaultEnumOptions, excludedPaths, excludedExtensions, useDigest));
+            Parallel.ForEach(pathsToSearch, path => SearchFiles(path, defaultEnumOptions, excludedPaths, excludedExtensions));
         }
 
         internal static bool IsExcluded(string path, List<string> excludedPaths, List<string> excludedExtensions)
@@ -95,7 +95,7 @@ namespace IntegrityService.Utils
         /// <param name="excludedPaths"></param>
         /// <param name="excludedExtensions"></param>
         /// <returns>List of files</returns> 
-        private static void SearchFiles(string directoryPath, EnumerationOptions options, List<string> excludedPaths, List<string> excludedExtensions, bool useDigest)
+        private static void SearchFiles(string directoryPath, EnumerationOptions options, List<string> excludedPaths, List<string> excludedExtensions)
         {
             if (IsExcluded(directoryPath, excludedPaths, excludedExtensions)) return;
 
@@ -103,8 +103,8 @@ namespace IntegrityService.Utils
             {
                 foreach (var directory in Directory.EnumerateDirectories(directoryPath))
                 {
-                    WriteDiscoveryToDatabase(directory, useDigest);
-                    SearchFiles(directory, options, excludedPaths, excludedExtensions, useDigest);
+                    WriteDiscoveryToDatabase(directory);
+                    SearchFiles(directory, options, excludedPaths, excludedExtensions);
                 }
             }
             catch (UnauthorizedAccessException ex)
@@ -124,7 +124,7 @@ namespace IntegrityService.Utils
             {
                 foreach (var file in Directory.EnumerateFiles(directoryPath, "*.*", options).Where(f => !IsExcluded(f, excludedPaths, excludedExtensions)))
                 {
-                    WriteDiscoveryToDatabase(file, useDigest);
+                    WriteDiscoveryToDatabase(file);
                 }
             }
             catch (UnauthorizedAccessException ex)
@@ -196,7 +196,7 @@ namespace IntegrityService.Utils
             }
         }
 
-        private static void WriteDiscoveryToDatabase(string path, bool useDigest)
+        private static void WriteDiscoveryToDatabase(string path)
         {
             var change = new FileSystemChange
             {
@@ -207,7 +207,7 @@ namespace IntegrityService.Utils
                 DateTime = DateTime.Now,
                 FullPath = path,
                 SourceComputer = Environment.MachineName,
-                CurrentHash = useDigest ? CalculateFileDigest(path) : string.Empty,
+                CurrentHash = CalculateFileDigest(path),
                 PreviousHash = string.Empty,
                 ACLs = path.GetACL()
             };

@@ -48,6 +48,12 @@ namespace IntegrityService
         /// </summary>
         public int HeartbeatInterval { get; private set; }
 
+        /// <summary>
+        ///     Switch to enable/disable local database. When true, you cannot display previous hashes.
+        ///     Default: false.
+        /// </summary>
+        public bool DisableLocalDatabase { get; private set; }
+
         internal static Settings Instance => Lazy.Value;
 
         private static readonly Lazy<Settings> Lazy = new(() => new Settings());
@@ -80,6 +86,9 @@ namespace IntegrityService
             Registry.WriteDwordValue("HeartbeatInterval", 60);
             var heartbeat = Registry.ReadDwordValue("HeartbeatInterval");
             HeartbeatInterval = heartbeat >= 0 ? heartbeat : 60;
+
+            Registry.WriteDwordValue("DisableLocalDatabase", 0);
+            DisableLocalDatabase = Registry.ReadDwordValue("DisableLocalDatabase") == 1;
         }
     }
 }
