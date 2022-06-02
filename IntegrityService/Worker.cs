@@ -33,11 +33,7 @@ namespace IntegrityService
                 Environment.Exit(1);
             }
 
-            if (!Settings.Instance.DisableLocalDatabase)
-            {
-                Database.Start();
-            }
-
+            await StartFilesystemDiscoveryAsync().ConfigureAwait(false);
             await StartFileMonitoringAsync().ConfigureAwait(false);
             await StartRegistryMonitoringAsync().ConfigureAwait(false);
 
@@ -51,15 +47,29 @@ namespace IntegrityService
             }
         }
 
-        private async Task StartFileMonitoringAsync()
-        {
-            var task = Task.Run(() =>
-            {
-                _fsMonitor.Start();
-                return true;
-            });
-            var result = await task;
-        }
+#pragma warning disable AsyncFixer01 // Unnecessary async/await usage
+        private async Task StartFilesystemDiscoveryAsync() => await Task.Run(async () =>
+                                                                       {
+                                                                           if (!Settings.Instance.DisableLocalDatabase && Registry.ReadDwordValue("FileDiscoveryCompleted") == 0)
+                                                                           {
+                                                                               _logger.LogInformation("Could not find the database file. Initiating file system discovery. It will take time.");
+                                                                               Database.Start();
+                                                                               Registry.WriteDwordValue("FileDiscoveryCompleted", 0, true);
+                                                                               await FileSystem.StartSearchAsync(Settings.Instance.MonitoredPaths, Settings.Instance.ExcludedPaths,
+                                                                                   Settings.Instance.ExcludedExtensions);
+
+                                                                               Registry.WriteDwordValue("FileDiscoveryCompleted", 1, true);
+                                                                               _logger.LogInformation("File system discovery completed.");
+                                                                           }
+                                                                           return true;
+                                                                       });
+#pragma warning restore AsyncFixer01 // Unnecessary async/await usage
+
+#pragma warning disable AsyncFixer01 // Unnecessary async/await usage
+#pragma warning disable U2U1006 // Await tasks correctly
+        private async Task StartFileMonitoringAsync() => await Task.Run(() => _fsMonitor.Start());
+#pragma warning restore U2U1006 // Await tasks correctly
+#pragma warning restore AsyncFixer01 // Unnecessary async/await usage
 
         private async Task StartRegistryMonitoringAsync()
         {

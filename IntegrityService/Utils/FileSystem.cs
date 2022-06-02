@@ -15,6 +15,12 @@ namespace IntegrityService.Utils
     {
         private static readonly SHA256 Sha256 = SHA256.Create();
 
+#pragma warning disable AsyncFixer01 // Unnecessary async/await usage
+#pragma warning disable U2U1006 // Await tasks correctly
+        internal static async Task StartSearchAsync(List<string> pathsToSearch, List<string> excludedPaths, List<string> excludedExtensions) => await Task.Run(() => StartSearch(pathsToSearch, excludedPaths, excludedExtensions));
+#pragma warning restore U2U1006 // Await tasks correctly
+#pragma warning restore AsyncFixer01 // Unnecessary async/await usage
+
         internal static void StartSearch(List<string> pathsToSearch, List<string> excludedPaths, List<string> excludedExtensions)
         {
             if (pathsToSearch is null)
@@ -45,7 +51,8 @@ namespace IntegrityService.Utils
         internal static bool IsExcluded(string path, List<string> excludedPaths, List<string> excludedExtensions)
         {
             var isFile = IsFile(path);
-            if (isFile == null) {
+            if (isFile == null)
+            {
                 return true;
             }
 
@@ -99,7 +106,8 @@ namespace IntegrityService.Utils
         /// <returns>List of files</returns> 
         private static void SearchFiles(string directoryPath, EnumerationOptions options, List<string> excludedPaths, List<string> excludedExtensions)
         {
-            if (IsExcluded(directoryPath, excludedPaths, excludedExtensions)) {
+            if (IsExcluded(directoryPath, excludedPaths, excludedExtensions))
+            {
                 return;
             }
 
@@ -155,12 +163,14 @@ namespace IntegrityService.Utils
             try
             {
                 sid = fileSecurity.GetOwner(typeof(SecurityIdentifier));
-                if (sid == null) {
+                if (sid == null)
+                {
                     return string.Empty;
                 }
 
                 var ntAccount = sid.Translate(typeof(NTAccount)) as NTAccount;
-                if (ntAccount == null) {
+                if (ntAccount == null)
+                {
                     return string.Empty;
                 }
 
@@ -187,12 +197,14 @@ namespace IntegrityService.Utils
             try
             {
                 primaryGroup = fileSecurity.GetGroup(typeof(SecurityIdentifier));
-                if (primaryGroup == null) {
+                if (primaryGroup == null)
+                {
                     return string.Empty;
                 }
 
                 var ntAccount = primaryGroup.Translate(typeof(NTAccount)) as NTAccount;
-                if (ntAccount == null) {
+                if (ntAccount == null)
+                {
                     return string.Empty;
                 }
 

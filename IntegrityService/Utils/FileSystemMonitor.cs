@@ -27,17 +27,6 @@ namespace IntegrityService.Utils
         // This should run async
         public void Start()
         {
-            if (!Settings.Instance.DisableLocalDatabase && Registry.ReadDwordValue("FileDiscoveryCompleted") == 0)
-            {
-                _logger.LogInformation("Could not find the database file. Initiating file system discovery. It will take time.");
-                Registry.WriteDwordValue("FileDiscoveryCompleted", 0, true);
-                FileSystem.StartSearch(Settings.Instance.MonitoredPaths, Settings.Instance.ExcludedPaths,
-                    Settings.Instance.ExcludedExtensions);
-
-                Registry.WriteDwordValue("FileDiscoveryCompleted", 1, true);
-                _logger.LogInformation("File system discovery completed.");
-            }
-
             InvokeWatchers();
         }
 
