@@ -45,6 +45,7 @@ namespace IntegrityService
                 if (Settings.Instance.HeartbeatInterval >= 0)
                     _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
 
+                // TODO: This runs once. Then starts waiting
                 var workItem = await _backgroundWorkerQueue.DequeueAsync(stoppingToken);
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 workItem(stoppingToken);
