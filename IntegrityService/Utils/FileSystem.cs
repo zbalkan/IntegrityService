@@ -45,7 +45,9 @@ namespace IntegrityService.Utils
         internal static bool IsExcluded(string path, List<string> excludedPaths, List<string> excludedExtensions)
         {
             var isFile = IsFile(path);
-            if (isFile == null) return true;
+            if (isFile == null) {
+                return true;
+            }
 
             bool result;
             if (isFile.Value)
@@ -97,7 +99,9 @@ namespace IntegrityService.Utils
         /// <returns>List of files</returns> 
         private static void SearchFiles(string directoryPath, EnumerationOptions options, List<string> excludedPaths, List<string> excludedExtensions)
         {
-            if (IsExcluded(directoryPath, excludedPaths, excludedExtensions)) return;
+            if (IsExcluded(directoryPath, excludedPaths, excludedExtensions)) {
+                return;
+            }
 
             try
             {
@@ -151,10 +155,14 @@ namespace IntegrityService.Utils
             try
             {
                 sid = fileSecurity.GetOwner(typeof(SecurityIdentifier));
-                if (sid == null) return string.Empty;
+                if (sid == null) {
+                    return string.Empty;
+                }
 
                 var ntAccount = sid.Translate(typeof(NTAccount)) as NTAccount;
-                if (ntAccount == null) return string.Empty;
+                if (ntAccount == null) {
+                    return string.Empty;
+                }
 
                 return ntAccount.Value;
             }
@@ -179,10 +187,14 @@ namespace IntegrityService.Utils
             try
             {
                 primaryGroup = fileSecurity.GetGroup(typeof(SecurityIdentifier));
-                if (primaryGroup == null) return string.Empty;
+                if (primaryGroup == null) {
+                    return string.Empty;
+                }
 
                 var ntAccount = primaryGroup.Translate(typeof(NTAccount)) as NTAccount;
-                if (ntAccount == null) return string.Empty;
+                if (ntAccount == null) {
+                    return string.Empty;
+                }
 
                 return ntAccount.Value;
             }
