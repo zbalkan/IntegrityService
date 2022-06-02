@@ -54,13 +54,26 @@ namespace IntegrityService
         /// </summary>
         public bool DisableLocalDatabase { get; private set; }
 
+        /// <summary>
+        ///     A flag that returns true if application loads the Settings successfully.
+        /// </summary>
+        public bool Success { get; private set; }
+
         internal static Settings Instance => Lazy.Value;
 
         private static readonly Lazy<Settings> Lazy = new(() => new Settings());
 
         private Settings()
         {
-            ReadOrCreateSubKeys();
+            try
+            {
+                ReadOrCreateSubKeys();
+                Success = true;
+            }
+            catch
+            {
+                Success = false;
+            }
         }
 
         private void ReadOrCreateSubKeys()

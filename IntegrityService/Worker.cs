@@ -23,7 +23,7 @@ namespace IntegrityService
         {
             NativeMethods.SetConsoleCtrlHandler(Handler, true);
 
-            if (Settings.Instance.MonitoredPaths.Count > 0)
+            if (Settings.Instance.Success)
             {
                 _logger.LogInformation("Read settings successfully");
             }
@@ -32,7 +32,11 @@ namespace IntegrityService
                 _logger.LogError("Failed to read settings.");
             }
 
-            Database.Start();
+            if (!Settings.Instance.DisableLocalDatabase)
+            {
+                Database.Start();
+            }
+
             _fsMonitor.Start();
             if (Settings.Instance.EnableRegistryMonitoring)
             {

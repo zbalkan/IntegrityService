@@ -18,6 +18,6 @@
 
         public static void Start() => _ = Context; // Just initiate it.
 
-        public static void Stop() => _context.Dispose();
+        public static void Stop() => _context?.Dispose();
     }
 }
