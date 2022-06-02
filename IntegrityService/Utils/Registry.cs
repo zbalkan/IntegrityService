@@ -106,10 +106,18 @@ namespace IntegrityService.Utils
             }
 
             var valueData = Root.GetValue(value);
-            return valueData
-                   == null
-                   ? 0
-                   : int.TryParse(valueData as string, out var valueDataAsInt) ? valueDataAsInt : 0;
+
+            if (valueData == null)
+            {
+                return 0;
+            }
+
+            if (int.TryParse(valueData.ToString(), out var valueDataAsInt))
+            {
+                return valueDataAsInt;
+            }
+
+            return 0;
         }
     }
 }
