@@ -15,7 +15,9 @@ namespace IntegrityService.Utils
         /// <summary>
         ///     The default size is 800MB
         /// </summary>
-        private const long InitialDatabaseSize = 800 * 1000 * 1024;
+        private const long InitialDatabaseSize = 800 * MB;
+
+        private const long MB = 1024 * 1024;
 
         /// <summary>
         ///     The default file name is fim.db
