@@ -12,8 +12,15 @@ namespace IntegrityService.Utils
 
         private readonly LiteDatabase _database;
 
-        private const long initialDatabaseSize = 800 * 1000 * 1024; // 800MB
+        /// <summary>
+        ///     The default size is 800MB
+        /// </summary>
+        private const long InitialDatabaseSize = 800 * 1000 * 1024;
 
+        /// <summary>
+        ///     The default file name is fim.db
+        /// </summary>
+        private const string DatabaseFileName = "fim.db";
         /// <summary>
         ///     Hardcoded database file name is fim.db. Initial database size is set to 800MB for performance reasons.
         /// </summary>
@@ -21,15 +28,14 @@ namespace IntegrityService.Utils
         {
             _database = new LiteDatabase(new ConnectionString()
             {
-                Filename = @"fim.db",
+                Filename = DatabaseFileName,
                 Connection = ConnectionType.Shared,
-                InitialSize = initialDatabaseSize
+                InitialSize = InitialDatabaseSize
             });
 
             FileSystemChanges = _database.GetCollection<FileSystemChange>("fileSystemChanges");
             FileSystemChanges.EnsureIndex(x => x.Id);
             FileSystemChanges.EnsureIndex(x => x.Entity);
-
 
             RegistryChanges = _database.GetCollection<RegistryChange>("registryChanges");
             RegistryChanges.EnsureIndex(x => x.Id);
