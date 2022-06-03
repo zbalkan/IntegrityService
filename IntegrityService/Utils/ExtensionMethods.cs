@@ -36,9 +36,18 @@ namespace IntegrityService.Utils
             return acl;
         }
 
-        public static AccessControlList OfFileSystem(this AccessControlList acl, FileInfo fileInfo)
+        public static AccessControlList? OfFileSystem(this AccessControlList acl, FileInfo fileInfo)
         {
-            var fileSystemSecurity = fileInfo.GetAccessControl();
+            FileSecurity fileSystemSecurity;
+            try
+            {
+                fileSystemSecurity = fileInfo.GetAccessControl();
+            }
+            catch (FileNotFoundException)
+            {
+                return default;
+            }
+
             acl.Owner = FileSystem.OwnerName(fileSystemSecurity);
             acl.PrimaryGroupOfOwner = FileSystem.PrimaryGroupOfOwnerName(fileSystemSecurity);
             acl.Permissions = fileSystemSecurity
@@ -104,8 +113,13 @@ namespace IntegrityService.Utils
             }
         }
 
-        private static string ToJson(AccessControlList ac)
+        private static string ToJson(AccessControlList? ac)
         {
+            if (ac is null)
+            {
+                return string.Empty;
+            }
+
             var options = new JsonSerializerOptions
             {
                 WriteIndented = true,
