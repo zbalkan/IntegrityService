@@ -71,6 +71,5 @@ namespace IntegrityService.Utils
                 _dictionary[key] = value;
             }
         }
-
     }
 }

@@ -118,6 +118,5 @@ namespace IntegrityService.Utils
 
             return json ?? string.Empty;
         }
-
     }
 }

@@ -185,7 +185,6 @@ namespace IntegrityService.Utils
                         ValueName = ev.ValueName,
                         ValueData = key.GetValue(ev.ValueName)?.ToString() ?? string.Empty,
                         ACLs = key.GetACL()
-
                     };
                     Database.Context.RegistryChanges.Insert(change);
                 }

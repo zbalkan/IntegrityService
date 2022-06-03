@@ -25,7 +25,6 @@ namespace IntegrityService.Utils
                 if (HklmSoftware?.OpenSubKey(FimKeyName, true) == null)
                 {
                     result = HklmSoftware.CreateSubKey(FimKeyName, true);
-
                 }
                 else
                 {
@@ -99,7 +98,6 @@ namespace IntegrityService.Utils
 
         public static int ReadDwordValue(string value)
         {
-
             if (string.IsNullOrEmpty(value))
             {
                 throw new ArgumentException($"'{nameof(value)}' cannot be null or empty.", nameof(value));
