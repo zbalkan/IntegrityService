@@ -11,17 +11,16 @@ namespace IntegrityService.Utils
 
         private readonly SemaphoreSlim _signal = new(0);
 
-        public async Task<Func<CancellationToken, Task>> DequeueAsync(CancellationToken cancellationToken)
+        public async Task<Func<CancellationToken, Task>?> DequeueAsync(CancellationToken cancellationToken)
         {
-            if (_workItems.IsEmpty)
+            if (!_workItems.IsEmpty)
             {
-                return null;
+                await _signal.WaitAsync(cancellationToken);
+                _workItems.TryDequeue(out var workItem);
+
+                return workItem;
             }
-
-            await _signal.WaitAsync(cancellationToken);
-            _workItems.TryDequeue(out var workItem);
-
-            return workItem;
+            return null;
         }
 
         public void QueueBackgroundWorkItem(Func<CancellationToken, Task> workItem)
