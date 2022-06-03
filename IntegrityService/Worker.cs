@@ -23,7 +23,7 @@ namespace IntegrityService
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            NativeMethods.SetConsoleCtrlHandler(Handler, true);
+            _ = NativeMethods.SetConsoleCtrlHandler(Handler, true);
 
             if (Settings.Instance.Success)
             {
@@ -37,14 +37,14 @@ namespace IntegrityService
 
             if (!Settings.Instance.DisableLocalDatabase && Registry.ReadDwordValue("FileDiscoveryCompleted") == 0)
             {
-                _backgroundWorkerQueue.QueueBackgroundWorkItem(_ => StartFilesystemDiscoveryAsync(stoppingToken));
+                _backgroundWorkerQueue.QueueBackgroundWorkItem(_ => StartFilesystemDiscoveryAsync(stoppingToken).Unwrap());
             }
 
-            await StartFileMonitoringAsync(stoppingToken).ConfigureAwait(false);
+            _fsMonitor.Start();
 
             if (Settings.Instance.EnableRegistryMonitoring)
             {
-                await StartRegistryMonitoringAsync(stoppingToken).ConfigureAwait(false);
+                _regMonitor.Start();
             }
 
             // This loop must continue until service is stopped.
@@ -92,10 +92,6 @@ namespace IntegrityService
             }
             return tcs.Task;
         }
-
-        private Task StartFileMonitoringAsync(CancellationToken token) => Task.Run(() => _fsMonitor.Start(), token);
-
-        private Task StartRegistryMonitoringAsync(CancellationToken token) => Task.Run(() => _regMonitor.Start(), token);
 
         private bool Handler(CtrlType signal)
         {
