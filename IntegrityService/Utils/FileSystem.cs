@@ -15,6 +15,7 @@ namespace IntegrityService.Utils
     {
         private static readonly SHA256 Sha256 = SHA256.Create();
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S125:Sections of code should not be commented out", Justification = "<Pending>")]
         internal static void StartSearch(List<string> pathsToSearch, List<string> excludedPaths, List<string> excludedExtensions)
         {
             if (pathsToSearch is null)
@@ -39,7 +40,12 @@ namespace IntegrityService.Utils
                 ReturnSpecialDirectories = false
             };
 
-            Parallel.ForEach(pathsToSearch, path => SearchFiles(path, defaultEnumOptions, excludedPaths, excludedExtensions));
+            //Parallel.ForEach(pathsToSearch, path => SearchFiles(path, defaultEnumOptions, excludedPaths, excludedExtensions));
+
+            foreach (var rootPath in pathsToSearch)
+            {
+                SearchFiles(rootPath, defaultEnumOptions, excludedPaths, excludedExtensions);
+            }
         }
 
         internal static bool IsExcluded(string path, List<string> excludedPaths, List<string> excludedExtensions)

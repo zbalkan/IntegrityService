@@ -29,7 +29,7 @@ namespace IntegrityService.Utils
             _database = new LiteDatabase(new ConnectionString()
             {
                 Filename = DatabaseFileName,
-                Connection = ConnectionType.Shared,
+                Connection = ConnectionType.Direct,
                 InitialSize = InitialDatabaseSize
             });
 
