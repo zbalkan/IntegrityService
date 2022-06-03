@@ -95,13 +95,8 @@ namespace IntegrityService.Utils
 
         public static void Log(this Exception? ex, ILogger logger)
         {
-            while (true)
+            while (ex != null)
             {
-                if (ex == null)
-                {
-                    break;
-                }
-
                 var sb = new StringBuilder(120).Append("Message: ")
                     .AppendLine(ex.Message)
                     .Append("Stacktrace: ")
