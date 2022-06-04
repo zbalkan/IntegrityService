@@ -37,11 +37,11 @@ namespace System.IO.Filesystem.Ntfs
         /// <summary>
         /// Logical cluster number, location on disk. 
         /// </summary>
-        UInt64 Lcn { get; }
+        ulong Lcn { get; }
 
         /// <summary>
         /// Virtual cluster number of next fragment.
         /// </summary>
-        UInt64 NextVcn { get; }
+        ulong NextVcn { get; }
     }
 }

@@ -27,9 +27,13 @@
     Danny Couture
     Software Architect
 */
+
 using System.Collections.Generic;
-using System.Text;
 using System.Diagnostics;
+using System.Text;
+using System.Threading.Tasks;
+
+// ReSharper disable CheckNamespace
 
 namespace System.IO.Filesystem.Ntfs
 {
@@ -40,27 +44,24 @@ namespace System.IO.Filesystem.Ntfs
     /// This is a lot faster than using conventional directory browsing method
     /// particularly when browsing really big directories.
     /// </summary>
-    /// <remarks>Admnistrator rights are required in order to use this method.</remarks>
+    /// <remarks>Administrator rights are required in order to use this method.</remarks>
     public partial class NtfsReader
     {
         /// <summary>
         /// NtfsReader constructor.
         /// </summary>
         /// <param name="driveInfo">The drive you want to read metadata from.</param>
-        /// <param name="include">Information to retrieve from each node while scanning the disk</param>
+        /// <param name="retrieveMode">Information to retrieve from each node while scanning the disk</param>
         /// <remarks>Streams & Fragments are expensive to store in memory, if you don't need them, don't retrieve them.</remarks>
         public NtfsReader(DriveInfo driveInfo, RetrieveMode retrieveMode)
         {
-            if (driveInfo == null)
-                throw new ArgumentNullException("driveInfo");
-
-            _driveInfo = driveInfo;
+            _driveInfo = driveInfo ?? throw new ArgumentNullException(nameof(driveInfo));
             _retrieveMode = retrieveMode;
 
-            StringBuilder builder = new StringBuilder(1024);
+            var builder = new StringBuilder(1024);
             GetVolumeNameForVolumeMountPoint(_driveInfo.RootDirectory.Name, builder, builder.Capacity);
 
-            string volume = builder.ToString().TrimEnd(new char[] { '\\' });
+            var volume = builder.ToString().TrimEnd('\\');
 
             _volumeHandle =
                 CreateFile(
@@ -74,12 +75,11 @@ namespace System.IO.Filesystem.Ntfs
                     );
 
             if (_volumeHandle == null || _volumeHandle.IsInvalid)
+            {
                 throw new IOException(
-                    string.Format(
-                        "Unable to open volume {0}. Make sure it exists and that you have Administrator privileges.",
-                        driveInfo
-                    )
+                    $"Unable to open volume {driveInfo}. Make sure it exists and that you have Administrator privileges."
                 );
+            }
 
             using (_volumeHandle)
             {
@@ -95,10 +95,7 @@ namespace System.IO.Filesystem.Ntfs
             GC.Collect();
         }
 
-        public IDiskInfo DiskInfo
-        {
-            get { return _diskInfo; }
-        }
+        public IDiskInfo DiskInfo => _diskInfo;
 
         /// <summary>
         /// Get all nodes under the specified rootPath.
@@ -106,35 +103,40 @@ namespace System.IO.Filesystem.Ntfs
         /// <param name="rootPath">The rootPath must at least contains the drive and may include any number of subdirectories. Wildcards aren't supported.</param>
         public List<INode> GetNodes(string rootPath)
         {
-            Stopwatch stopwatch = new Stopwatch();
+            var stopwatch = new Stopwatch();
             stopwatch.Start();
 
-            List<INode> nodes = new List<INode>();
+            var nodes = new List<INode>();
 
             //TODO use Parallel.Net to process this when it becomes available
-            UInt32 nodeCount = (UInt32)_nodes.Length;
-            for (UInt32 i = 0; i < nodeCount; ++i)
-                if (_nodes[i].NameIndex != 0 && GetNodeFullNameCore(i).StartsWith(rootPath, StringComparison.InvariantCultureIgnoreCase))
-                    nodes.Add(new NodeWrapper(this, i, _nodes[i]));
+            var nodeCount = (uint)_nodes.Length;
+            //for (uint i = 0; i < nodeCount; ++i)
+            //    if (_nodes[i].NameIndex != 0 && GetNodeFullNameCore(i).StartsWith(rootPath, StringComparison.InvariantCultureIgnoreCase))
+            //        nodes.Add(new NodeWrapper(this, i, _nodes[i]));
+
+            Parallel.For(0,
+                nodeCount,
+                new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount, TaskScheduler = TaskScheduler.Default },
+                index => 
+                {
+                    var i = Convert.ToUInt32(index);
+                    if (_nodes[i].NameIndex != 0 && GetNodeFullNameCore(i)
+                            .StartsWith(rootPath, StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        nodes.Add(new NodeWrapper(this, i, _nodes[i]));
+                    }
+                });
 
             stopwatch.Stop();
 
             Trace.WriteLine(
-                string.Format(
-                    "{0} node{1} have been retrieved in {2} ms",
-                    nodes.Count,
-                    nodes.Count > 1 ? "s" : string.Empty,
-                    (float)stopwatch.ElapsedTicks / TimeSpan.TicksPerMillisecond
-                )
+                $"{nodes.Count} node{(nodes.Count > 1 ? "s" : string.Empty)} have been retrieved in {(float)stopwatch.ElapsedTicks / TimeSpan.TicksPerMillisecond} ms"
             );
 
             return nodes;
         }
 
-        public byte[] GetVolumeBitmap()
-        {
-            return _bitmapData;
-        }
+        public byte[] GetVolumeBitmap() => _bitmapData;
 
         #region IDisposable Members
 

@@ -1,4 +1,6 @@
 ﻿using System.Runtime.InteropServices;
+using System.Text;
+using Microsoft.Win32.SafeHandles;
 /*
     The NtfsReader library.
 
@@ -28,15 +30,13 @@
     Danny Couture
     Software Architect
 */
-using System.Text;
-using Microsoft.Win32.SafeHandles;
 
 namespace System.IO.Filesystem.Ntfs
 {
     public partial class NtfsReader
     {
         [DllImport("kernel32", CharSet = CharSet.Auto, BestFitMapping = false)]
-        private static extern bool GetVolumeNameForVolumeMountPoint(String volumeName, StringBuilder uniqueVolumeName, int uniqueNameBufferCapacity);
+        private static extern bool GetVolumeNameForVolumeMountPoint(string volumeName, StringBuilder uniqueVolumeName, int uniqueNameBufferCapacity);
 
         [DllImport("kernel32", CharSet = CharSet.Auto, BestFitMapping = false)]
         private static extern SafeFileHandle CreateFile(string lpFileName, FileAccess fileAccess, FileShare fileShare, IntPtr lpSecurityAttributes, FileMode fileMode, int dwFlagsAndAttributes, IntPtr hTemplateFile);
@@ -45,7 +45,7 @@ namespace System.IO.Filesystem.Ntfs
         private static extern bool ReadFile(SafeFileHandle hFile, IntPtr lpBuffer, uint nNumberOfBytesToRead, out uint lpNumberOfBytesRead, ref NativeOverlapped lpOverlapped);
 
         [Serializable]
-        private enum FileMode : int
+        private enum FileMode
         {
             Append = 6,
             Create = 2,
@@ -56,7 +56,7 @@ namespace System.IO.Filesystem.Ntfs
         }
 
         [Serializable, Flags]
-        private enum FileShare : int
+        private enum FileShare
         {
             None = 0,
             Read = 1,
@@ -66,7 +66,7 @@ namespace System.IO.Filesystem.Ntfs
         }
 
         [Serializable, Flags]
-        private enum FileAccess : int
+        private enum FileAccess
         {
             Read = 1,
             ReadWrite = 3,
@@ -78,10 +78,10 @@ namespace System.IO.Filesystem.Ntfs
         {
             public IntPtr privateLow;
             public IntPtr privateHigh;
-            public UInt64 Offset;
+            public ulong Offset;
             public IntPtr EventHandle;
 
-            public NativeOverlapped(UInt64 offset)
+            public NativeOverlapped(ulong offset)
             {
                 Offset = offset;
                 EventHandle = IntPtr.Zero;

@@ -27,6 +27,7 @@
     Danny Couture
     Software Architect
 */
+
 using System.Collections.Generic;
 using System.Text;
 
@@ -38,24 +39,28 @@ namespace System.IO.Filesystem.Ntfs
         /// Recurse the node hierarchy and construct its entire name
         /// stopping at the root directory.
         /// </summary>
-        private string GetNodeFullNameCore(UInt32 nodeIndex)
+        private string GetNodeFullNameCore(uint nodeIndex)
         {
-            UInt32 node = nodeIndex;
+            var node = nodeIndex;
 
-            Stack<UInt32> fullPathNodes = new Stack<UInt32>();
+            var fullPathNodes = new Stack<uint>();
             fullPathNodes.Push(node);
 
-            UInt32 lastNode = node;
+            var lastNode = node;
             while (true)
             {
-                UInt32 parent = _nodes[node].ParentNodeIndex;
+                var parent = _nodes[node].ParentNodeIndex;
 
                 //loop until we reach the root directory
                 if (parent == ROOTDIRECTORY)
+                {
                     break;
+                }
 
                 if (parent == lastNode)
+                {
                     throw new InvalidDataException("Detected a loop in the tree structure.");
+                }
 
                 fullPathNodes.Push(parent);
 
@@ -63,8 +68,8 @@ namespace System.IO.Filesystem.Ntfs
                 node = parent;
             }
 
-            StringBuilder fullPath = new StringBuilder();
-            fullPath.Append(_driveInfo.Name.TrimEnd(new char[] { '\\' }));
+            var fullPath = new StringBuilder();
+            fullPath.Append(_driveInfo.Name.TrimEnd('\\'));
 
             while (fullPathNodes.Count > 0)
             {
