@@ -28,8 +28,10 @@
     Software Architect
 */
 
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -107,17 +109,38 @@ namespace System.IO.Filesystem.Ntfs
             stopwatch.Start();
 
             var nodes = new List<INode>();
-
-            //TODO use Parallel.Net to process this when it becomes available
             var nodeCount = (uint)_nodes.Length;
-            //for (uint i = 0; i < nodeCount; ++i)
-            //    if (_nodes[i].NameIndex != 0 && GetNodeFullNameCore(i).StartsWith(rootPath, StringComparison.InvariantCultureIgnoreCase))
-            //        nodes.Add(new NodeWrapper(this, i, _nodes[i]));
+            for (uint i = 0; i < nodeCount; ++i)
+            {
+                if (_nodes[i].NameIndex != 0 && GetNodeFullNameCore(i).StartsWith(rootPath, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    nodes.Add(new NodeWrapper(this, i, _nodes[i]));
+                }
+            }
 
+            stopwatch.Stop();
+
+            Trace.WriteLine(
+                $"{nodes.Count} node{(nodes.Count > 1 ? "s" : string.Empty)} have been retrieved in {(float)stopwatch.ElapsedTicks / TimeSpan.TicksPerMillisecond} ms"
+            );
+
+            return nodes;
+        }
+
+        /// <summary>
+        /// Get all nodes under the specified rootPath.
+        /// </summary>
+        /// <param name="rootPath">The rootPath must at least contains the drive and may include any number of subdirectories. Wildcards aren't supported.</param>
+        public List<INode> GetNodesParallel(string rootPath)
+        {
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
+
+            var nodes = new ConcurrentBag<INode>();
+            var nodeCount = (uint)_nodes.Length;
             Parallel.For(0,
                 nodeCount,
-                new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount, TaskScheduler = TaskScheduler.Default },
-                index => 
+                index =>
                 {
                     var i = Convert.ToUInt32(index);
                     if (_nodes[i].NameIndex != 0 && GetNodeFullNameCore(i)
@@ -133,7 +156,7 @@ namespace System.IO.Filesystem.Ntfs
                 $"{nodes.Count} node{(nodes.Count > 1 ? "s" : string.Empty)} have been retrieved in {(float)stopwatch.ElapsedTicks / TimeSpan.TicksPerMillisecond} ms"
             );
 
-            return nodes;
+            return nodes.ToList();
         }
 
         public byte[] GetVolumeBitmap() => _bitmapData;
