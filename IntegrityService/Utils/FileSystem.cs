@@ -46,7 +46,7 @@ namespace IntegrityService.Utils
             Console.WriteLine($"File data preparation completed: {sw.Elapsed}");
 
             sw.Restart();
-            Database.Context.FileSystemChanges.InsertBulk(changes, changes.Count);
+            Database.Context.FileSystemChanges.InsertBulk(changes, changes.Count());
             sw.Stop();
             Console.WriteLine($"File insert bulk completed: {sw.Elapsed}");
         }
@@ -159,21 +159,28 @@ namespace IntegrityService.Utils
             }
         }
 
-        private static List<FileSystemChange> PrepareData(IEnumerable<string> paths) =>
-            paths.Select(path => new FileSystemChange
+        private static IEnumerable<FileSystemChange> PrepareData(IEnumerable<string> paths)
+        {
+            var count = 0;
+            foreach (var path in paths)
             {
-                Id = Guid.NewGuid(),
-                ChangeCategory = ChangeCategory.Discovery,
-                ConfigChangeType = ConfigChangeType.FileSystem,
-                Entity = path,
-                DateTime = DateTime.Now,
-                FullPath = path,
-                SourceComputer = Environment.MachineName,
-                CurrentHash = CalculateFileDigest(path),
-                PreviousHash = string.Empty,
-                ACLs = path.GetACL()
-            })
-                .ToList();
+                var change = new FileSystemChange
+                {
+                    Id = Guid.NewGuid(),
+                    ChangeCategory = ChangeCategory.Discovery,
+                    ConfigChangeType = ConfigChangeType.FileSystem,
+                    Entity = path,
+                    DateTime = DateTime.Now,
+                    FullPath = path,
+                    SourceComputer = Environment.MachineName,
+                    CurrentHash = CalculateFileDigest(path),
+                    PreviousHash = string.Empty,
+                    ACLs = path.GetACL()
+                };
+                yield return change;
+                Debug.WriteLine($"Count: {count++}, Total: {paths.Count()}");
+            }
+        }
 
         public static string CalculateFileDigest(string path)
         {
