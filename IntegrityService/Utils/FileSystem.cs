@@ -12,6 +12,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using IntegrityService.FIM;
+using NUlid;
 
 namespace IntegrityService.Utils
 {
@@ -166,7 +167,7 @@ namespace IntegrityService.Utils
             {
                 var change = new FileSystemChange
                 {
-                    Id = Guid.NewGuid(),
+                    Id = Ulid.NewUlid().ToString(),
                     ChangeCategory = ChangeCategory.Discovery,
                     ConfigChangeType = ConfigChangeType.FileSystem,
                     Entity = path,

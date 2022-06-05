@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using NUlid;
 
 namespace IntegrityService.Utils
 {
@@ -104,7 +105,7 @@ namespace IntegrityService.Utils
 
                 var change = new FileSystemChange
                 {
-                    Id = Guid.NewGuid(),
+                    Id = Ulid.NewUlid().ToString(),
                     ChangeCategory = category,
                     ConfigChangeType = ConfigChangeType.FileSystem,
                     Entity = path,

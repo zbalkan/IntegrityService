@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Threading;
+using NUlid;
 using NtKeywords = Microsoft.Diagnostics.Tracing.Parsers.KernelTraceEventParser.Keywords;
 
 namespace IntegrityService.Utils
@@ -174,7 +175,7 @@ namespace IntegrityService.Utils
 
                     var change = new RegistryChange
                     {
-                        Id = Guid.NewGuid(),
+                        Id = Ulid.NewUlid().ToString(),
                         ChangeCategory = changeCategory,
                         ConfigChangeType = ConfigChangeType.Registry,
                         Entity = keyName,

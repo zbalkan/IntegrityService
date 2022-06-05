@@ -4,7 +4,7 @@ namespace IntegrityService.FIM
 {
     public class Change
     {
-        public Guid Id { get; set; }
+        public string Id { get; set; }
 
         public string Entity { get; set; }
 
