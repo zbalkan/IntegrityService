@@ -78,9 +78,7 @@ namespace IntegrityService
                                "Could not find the database file. Initiating file system discovery. It will take time.");
                            Database.Start();
                            Registry.WriteDwordValue("FileDiscoveryCompleted", 0, true);
-                           FileSystem.StartSearch(Settings.Instance.MonitoredPaths, Settings.Instance.ExcludedPaths,
-                               Settings.Instance.ExcludedExtensions);
-
+                           FileSystem.StartSearch();
                            Registry.WriteDwordValue("FileDiscoveryCompleted", 1, true);
                            _logger.LogInformation("File system discovery completed.");
                        },

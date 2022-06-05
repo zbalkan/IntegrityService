@@ -1,13 +1,17 @@
-﻿using IntegrityService.FIM;
-using System;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Filesystem.Ntfs;
 using System.Linq;
 using System.Security.AccessControl;
 using System.Security.Cryptography;
 using System.Security.Principal;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using IntegrityService.FIM;
 
 namespace IntegrityService.Utils
 {
@@ -15,143 +19,78 @@ namespace IntegrityService.Utils
     {
         private static readonly SHA256 Sha256 = SHA256.Create();
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S125:Sections of code should not be commented out", Justification = "<Pending>")]
-        internal static void StartSearch(List<string> pathsToSearch, List<string> excludedPaths, List<string> excludedExtensions)
+        private static Regex Pattern => _pattern ??= new Regex(GeneratePattern(), RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+        private static Regex? _pattern;
+
+        internal static void StartSearch()
         {
-            if (pathsToSearch is null)
-            {
-                throw new ArgumentNullException(nameof(pathsToSearch));
-            }
-
-            if (excludedPaths is null)
-            {
-                throw new ArgumentNullException(nameof(excludedPaths));
-            }
-
-            if (excludedExtensions is null)
-            {
-                throw new ArgumentNullException(nameof(excludedExtensions));
-            }
-
-            var defaultEnumOptions = new EnumerationOptions
-            {
-                IgnoreInaccessible = true,
-                RecurseSubdirectories = false,
-                ReturnSpecialDirectories = false
-            };
-
-            //Parallel.ForEach(pathsToSearch, path => SearchFiles(path, defaultEnumOptions, excludedPaths, excludedExtensions));
-
-            foreach (var rootPath in pathsToSearch)
-            {
-                SearchFiles(rootPath, defaultEnumOptions, excludedPaths, excludedExtensions);
-            }
-        }
-
-        internal static bool IsExcluded(string path, List<string> excludedPaths, List<string> excludedExtensions)
-        {
-            var isFile = IsFile(path);
-            if (isFile == null)
-            {
-                return true;
-            }
-
-            bool result;
-            if (isFile.Value)
-            {
-#pragma warning disable U2U1212 // Capture intermediate results in lambda expressions
-                result = (excludedPaths ??
-                          throw new InvalidOperationException()) // If file, sanitize file path and check. Then, check extensions.
-                         .Any(excludedPath =>
-                             Path.GetFileName(path).Contains(Path.GetFileName(excludedPath)!,
-                                 StringComparison.OrdinalIgnoreCase)) ||
-                         (excludedExtensions ?? throw new InvalidOperationException())
-                         .Any(extension =>
-                             extension.Contains(Path.GetExtension(path), StringComparison.OrdinalIgnoreCase));
-#pragma warning restore U2U1212 // Capture intermediate results in lambda expressions
-            }
-            else
-            {
-                result = (excludedPaths ??
-                          throw new InvalidOperationException()) // If directory, sanitize directory path and check
-                    .Any(excludedPath =>
-                        Path.GetDirectoryName(path)!.Contains(Path.GetDirectoryName(excludedPath)!,
-                            StringComparison.OrdinalIgnoreCase));
-            }
-
-            return result;
-        }
-
-        internal static bool? IsFile(string fullPath)
-        {
-            try
-            {
-                return (File.GetAttributes(fullPath) & FileAttributes.Directory) != FileAttributes.Directory;
-            }
-            catch (Exception ex)
-            {
-                // TODO: Log properly
-                Debug.WriteLine(ex.Message);
-                return null;
-            }
-        }
-
-        /// <summary> 
-        ///     A safe way to get all the files in a directory and sub directory without crashing on UnauthorizedException or PathTooLongException 
-        /// </summary> 
-        /// <param name="directoryPath">Starting directory</param>
-        /// <param name="options">Enumeration options</param>
-        /// <param name="excludedPaths"></param>
-        /// <param name="excludedExtensions"></param>
-        /// <returns>List of files</returns> 
-        private static void SearchFiles(string directoryPath, EnumerationOptions options, List<string> excludedPaths, List<string> excludedExtensions)
-        {
-            if (IsExcluded(directoryPath, excludedPaths, excludedExtensions))
+            var sw = new Stopwatch();
+            sw.Start();
+            var files = InvokeNtfsSearch();
+            if (files == null)
             {
                 return;
             }
+            sw.Stop();
+            Console.WriteLine($"File search completed: {sw.Elapsed}");
 
-            try
-            {
-                foreach (var directory in Directory.EnumerateDirectories(directoryPath))
-                {
-                    WriteDiscoveryToDatabase(directory);
-                    SearchFiles(directory, options, excludedPaths, excludedExtensions);
-                }
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                Console.WriteLine(ex.Message);
-            }
-            catch (IOException ex)
-            {
-                Console.WriteLine(ex.Message);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine(ex.Message);
-            }
+            sw.Restart();
+            var filtered = FilterAll(files);
+            sw.Stop();
+            Console.WriteLine($"File filtering completed: {sw.Elapsed}");
 
-            try
-            {
-                foreach (var file in Directory.EnumerateFiles(directoryPath, "*.*", options).Where(f => !IsExcluded(f, excludedPaths, excludedExtensions)))
-                {
-                    WriteDiscoveryToDatabase(file);
-                }
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                Console.WriteLine(ex.Message);
-            }
-            catch (IOException ex)
-            {
-                Console.WriteLine(ex.Message);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine(ex.Message);
-            }
+            sw.Restart();
+            var changes = PrepareData(filtered);
+            sw.Stop();
+            Console.WriteLine($"File data preparation completed: {sw.Elapsed}");
+
+            sw.Restart();
+            Database.Context.FileSystemChanges.InsertBulk(changes, changes.Count);
+            sw.Stop();
+            Console.WriteLine($"File insert bulk completed: {sw.Elapsed}");
         }
+
+        private static ConcurrentBag<string>? InvokeNtfsSearch()
+        {
+            var ntfsDrives = DriveInfo.GetDrives()
+                .Where(d => d.DriveFormat == "NTFS").ToList();
+
+            var allPaths = new ConcurrentBag<string>();
+
+            Parallel.ForEach(ntfsDrives, driveToAnalyze =>
+            {
+                var ntfsReader =
+                    new NtfsReader(driveToAnalyze, RetrieveMode.All);
+                var files =
+                    ntfsReader.GetNodesParallel(driveToAnalyze.Name)
+                        .Where(n => (n.Attributes &
+                                     (Attributes.Temporary |
+                                      Attributes.System |
+                                      Attributes.Device |
+                                      Attributes.Directory |
+                                      Attributes.Offline |
+                                      Attributes.ReparsePoint |
+                                      Attributes.SparseFile)) == 0)
+                        // TODO: Generate regex from rules and use just that one.
+                        .Select(n => n.FullName);
+
+                allPaths.AddRange(files);
+            });
+
+            return allPaths;
+        }
+
+        private static IEnumerable<string> FilterAll(IEnumerable<string> paths)
+        {
+            var matches = from path in paths.AsParallel().WithMergeOptions(ParallelMergeOptions.NotBuffered)
+                          where Pattern.IsMatch(path)
+                          select path;
+
+            return matches.ToList();
+        }
+
+        public static bool IsExcluded(string path) => !Pattern.IsMatch(path);
 
         public static string OwnerName(FileSecurity fileSecurity)
         {
@@ -220,9 +159,8 @@ namespace IntegrityService.Utils
             }
         }
 
-        private static void WriteDiscoveryToDatabase(string path)
-        {
-            var change = new FileSystemChange
+        private static List<FileSystemChange> PrepareData(IEnumerable<string> paths) =>
+            paths.Select(path => new FileSystemChange
             {
                 Id = Guid.NewGuid(),
                 ChangeCategory = ChangeCategory.Discovery,
@@ -234,28 +172,61 @@ namespace IntegrityService.Utils
                 CurrentHash = CalculateFileDigest(path),
                 PreviousHash = string.Empty,
                 ACLs = path.GetACL()
-            };
-
-            Database.Context.FileSystemChanges.Insert(change);
-        }
+            })
+                .ToList();
 
         public static string CalculateFileDigest(string path)
         {
             var digest = string.Empty;
-            var isFile = IsFile(path);
-            if (isFile != null && isFile.Value)
+
+            try
             {
-                try
-                {
-                    using var fileStream = File.OpenRead(path);
-                    digest = Convert.ToHexString(Sha256.ComputeHash(fileStream));
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine(ex.Message);
-                }
+                using var fileStream = File.OpenRead(path);
+                digest = Convert.ToHexString(Sha256.ComputeHash(fileStream));
             }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+            }
+
             return digest;
         }
+
+        private static string GeneratePattern()
+        {
+            var sb = new StringBuilder(100);
+
+            // Start with negative lookahead for exclusion
+            sb.Append("(?:(?!(^(");
+            if (Settings.Instance.ExcludedPaths.Count > 0)
+            {
+                sb.Append(new StringBuilder(20).AppendJoin('|', Settings.Instance.ExcludedPaths).Sanitize());
+                sb.Append(@")\\?.*)");
+            }
+
+            if (Settings.Instance.ExcludedExtensions.Count > 0)
+            {
+                sb.Append(@"|(^.*(");
+                sb.Append(new StringBuilder(20).AppendJoin('|', Settings.Instance.ExcludedExtensions).Sanitize());
+                sb.Append(')');
+            }
+
+            sb.Append("$))");
+
+            // Add included paths
+            sb.Append("(?:^(");
+            sb.Append(new StringBuilder(20).AppendJoin('|', Settings.Instance.MonitoredPaths).Sanitize());
+            sb.Append(@")\\?.*$))");
+
+            return sb.ToString();
+        }
+
+        private static StringBuilder Sanitize(this StringBuilder sb) =>
+            sb
+                .Replace(@"\", @"\\").Replace(@"\\\\", @"\\")
+                .Replace(".", @"\.")
+                .Replace(" ", "\\ ")
+                .Replace("(", "\\(")
+                .Replace(")", "\\)");
     }
 }

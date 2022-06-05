@@ -85,12 +85,10 @@ namespace IntegrityService.Utils
 
         private void ProcessEvent(string path, ChangeCategory category)
         {
-            if (FileSystem.IsExcluded(path, Settings.Instance.ExcludedPaths, Settings.Instance.ExcludedExtensions) || IsDuplicate(path))
+            if (FileSystem.IsExcluded(path) || IsDuplicate(path))
             {
                 return;
             }
-
-
 
             if (!Settings.Instance.DisableLocalDatabase)
             {
