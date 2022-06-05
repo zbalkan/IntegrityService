@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using Microsoft.Win32;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -8,7 +6,9 @@ using System.Linq;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Text;
-using System.Text.Json;
+using Microsoft.Extensions.Logging;
+using Microsoft.Win32;
+using Utf8Json;
 
 namespace IntegrityService.Utils
 {
@@ -115,15 +115,7 @@ namespace IntegrityService.Utils
                 return string.Empty;
             }
 
-            var options = new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                ReadCommentHandling = JsonCommentHandling.Skip,
-                DictionaryKeyPolicy = JsonNamingPolicy.CamelCase
-            };
-
-            var json = JsonSerializer.Serialize(ac, options);
+            var json = Encoding.UTF8.GetString(JsonSerializer.Serialize(ac));
 
             return json ?? string.Empty;
         }
