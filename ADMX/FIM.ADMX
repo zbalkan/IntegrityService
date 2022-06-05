@@ -1,1 +1,72 @@
-<policyDefinitions revision="1.0" schemaVersion="1.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><policyNamespaces><target prefix="Marianok" namespace="MSC.Policies.BC1E304B_07E6_4C10_A7AB_D7F0B81C7B7C"/><using prefix="windows" namespace="Microsoft.Policies.Windows"/></policyNamespaces><supersededAdm fileName=""/><resources minRequiredRevision="1.0" fallbackCulture="language"/><categories><category name="CAT_MARIANOKS_XML_2_ADMXL" displayName="$(string.CAT_MARIANOKS_XML_2_ADMXL)" explainText="$(string.CAT_MARIANOKS_XML_2_ADMXL_HELP)"/><category name="CAT_81045818_4650_4C2E_B686_3C1C6C276D8D" displayName="$(string.CAT_81045818_4650_4C2E_B686_3C1C6C276D8D)" explainText="$(string.CAT_81045818_4650_4C2E_B686_3C1C6C276D8D_HELP)"><parentCategory ref="CAT_MARIANOKS_XML_2_ADMXL"/></category></categories><policies><policy name="POL_CE8A94B6_893D_4FEF_92EC_B05DBCF6C7EB" displayName="$(string.POL_CE8A94B6_893D_4FEF_92EC_B05DBCF6C7EB)" explainText="$(string.POL_CE8A94B6_893D_4FEF_92EC_B05DBCF6C7EB_HELP)" key="SOFTWARE\FIM" class="Machine" presentation="$(presentation.POL_CE8A94B6_893D_4FEF_92EC_B05DBCF6C7EB)"><parentCategory ref="CAT_81045818_4650_4C2E_B686_3C1C6C276D8D"/><supportedOn ref="windows:SUPPORTED_WindowsVista"/><elements><text id="HXT_CE8A94B6_893D_4FEF_92EC_B05DBCF6C7EB" valueName="MonitoredPaths"/></elements></policy><policy name="POL_FD8FC729_6990_41DE_90A4_AB126901739A" displayName="$(string.POL_FD8FC729_6990_41DE_90A4_AB126901739A)" explainText="$(string.POL_FD8FC729_6990_41DE_90A4_AB126901739A_HELP)" key="SOFTWARE\FIM" class="Machine" presentation="$(presentation.POL_FD8FC729_6990_41DE_90A4_AB126901739A)"><parentCategory ref="CAT_81045818_4650_4C2E_B686_3C1C6C276D8D"/><supportedOn ref="windows:SUPPORTED_WindowsVista"/><elements><text id="HXT_FD8FC729_6990_41DE_90A4_AB126901739A" valueName="ExcludedPaths"/></elements></policy><policy name="POL_51BAB56C_7C73_4E22_99ED_920F647A8672" displayName="$(string.POL_51BAB56C_7C73_4E22_99ED_920F647A8672)" explainText="$(string.POL_51BAB56C_7C73_4E22_99ED_920F647A8672_HELP)" key="SOFTWARE\FIM" class="Machine" presentation="$(presentation.POL_51BAB56C_7C73_4E22_99ED_920F647A8672)"><parentCategory ref="CAT_81045818_4650_4C2E_B686_3C1C6C276D8D"/><supportedOn ref="windows:SUPPORTED_WindowsVista"/><elements><text id="HXT_51BAB56C_7C73_4E22_99ED_920F647A8672" valueName="ExcludedExtensions"/></elements></policy></policies></policyDefinitions>
+<policyDefinitions revision="1.0" schemaVersion="1.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<policyNamespaces>
+		<target prefix="Marianok" namespace="MSC.Policies.BBDDCA06_2157_4897_B891_8782B14C7A89"/>
+		<using prefix="windows" namespace="Microsoft.Policies.Windows"/>
+	</policyNamespaces>
+	<supersededAdm fileName=""/>
+	<resources minRequiredRevision="1.0" fallbackCulture="en-US"/>
+	<categories>
+		<category name="CAT_MARIANOKS_XML_2_ADMXL" displayName="$(string.CAT_MARIANOKS_XML_2_ADMXL)" explainText="$(string.CAT_MARIANOKS_XML_2_ADMXL_HELP)"/>
+		<category name="CAT_F2423AD1_E9C3_45EE_B2D5_96BF910F5678" displayName="$(string.CAT_F2423AD1_E9C3_45EE_B2D5_96BF910F5678)" explainText="$(string.CAT_F2423AD1_E9C3_45EE_B2D5_96BF910F5678_HELP)">
+			<parentCategory ref="CAT_MARIANOKS_XML_2_ADMXL"/>
+		</category>
+	</categories>
+	<policies>
+		<policy name="POL_1E2517DE_3A01_4C7B_B126_7279C88B05C3" displayName="$(string.POL_1E2517DE_3A01_4C7B_B126_7279C88B05C3)" explainText="$(string.POL_1E2517DE_3A01_4C7B_B126_7279C88B05C3_HELP)" key="SOFTWARE\FIM" class="Machine" presentation="$(presentation.POL_1E2517DE_3A01_4C7B_B126_7279C88B05C3)">
+			<parentCategory ref="CAT_F2423AD1_E9C3_45EE_B2D5_96BF910F5678"/>
+			<supportedOn ref="windows:SUPPORTED_WindowsVista"/>
+			<elements>
+				<text id="HXT_1E2517DE_3A01_4C7B_B126_7279C88B05C3" valueName="MonitoredPaths"/>
+			</elements>
+		</policy>
+		<policy name="POL_E7DCAEFF_3740_44E3_B481_C95E32C185BE" displayName="$(string.POL_E7DCAEFF_3740_44E3_B481_C95E32C185BE)" explainText="$(string.POL_E7DCAEFF_3740_44E3_B481_C95E32C185BE_HELP)" key="SOFTWARE\FIM" class="Machine" presentation="$(presentation.POL_E7DCAEFF_3740_44E3_B481_C95E32C185BE)">
+			<parentCategory ref="CAT_F2423AD1_E9C3_45EE_B2D5_96BF910F5678"/>
+			<supportedOn ref="windows:SUPPORTED_WindowsVista"/>
+			<elements>
+				<text id="HXT_E7DCAEFF_3740_44E3_B481_C95E32C185BE" valueName="ExcludedPaths"/>
+			</elements>
+		</policy>
+		<policy name="POL_BBD434C0_8E0A_48C8_A0CD_C47D0EFED86C" displayName="$(string.POL_BBD434C0_8E0A_48C8_A0CD_C47D0EFED86C)" explainText="$(string.POL_BBD434C0_8E0A_48C8_A0CD_C47D0EFED86C_HELP)" key="SOFTWARE\FIM" class="Machine" presentation="$(presentation.POL_BBD434C0_8E0A_48C8_A0CD_C47D0EFED86C)">
+			<parentCategory ref="CAT_F2423AD1_E9C3_45EE_B2D5_96BF910F5678"/>
+			<supportedOn ref="windows:SUPPORTED_WindowsVista"/>
+			<elements>
+				<text id="HXT_BBD434C0_8E0A_48C8_A0CD_C47D0EFED86C" valueName="ExcludedExtensions"/>
+			</elements>
+		</policy>
+		<policy name="POL_B0147275_6B7B_4AD7_A95A_3D17F691AA8D" displayName="$(string.POL_B0147275_6B7B_4AD7_A95A_3D17F691AA8D)" explainText="$(string.POL_B0147275_6B7B_4AD7_A95A_3D17F691AA8D_HELP)" key="SOFTWARE\FIM" class="Machine" presentation="$(presentation.POL_B0147275_6B7B_4AD7_A95A_3D17F691AA8D)">
+			<parentCategory ref="CAT_F2423AD1_E9C3_45EE_B2D5_96BF910F5678"/>
+			<supportedOn ref="windows:SUPPORTED_WindowsVista"/>
+			<elements>
+				<decimal id="DXT_B0147275_6B7B_4AD7_A95A_3D17F691AA8D" valueName="EnableRegistryMonitoring"/>
+			</elements>
+		</policy>
+		<policy name="POL_3707498D_FDE8_4E8E_96C4_A83D719C8F6D" displayName="$(string.POL_3707498D_FDE8_4E8E_96C4_A83D719C8F6D)" explainText="$(string.POL_3707498D_FDE8_4E8E_96C4_A83D719C8F6D_HELP)" key="SOFTWARE\FIM" class="Machine" presentation="$(presentation.POL_3707498D_FDE8_4E8E_96C4_A83D719C8F6D)">
+			<parentCategory ref="CAT_F2423AD1_E9C3_45EE_B2D5_96BF910F5678"/>
+			<supportedOn ref="windows:SUPPORTED_WindowsVista"/>
+			<elements>
+				<text id="HXT_3707498D_FDE8_4E8E_96C4_A83D719C8F6D" valueName="MonitoredKeys"/>
+			</elements>
+		</policy>
+		<policy name="POL_8F47A97C_368F_4BAB_BF08_A8EACBDEA12A" displayName="$(string.POL_8F47A97C_368F_4BAB_BF08_A8EACBDEA12A)" explainText="$(string.POL_8F47A97C_368F_4BAB_BF08_A8EACBDEA12A_HELP)" key="SOFTWARE\FIM" class="Machine" presentation="$(presentation.POL_8F47A97C_368F_4BAB_BF08_A8EACBDEA12A)">
+			<parentCategory ref="CAT_F2423AD1_E9C3_45EE_B2D5_96BF910F5678"/>
+			<supportedOn ref="windows:SUPPORTED_WindowsVista"/>
+			<elements>
+				<text id="HXT_8F47A97C_368F_4BAB_BF08_A8EACBDEA12A" valueName="ExcludedKeys"/>
+			</elements>
+		</policy>
+		<policy name="POL_87A792FA_2928_4D84_A849_5A784E28D203" displayName="$(string.POL_87A792FA_2928_4D84_A849_5A784E28D203)" explainText="$(string.POL_87A792FA_2928_4D84_A849_5A784E28D203_HELP)" key="SOFTWARE\FIM" class="Machine" presentation="$(presentation.POL_87A792FA_2928_4D84_A849_5A784E28D203)">
+			<parentCategory ref="CAT_F2423AD1_E9C3_45EE_B2D5_96BF910F5678"/>
+			<supportedOn ref="windows:SUPPORTED_WindowsVista"/>
+			<elements>
+				<decimal id="DXT_87A792FA_2928_4D84_A849_5A784E28D203" valueName="HeartbeatInterval"/>
+			</elements>
+		</policy>
+		<policy name="POL_E8D8DF73_DA53_4CC7_927B_B9F7A344DAFC" displayName="$(string.POL_E8D8DF73_DA53_4CC7_927B_B9F7A344DAFC)" explainText="$(string.POL_E8D8DF73_DA53_4CC7_927B_B9F7A344DAFC_HELP)" key="SOFTWARE\FIM" class="Machine" presentation="$(presentation.POL_E8D8DF73_DA53_4CC7_927B_B9F7A344DAFC)">
+			<parentCategory ref="CAT_F2423AD1_E9C3_45EE_B2D5_96BF910F5678"/>
+			<supportedOn ref="windows:SUPPORTED_WindowsVista"/>
+			<elements>
+				<decimal id="DXT_E8D8DF73_DA53_4CC7_927B_B9F7A344DAFC" valueName="DisableLocalDatabase"/>
+			</elements>
+		</policy>
+	</policies>
+</policyDefinitions>
