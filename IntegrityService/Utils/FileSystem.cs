@@ -162,7 +162,7 @@ namespace IntegrityService.Utils
 
         private static IEnumerable<FileSystemChange> PrepareData(IEnumerable<string> paths)
         {
-            var count = 0;
+            //var count = 0;
             foreach (var path in paths)
             {
                 var change = new FileSystemChange
@@ -179,7 +179,7 @@ namespace IntegrityService.Utils
                     ACLs = path.GetACL()
                 };
                 yield return change;
-                Debug.WriteLine($"Count: {count++}, Total: {paths.Count()}");
+                //Debug.WriteLine($"Count: {count++}, Total: {paths.Count()}");
             }
         }
 
