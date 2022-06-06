@@ -12,7 +12,7 @@
 <!-- Executable name -->
 <?define Executable="IntegrityService.exe"?>
 
-<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
 	<Product Id="*" Name="$(var.Name)" Manufacturer="$(var.Manufacturer)" UpgradeCode="$(var.UpgradeCode)" Version="$(var.Version)" Language="1033">
 		<!-- Create a folder inside FIM called IntegrityService -->
 		<Package InstallerVersion="300" Compressed="yes" InstallScope="perMachine"/>
@@ -45,7 +45,7 @@
 				ErrorControl="normal"
 				Interactive="no"
 				Vital="yes">
-					<ServiceConfig FirstFailureActionType ="restart"
+					<util:ServiceConfig FirstFailureActionType ="restart"
 					SecondFailureActionType ="restart"
 					ThirdFailureActionType ="restart"
 					ResetPeriodInDays="1"/>
