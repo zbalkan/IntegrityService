@@ -83,6 +83,7 @@ namespace IntegrityService
                            FileSystem.StartSearch();
                            Registry.WriteDwordValue("FileDiscoveryCompleted", 1, true);
                            _logger.LogInformation("File system discovery completed.");
+                           Environment.Exit(0); // Kill the service here. The OS will restart the service.
                        },
                        token);
             }
