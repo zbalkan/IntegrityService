@@ -24,7 +24,7 @@
 		<Directory Id="TARGETDIR" Name="SourceDir">
 			<Directory Id="ProgramFilesFolder">
 				<!-- Create a folder inside FIM called IntegrityService -->
-					<Directory Id="INSTALLFOLDER" Name="$(var.Name)" />
+				<Directory Id="INSTALLFOLDER" Name="$(var.Name)" />
 			</Directory>
 		</Directory>
 		<!-- The files inside this DirectoryRef are linked to the IntegrityService directory via INSTALLFOLDER -->
@@ -37,19 +37,24 @@
 				<RemoveFile Id="ALLFILES" Name="*.*" On="both" />
 				<!-- Tell WiX to install the Service -->
 				<ServiceInstall Id="ServiceInstaller" 
-					Type="ownProcess" 
-					Name="$(var.Name)"
-					DisplayName="$(var.Name)" 
-					Description="A File Integrity Monitoring service that keeps track of file changes in specified folders." 
-					Start="auto" 
-					ErrorControl="normal"
-					Interactive="no"
-					Vital="yes"/>
-			</Component>
-			</DirectoryRef>
-			<!-- Tell WiX to install the files -->
-			<Feature Id="MainApplication" Title="Main Application" Level="1">
-				<ComponentRef Id="$(var.Executable)" />
-			</Feature>
-		</Product>
-	</Wix>
+				Type="ownProcess" 
+				Name="$(var.Name)"
+				DisplayName="$(var.Name)" 
+				Description="A File Integrity Monitoring service that keeps track of file changes in specified folders." 
+				Start="auto" 
+				ErrorControl="normal"
+				Interactive="no"
+				Vital="yes">
+					<ServiceConfig FirstFailureActionType ="restart"
+					SecondFailureActionType ="restart"
+					ThirdFailureActionType ="restart"
+					ResetPeriodInDays="1"/>
+				</ServiceInstall>
+		</Component>
+	</DirectoryRef>
+	<!-- Tell WiX to install the files -->
+	<Feature Id="MainApplication" Title="Main Application" Level="1">
+		<ComponentRef Id="$(var.Executable)" />
+	</Feature>
+</Product>
+</Wix>
