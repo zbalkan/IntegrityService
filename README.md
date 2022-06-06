@@ -1,5 +1,9 @@
 # IntegrityService
 
+[![DevSkim](https://github.com/zbalkan/IntegrityService/actions/workflows/devskim.yml/badge.svg)](https://github.com/zbalkan/IntegrityService/actions/workflows/devskim.yml)
+
+[![Release](https://github.com/zbalkan/IntegrityService/actions/workflows/dotnet.yml/badge.svg)](https://github.com/zbalkan/IntegrityService/actions/workflows/dotnet.yml)
+
 ## Overview
 File Integrity Monitoring (FIM) is a security related requirement for monitoring critical locations:
 * directories in Linux
