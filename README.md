@@ -13,7 +13,7 @@ This application provides a FIM service for Windows.
 
 ## Usage
 1. Install the service via `sc.exe` manually, or using `install.bat` or `IntegrityService.msi`.
-2. If local file search started, the file system monitoring will require a restart when search is completed.
+2. If local file search started, the file system monitoring will initiate a service restart when search is completed.
 3. Use the `default.reg` file for local and ADMX file for domain installations to manage the configuration.
 4. The service does not provide enough information about a security incident, but constitutes a supportive information to collaborate. It is advised to use `Sysmon` and collaborate events together. Related Sysmon event IDs are 2, 9, 11, 12, 13, 14, 15, 23 and 26.
 
@@ -22,9 +22,7 @@ It is designed to be a Windows Service. In first use, it will start a scan based
 
 If there is no path to monitor defined in the Registry, service will not do any action (no default value hard-coded).
 
-In the first use, it will run a full discovery, search for all the files, calculate SHA256 checksum and save it in a local database as the baseline. File search process reads the data from NTFS MFT (Master File Table) so it will take up to 10 seconds. But file search will generally catch at least 100.000 files and folders on a fresh Windows 10 installation and take about 30 to 90 minutes for calculating hashes, obtaining and parsing ACLs and writing to database depending on the number of files and the system specifications. This search can be disabled via Group Policy or registry. If you will use a central logging solution, you can disable it.
-
-If the discovery is completed, restart the service. If you disabled the local database, just skip to the next paragraph.
+In the first use, it will run a full discovery, search for all the files, calculate SHA256 checksum and save it in a local database as the baseline. File search process reads the data from NTFS MFT (Master File Table) so it will take up to 10 seconds. But file search will generally catch at least 100.000 files and folders on a fresh Windows 10 installation and take about 30 to 90 minutes for calculating hashes, obtaining and parsing ACLs and writing to database depending on the number of files and the system specifications. This search can be disabled via Group Policy or registry. If you will use a central logging solution, you can disable it. When the discovery is completed, the service will kill itself. The First Error Action is set to restart, so the OS will restart the service after discovery. If you disabled the local database, just skip to the next paragraph.
 
 The service  will subscribe to file system events and when any changes occur, it will create an event log and update the database. You can see the SHA256 hashes for the current and (if exist) previous versions.
 
@@ -168,7 +166,7 @@ You need to have .NET 6 for the service. The installer project requires Wix Tool
 - [x] Generate installer, preferably in MSI format.
 - [ ] Translate AD addresses (resource consuming task)
 - [ ] Use Observable pattern for registry instead of looping
-- [ ] Fine tune MSI
+- [x] Fine tune MSI
 
 ## Special thanks to:
 ### Icons8
