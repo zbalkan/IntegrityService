@@ -1,72 +1,52 @@
-<policyDefinitions revision="1.0" schemaVersion="1.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-	<policyNamespaces>
-		<target prefix="Marianok" namespace="MSC.Policies.BBDDCA06_2157_4897_B891_8782B14C7A89"/>
-		<using prefix="windows" namespace="Microsoft.Policies.Windows"/>
-	</policyNamespaces>
-	<supersededAdm fileName=""/>
-	<resources minRequiredRevision="1.0" fallbackCulture="en-US"/>
-	<categories>
-		<category name="CAT_MARIANOKS_XML_2_ADMXL" displayName="$(string.CAT_MARIANOKS_XML_2_ADMXL)" explainText="$(string.CAT_MARIANOKS_XML_2_ADMXL_HELP)"/>
-		<category name="CAT_F2423AD1_E9C3_45EE_B2D5_96BF910F5678" displayName="$(string.CAT_F2423AD1_E9C3_45EE_B2D5_96BF910F5678)" explainText="$(string.CAT_F2423AD1_E9C3_45EE_B2D5_96BF910F5678_HELP)">
-			<parentCategory ref="CAT_MARIANOKS_XML_2_ADMXL"/>
-		</category>
-	</categories>
-	<policies>
-		<policy name="POL_1E2517DE_3A01_4C7B_B126_7279C88B05C3" displayName="$(string.POL_1E2517DE_3A01_4C7B_B126_7279C88B05C3)" explainText="$(string.POL_1E2517DE_3A01_4C7B_B126_7279C88B05C3_HELP)" key="SOFTWARE\FIM" class="Machine" presentation="$(presentation.POL_1E2517DE_3A01_4C7B_B126_7279C88B05C3)">
-			<parentCategory ref="CAT_F2423AD1_E9C3_45EE_B2D5_96BF910F5678"/>
-			<supportedOn ref="windows:SUPPORTED_WindowsVista"/>
-			<elements>
-				<text id="HXT_1E2517DE_3A01_4C7B_B126_7279C88B05C3" valueName="MonitoredPaths"/>
-			</elements>
-		</policy>
-		<policy name="POL_E7DCAEFF_3740_44E3_B481_C95E32C185BE" displayName="$(string.POL_E7DCAEFF_3740_44E3_B481_C95E32C185BE)" explainText="$(string.POL_E7DCAEFF_3740_44E3_B481_C95E32C185BE_HELP)" key="SOFTWARE\FIM" class="Machine" presentation="$(presentation.POL_E7DCAEFF_3740_44E3_B481_C95E32C185BE)">
-			<parentCategory ref="CAT_F2423AD1_E9C3_45EE_B2D5_96BF910F5678"/>
-			<supportedOn ref="windows:SUPPORTED_WindowsVista"/>
-			<elements>
-				<text id="HXT_E7DCAEFF_3740_44E3_B481_C95E32C185BE" valueName="ExcludedPaths"/>
-			</elements>
-		</policy>
-		<policy name="POL_BBD434C0_8E0A_48C8_A0CD_C47D0EFED86C" displayName="$(string.POL_BBD434C0_8E0A_48C8_A0CD_C47D0EFED86C)" explainText="$(string.POL_BBD434C0_8E0A_48C8_A0CD_C47D0EFED86C_HELP)" key="SOFTWARE\FIM" class="Machine" presentation="$(presentation.POL_BBD434C0_8E0A_48C8_A0CD_C47D0EFED86C)">
-			<parentCategory ref="CAT_F2423AD1_E9C3_45EE_B2D5_96BF910F5678"/>
-			<supportedOn ref="windows:SUPPORTED_WindowsVista"/>
-			<elements>
-				<text id="HXT_BBD434C0_8E0A_48C8_A0CD_C47D0EFED86C" valueName="ExcludedExtensions"/>
-			</elements>
-		</policy>
-		<policy name="POL_B0147275_6B7B_4AD7_A95A_3D17F691AA8D" displayName="$(string.POL_B0147275_6B7B_4AD7_A95A_3D17F691AA8D)" explainText="$(string.POL_B0147275_6B7B_4AD7_A95A_3D17F691AA8D_HELP)" key="SOFTWARE\FIM" class="Machine" presentation="$(presentation.POL_B0147275_6B7B_4AD7_A95A_3D17F691AA8D)">
-			<parentCategory ref="CAT_F2423AD1_E9C3_45EE_B2D5_96BF910F5678"/>
-			<supportedOn ref="windows:SUPPORTED_WindowsVista"/>
-			<elements>
-				<decimal id="DXT_B0147275_6B7B_4AD7_A95A_3D17F691AA8D" valueName="EnableRegistryMonitoring"/>
-			</elements>
-		</policy>
-		<policy name="POL_3707498D_FDE8_4E8E_96C4_A83D719C8F6D" displayName="$(string.POL_3707498D_FDE8_4E8E_96C4_A83D719C8F6D)" explainText="$(string.POL_3707498D_FDE8_4E8E_96C4_A83D719C8F6D_HELP)" key="SOFTWARE\FIM" class="Machine" presentation="$(presentation.POL_3707498D_FDE8_4E8E_96C4_A83D719C8F6D)">
-			<parentCategory ref="CAT_F2423AD1_E9C3_45EE_B2D5_96BF910F5678"/>
-			<supportedOn ref="windows:SUPPORTED_WindowsVista"/>
-			<elements>
-				<text id="HXT_3707498D_FDE8_4E8E_96C4_A83D719C8F6D" valueName="MonitoredKeys"/>
-			</elements>
-		</policy>
-		<policy name="POL_8F47A97C_368F_4BAB_BF08_A8EACBDEA12A" displayName="$(string.POL_8F47A97C_368F_4BAB_BF08_A8EACBDEA12A)" explainText="$(string.POL_8F47A97C_368F_4BAB_BF08_A8EACBDEA12A_HELP)" key="SOFTWARE\FIM" class="Machine" presentation="$(presentation.POL_8F47A97C_368F_4BAB_BF08_A8EACBDEA12A)">
-			<parentCategory ref="CAT_F2423AD1_E9C3_45EE_B2D5_96BF910F5678"/>
-			<supportedOn ref="windows:SUPPORTED_WindowsVista"/>
-			<elements>
-				<text id="HXT_8F47A97C_368F_4BAB_BF08_A8EACBDEA12A" valueName="ExcludedKeys"/>
-			</elements>
-		</policy>
-		<policy name="POL_87A792FA_2928_4D84_A849_5A784E28D203" displayName="$(string.POL_87A792FA_2928_4D84_A849_5A784E28D203)" explainText="$(string.POL_87A792FA_2928_4D84_A849_5A784E28D203_HELP)" key="SOFTWARE\FIM" class="Machine" presentation="$(presentation.POL_87A792FA_2928_4D84_A849_5A784E28D203)">
-			<parentCategory ref="CAT_F2423AD1_E9C3_45EE_B2D5_96BF910F5678"/>
-			<supportedOn ref="windows:SUPPORTED_WindowsVista"/>
-			<elements>
-				<decimal id="DXT_87A792FA_2928_4D84_A849_5A784E28D203" valueName="HeartbeatInterval"/>
-			</elements>
-		</policy>
-		<policy name="POL_E8D8DF73_DA53_4CC7_927B_B9F7A344DAFC" displayName="$(string.POL_E8D8DF73_DA53_4CC7_927B_B9F7A344DAFC)" explainText="$(string.POL_E8D8DF73_DA53_4CC7_927B_B9F7A344DAFC_HELP)" key="SOFTWARE\FIM" class="Machine" presentation="$(presentation.POL_E8D8DF73_DA53_4CC7_927B_B9F7A344DAFC)">
-			<parentCategory ref="CAT_F2423AD1_E9C3_45EE_B2D5_96BF910F5678"/>
-			<supportedOn ref="windows:SUPPORTED_WindowsVista"/>
-			<elements>
-				<decimal id="DXT_E8D8DF73_DA53_4CC7_927B_B9F7A344DAFC" valueName="DisableLocalDatabase"/>
-			</elements>
-		</policy>
-	</policies>
+<?xml version="1.0" encoding="utf-8"?>
+<policyDefinitions xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" revision="1.0" schemaVersion="1.0" xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions" xsi:schemaLocation="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions ../Schema/PolicyDefinitionFiles.xsd">
+    <policyNamespaces>
+        <target prefix="fim" namespace="fim"/>
+        <using prefix="windows" namespace="Microsoft.Policies.Windows"/>
+    </policyNamespaces>
+    <supersededAdm fileName="" />
+    <resources minRequiredRevision="1.0" fallbackCulture="en-US"/>
+    <categories>
+        <category name="FIM" displayName="$(string.FIM)" explainText="$(string.FIM_HELP)"/>
+    </categories>
+    <policies>
+        <policy name="polHeartbeat" displayName="$(string.polHeartbeat)" explainText="$(string.polHeartbeat_HELP)" key="SOFTWARE\FIM" class="Machine" presentation="$(presentation.presHeartbeat)">
+            <parentCategory ref="FIM"/>
+            <supportedOn ref="windows:SUPPORTED_WindowsVista"/>
+            <elements>
+                <decimal id="presHeartbeatInterval" valueName="HeartbeatInterval" minValue="0" maxValue="3600" required="true"/>
+            </elements>
+        </policy>
+        <policy name="polFileSystem" displayName="$(string.polFileSystem)" explainText="$(string.polFileSystem_HELP)" key="SOFTWARE\FIM" class="Machine" presentation="$(presentation.presFileSystem)">
+            <parentCategory ref="FIM"/>
+            <supportedOn ref="windows:SUPPORTED_WindowsVista"/>
+            <elements>
+                <multiText id="presMonitoredPaths" valueName="MonitoredPaths"/>
+                <multiText id="presExcludedPaths" valueName="ExcludedPaths"/>
+                <multiText id="presExcludedExtensions" valueName="ExcludedExtensions"/>
+                <boolean id="presDisableLocalDatabase" valueName="DisableLocalDatabase">
+                    <trueValue>
+                        <string>true</string>
+                    </trueValue>
+                    <falseValue>
+                        <string>false</string>
+                    </falseValue>
+                </boolean>
+            </elements>
+        </policy>
+        <policy name="polRegistry" displayName="$(string.polRegistry)" explainText="$(string.polRegistry_HELP)" key="SOFTWARE\FIM" valueName="EnableRegistryMonitoring" class="Machine" presentation="$(presentation.presRegistry)">
+            <parentCategory ref="FIM"/>
+            <supportedOn ref="windows:SUPPORTED_WindowsVista"/>
+            <enabledValue>
+                <decimal value="1" />
+            </enabledValue>
+            <disabledValue>
+                <decimal value="0" />
+            </disabledValue>
+            <elements>
+                <multiText id="presMonitoredKeys" valueName="MonitoredKeys"/>
+                <multiText id="presExcludedKeys" valueName="ExcludedKeys"/>
+            </elements>
+        </policy>
+    </policies>
 </policyDefinitions>

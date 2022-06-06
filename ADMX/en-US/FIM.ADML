@@ -1,58 +1,79 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="utf-8"?>
 <policyDefinitionResources revision="1.0" schemaVersion="1.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-	<displayName>FIM</displayName>
-	<description>This policy includes the settings for FIM (File Integrity Monitoring) Service.</description>
-	<resources>
-		<stringTable>
-			<string id="CAT_MARIANOKS_XML_2_ADMXL">FIM Policy</string>
-			<string id="CAT_MARIANOKS_XML_2_ADMXL_HELP">This policy includes the settings for FIM (File Integrity Monitoring) Service.</string>
-			<string id="CAT_F2423AD1_E9C3_45EE_B2D5_96BF910F5678">FIM</string>
-			<string id="CAT_F2423AD1_E9C3_45EE_B2D5_96BF910F5678_HELP">This policy includes the settings for FIM (File Integrity Monitoring) Service.</string>
-			<string id="POL_1E2517DE_3A01_4C7B_B126_7279C88B05C3">Monitored Paths</string>
-			<string id="POL_1E2517DE_3A01_4C7B_B126_7279C88B05C3_HELP">This Policy configures the paths to monitor. Default value is defined as [hex(7)] with the value [43,00,3a,00,5c,00,57,00,69,00,6e,00,64,00,6f,00,77,00,73,00,5c,00,53,00,79,00,73,00,74,00,65,00,6d,00,33,00,32,00,00,00,43,00,3a,00,5c,00,57,00,69,00,6e,00,64,00,6f,00,77,00,73,00,5c,00,53,00,79,00,73,00,57,00,4f,00,57,00,36,00,34,00,00,00,43,00,3a,00,5c,00,50,00,72,00,6f,00,67,00,72,00,61,00,6d,00,20,00,46,00,69,00,6c,00,65,00,73,00,00,00,43,00,3a,00,5c,00,50,00,72,00,6f,00,67,00,72,00,61,00,6d,00,20,00,46,00,69,00,6c,00,65,00,73,00,20,00,28,00,78,00,38,00,36,00,29,00,00,00,00,00] assigned.</string>
-			<string id="POL_E7DCAEFF_3740_44E3_B481_C95E32C185BE">Excluded Paths</string>
-			<string id="POL_E7DCAEFF_3740_44E3_B481_C95E32C185BE_HELP">This Policy configures the paths to exclude from monitoring. Default value is defined as [hex(7)] with the value [43,00,3a,00,5c,00,57,00,69,00,6e,00,64,00,6f,00,77,00,73,00,5c,00,53,00,79,00,73,00,74,00,65,00,6d,00,33,00,32,00,5c,00,77,00,69,00,6e,00,65,00,76,00,74,00,00,00,43,00,3a,00,5c,00,57,00,69,00,6e,00,64,00,6f,00,77,00,73,00,5c,00,53,00,79,00,73,00,74,00,65,00,6d,00,33,00,32,00,5c,00,73,00,72,00,75,00,00,00,43,00,3a,00,5c,00,57,00,69,00,6e,00,64,00,6f,00,77,00,73,00,5c,00,53,00,79,00,73,00,74,00,65,00,6d,00,33,00,32,00,5c,00,63,00,6f,00,6e,00,66,00,69,00,67,00,00,00,43,00,3a,00,5c,00,57,00,69,00,6e,00,64,00,6f,00,77,00,73,00,5c,00,53,00,79,00,73,00,74,00,65,00,6d,00,33,00,32,00,5c,00,63,00,61,00,74,00,72,00,6f,00,6f,00,74,00,32,00,00,00,43,00,3a,00,5c,00,57,00,69,00,6e,00,64,00,6f,00,77,00,73,00,5c,00,53,00,79,00,73,00,74,00,65,00,6d,00,33,00,32,00,5c,00,4c,00,6f,00,67,00,46,00,69,00,6c,00,65,00,73,00,00,00,43,00,3a,00,5c,00,57,00,69,00,6e,00,64,00,6f,00,77,00,73,00,5c,00,53,00,79,00,73,00,74,00,65,00,6d,00,33,00,32,00,5c,00,77,00,62,00,65,00,6d,00,00,00,43,00,3a,00,5c,00,57,00,69,00,6e,00,64,00,6f,00,77,00,73,00,5c,00,53,00,79,00,73,00,74,00,65,00,6d,00,33,00,32,00,5c,00,57,00,44,00,49,00,5c,00,4c,00,6f,00,67,00,46,00,69,00,6c,00,65,00,73,00,00,00,43,00,3a,00,5c,00,57,00,69,00,6e,00,64,00,6f,00,77,00,73,00,5c,00,53,00,79,00,73,00,74,00,65,00,6d,00,33,00,32,00,5c,00,4d,00,69,00,63,00,72,00,6f,00,73,00,6f,00,66,00,74,00,5c,00,50,00,72,00,6f,00,74,00,65,00,63,00,74,00,5c,00,52,00,65,00,63,00,6f,00,76,00,65,00,72,00,79,00,00,00,43,00,3a,00,5c,00,57,00,69,00,6e,00,64,00,6f,00,77,00,73,00,5c,00,53,00,79,00,73,00,57,00,4f,00,57,00,36,00,34,00,5c,00,77,00,69,00,6e,00,65,00,76,00,74,00,00,00,43,00,3a,00,5c,00,57,00,69,00,6e,00,64,00,6f,00,77,00,73,00,5c,00,53,00,79,00,73,00,57,00,4f,00,57,00,36,00,34,00,5c,00,73,00,72,00,75,00,00,00,43,00,3a,00,5c,00,57,00,69,00,6e,00,64,00,6f,00,77,00,73,00,5c,00,53,00,79,00,73,00,57,00,4f,00,57,00,36,00,34,00,5c,00,63,00,6f,00,6e,00,66,00,69,00,67,00,00,00,43,00,3a,00,5c,00,57,00,69,00,6e,00,64,00,6f,00,77,00,73,00,5c,00,53,00,79,00,73,00,57,00,4f,00,57,00,36,00,34,00,5c,00,63,00,61,00,74,00,72,00,6f,00,6f,00,74,00,32,00,00,00,43,00,3a,00,5c,00,57,00,69,00,6e,00,64,00,6f,00,77,00,73,00,5c,00,53,00,79,00,73,00,57,00,4f,00,57,00,36,00,34,00,5c,00,4c,00,6f,00,67,00,46,00,69,00,6c,00,65,00,73,00,00,00,43,00,3a,00,5c,00,57,00,69,00,6e,00,64,00,6f,00,77,00,73,00,5c,00,53,00,79,00,73,00,57,00,4f,00,57,00,36,00,34,00,5c,00,77,00,62,00,65,00,6d,00,00,00,43,00,3a,00,5c,00,57,00,69,00,6e,00,64,00,6f,00,77,00,73,00,5c,00,53,00,79,00,73,00,57,00,4f,00,57,00,36,00,34,00,5c,00,57,00,44,00,49,00,5c,00,4c,00,6f,00,67,00,46,00,69,00,6c,00,65,00,73,00,00,00,43,00,3a,00,5c,00,57,00,69,00,6e,00,64,00,6f,00,77,00,73,00,5c,00,53,00,79,00,73,00,57,00,4f,00,57,00,36,00,34,00,5c,00,4d,00,69,00,63,00,72,00,6f,00,73,00,6f,00,66,00,74,00,5c,00,50,00,72,00,6f,00,74,00,65,00,63,00,74,00,5c,00,52,00,65,00,63,00,6f,00,76,00,65,00,72,00,79,00,00,00,43,00,3a,00,5c,00,50,00,72,00,6f,00,67,00,72,00,61,00,6d,00,20,00,46,00,69,00,6c,00,65,00,73,00,5c,00,57,00,69,00,6e,00,64,00,6f,00,77,00,73,00,20,00,44,00,65,00,66,00,65,00,6e,00,64,00,65,00,72,00,20,00,41,00,64,00,76,00,61,00,6e,00,63,00,65,00,64,00,20,00,54,00,68,00,72,00,65,00,61,00,74,00,20,00,50,00,72,00,6f,00,74,00,65,00,63,00,74,00,69,00,6f,00,6e,00,5c,00,43,00,6c,00,61,00,73,00,73,00,69,00,66,00,69,00,63,00,61,00,74,00,69,00,6f,00,6e,00,5c,00,43,00,6f,00,6e,00,66,00,69,00,67,00,75,00,72,00,61,00,74,00,69,00,6f,00,6e,00,00,00,43,00,3a,00,5c,00,50,00,72,00,6f,00,67,00,72,00,61,00,6d,00,20,00,46,00,69,00,6c,00,65,00,73,00,5c,00,4d,00,69,00,63,00,72,00,6f,00,73,00,6f,00,66,00,74,00,20,00,4f,00,6e,00,65,00,44,00,72,00,69,00,76,00,65,00,5c,00,53,00,74,00,61,00,6e,00,64,00,61,00,6c,00,6f,00,6e,00,65,00,55,00,70,00,64,00,61,00,74,00,65,00,72,00,5c,00,6c,00,6f,00,67,00,73,00,00,00,00,00] assigned.</string>
-			<string id="POL_BBD434C0_8E0A_48C8_A0CD_C47D0EFED86C">Excluded Extensions</string>
-			<string id="POL_BBD434C0_8E0A_48C8_A0CD_C47D0EFED86C_HELP">This Policy configures the file extensions to exclude from monitoring. Default value is defined as [hex(7)] with the value [2e,00,6c,00,6f,00,67,00,00,00,2e,00,65,00,76,00,74,00,78,00,00,00,2e,00,65,00,74,00,6c,00,00,00,00,00] assigned.</string>
-			<string id="POL_B0147275_6B7B_4AD7_A95A_3D17F691AA8D">Enable Registry Monitoring</string>
-			<string id="POL_B0147275_6B7B_4AD7_A95A_3D17F691AA8D_HELP">This Policy enables Registry Monitoring feature. 0 means disabled and 1 means enabled.</string>
-			<string id="POL_3707498D_FDE8_4E8E_96C4_A83D719C8F6D">Monitored Keys</string>
-			<string id="POL_3707498D_FDE8_4E8E_96C4_A83D719C8F6D_HELP">This Policy configures the Registry keys to monitor. Default value is defined as [hex(7)] with the value [43,00,6f,00,6d,00,70,00,75,00,74,00,65,00,72,00,5c,00,48,00,4b,00,45,00,59,00,5f,00,4c,00,4f,00,43,00,41,00,4c,00,5f,00,4d,00,41,00,43,00,48,00,49,00,4e,00,45,00,5c,00,53,00,4f,00,46,00,54,00,57,00,41,00,52,00,45,00,5c,00,46,00,49,00,4d,00,00,00,00,00] assigned.</string>
-			<string id="POL_8F47A97C_368F_4BAB_BF08_A8EACBDEA12A">Excluded Keys</string>
-			<string id="POL_8F47A97C_368F_4BAB_BF08_A8EACBDEA12A_HELP">This Policy configures the Registry keys to exclude from monitoring. Default value is defined as [hex(7)] with the value [00,00,00,00] assigned.</string>
-			<string id="POL_87A792FA_2928_4D84_A849_5A784E28D203">Heartbeat Interval</string>
-			<string id="POL_87A792FA_2928_4D84_A849_5A784E28D203_HELP">This Policy configures the HeartbeatInterval which creates an information level event log entry in an interval. The default value is defined as [dword] with the value 60 (seconds) assigned.</string>
-			<string id="POL_E8D8DF73_DA53_4CC7_927B_B9F7A344DAFC">Disable Local Database</string>
-			<string id="POL_E8D8DF73_DA53_4CC7_927B_B9F7A344DAFC_HELP">This Policy configures disabling the use of a Local Database. 0 means enabled and 1 means disabled.</string>
-		</stringTable>
-		<presentationTable>
-			<presentation id="POL_1E2517DE_3A01_4C7B_B126_7279C88B05C3">
-				<textBox refId="HXT_1E2517DE_3A01_4C7B_B126_7279C88B05C3"/>
-			</presentation>
-			<presentation id="POL_E7DCAEFF_3740_44E3_B481_C95E32C185BE">
-				<textBox refId="HXT_E7DCAEFF_3740_44E3_B481_C95E32C185BE"/>
-			</presentation>
-			<presentation id="POL_BBD434C0_8E0A_48C8_A0CD_C47D0EFED86C">
-				<textBox refId="HXT_BBD434C0_8E0A_48C8_A0CD_C47D0EFED86C"/>
-			</presentation>
-			<presentation id="POL_B0147275_6B7B_4AD7_A95A_3D17F691AA8D">
-				<decimalTextBox refId="DXT_B0147275_6B7B_4AD7_A95A_3D17F691AA8D"/>
-			</presentation>
-			<presentation id="POL_3707498D_FDE8_4E8E_96C4_A83D719C8F6D">
-				<textBox refId="HXT_3707498D_FDE8_4E8E_96C4_A83D719C8F6D"/>
-			</presentation>
-			<presentation id="POL_8F47A97C_368F_4BAB_BF08_A8EACBDEA12A">
-				<textBox refId="HXT_8F47A97C_368F_4BAB_BF08_A8EACBDEA12A"/>
-			</presentation>
-			<presentation id="POL_87A792FA_2928_4D84_A849_5A784E28D203">
-				<decimalTextBox refId="DXT_87A792FA_2928_4D84_A849_5A784E28D203"/>
-			</presentation>
-			<presentation id="POL_0F7B6A05_6EF6_4DE7_B6B1_D6136AB692F5">
-				<decimalTextBox refId="DXT_0F7B6A05_6EF6_4DE7_B6B1_D6136AB692F5"/>
-			</presentation>
-			<presentation id="POL_E8D8DF73_DA53_4CC7_927B_B9F7A344DAFC">
-				<decimalTextBox refId="DXT_E8D8DF73_DA53_4CC7_927B_B9F7A344DAFC"/>
-			</presentation>
-		</presentationTable>
-	</resources>
+    <displayName>FIM</displayName>
+    <description>This policy includes the settings for FIM (File Integrity Monitoring) Service.</description>
+    <resources>
+        <stringTable>
+            <string id="FIM">FIM</string>
+            <string id="FIM_HELP">Configure FIM (File Integrity Monitoring) Service</string>
+            <string id="polHeartbeat">Configure heartbeat</string>
+            <string id="polHeartbeat_HELP">This policy includes the heartbeat settings for FIM (File Integrity Monitoring) Service. FIM Service generates an event log in INFORMATION level in an interval.
+            
+If this policy is disabled or not configured, the default value is hardcoded as 60 seconds.
+The value can be specified between 0 to 3600 seconds. 0 means no heartbeat logs.
+
+Interval is not an exact timing. The exact logging will occur on each interval value plus a random offset.</string>
+            <string id="polFileSystem">Configure file system monitoring</string>
+            <string id="polFileSystem_HELP">This policy includes the file system monitoring settings for FIM (File Integrity Monitoring) Service.
+
+When disabled or not configured, there is no default value. Service will run without any monitoring activity.
+
+Monitored Paths:
+The paths enumerated in this list will be monitored by the FIM service. Please type each full path in one line without quotation marks, for instance:
+C:\Windows\System32
+C:\Windows\SysWOW64
+C:\Program Files
+C:\Program Files (x86)
+
+Excluded Paths:
+Paths to exclude from file system monitoring. Please type each full path in one line without quotation marks, for instance:
+C:\Windows\System32\winevt
+C:\Windows\System32\sru
+C:\Windows\System32\config
+C:\Windows\System32\catroot2
+C:\Windows\System32\LogFiles
+C:\Windows\System32\wbem
+
+Excluded extensions:
+File extensions to exclude from file system monitoring. Please type each extension in one line with preceding dot without quotation marks or wild cards, for instance:
+.log
+.evtx
+.etl            
+
+
+Disable local database:
+In the first run, the service creates a database that includes information and metadata of files within the monitored paths, including ACLs, SHA256 hashes, etc.
+The initial discovery generally takes around 30-90 minutes depending on the number of the files. After a discovery scan, the service needs to be restarted.
+By selecting this checkbox, you can disable the discovery phase and just start logging into event logs.</string>
+            <string id="polRegistry">Configure registry monitoring</string>
+            <string id="polRegistry_HELP">This policy includes the registry monitoring settings for FIM (File Integrity Monitoring) Service.
+
+When disabled or not configured, Registry monitoring will not run. Service will run without any monitoring activity.
+
+Monitored Keys:
+Registry keys to monitor. Please type each key in one line without quotation marks, for instance:
+Computer\HKEY_LOCAL_MACHINE\SOFTWARE\FIM
+Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run
+Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce
+Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon
+
+Excluded keys:
+Registry keys to exclude from file system monitoring. Please type each key in one line without quotation marks.</string>
+        </stringTable>
+        <presentationTable>
+            <presentation id="presHeartbeat">
+                <decimalTextBox refId="presHeartbeatInterval" defaultValue="60" spin="true">Heartbeat interval:</decimalTextBox>
+            </presentation>
+            <presentation id="presFileSystem">
+                <multiTextBox refId="presMonitoredPaths">Monitored paths:</multiTextBox>
+                <multiTextBox refId="presExcludedPaths">Excluded paths:</multiTextBox>
+                <multiTextBox refId="presExcludedExtensions">Excluded extensions:</multiTextBox>
+                <checkBox refId="presDisableLocalDatabase" defaultChecked="false">Disable local database</checkBox>
+            </presentation>
+            <presentation id="presRegistry">
+                <multiTextBox refId="presMonitoredKeys">Monitored keys:</multiTextBox>
+                <multiTextBox refId="presExcludedKeys">Excluded keys:</multiTextBox>
+            </presentation>
+        </presentationTable>
+    </resources>
 </policyDefinitionResources>
