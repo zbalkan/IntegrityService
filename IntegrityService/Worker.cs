@@ -11,13 +11,13 @@ namespace IntegrityService
     {
         private readonly ILogger<Worker> _logger;
         private readonly FileSystemMonitor _fsMonitor;
-        private readonly RegistryMonitor _regMonitor;
         private readonly BackgroundWorkerQueue _backgroundWorkerQueue;
+        private RegistryMonitor _regMonitor;
+        
         public Worker(ILogger<Worker> logger, BackgroundWorkerQueue backgroundWorkerQueue)
         {
             _logger = logger;
             _fsMonitor = new FileSystemMonitor(_logger);
-            _regMonitor = new RegistryMonitor(_logger);
             _backgroundWorkerQueue = backgroundWorkerQueue;
         }
 
@@ -46,6 +46,7 @@ namespace IntegrityService
 
             if (Settings.Instance.EnableRegistryMonitoring)
             {
+                _regMonitor = new RegistryMonitor(_logger);
                 _regMonitor.Start();
             }
 
