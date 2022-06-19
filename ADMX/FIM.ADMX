@@ -26,10 +26,10 @@
                 <multiText id="presExcludedExtensions" valueName="ExcludedExtensions"/>
                 <boolean id="presDisableLocalDatabase" valueName="DisableLocalDatabase">
                     <trueValue>
-                        <string>true</string>
+                        <string>1</string>
                     </trueValue>
                     <falseValue>
-                        <string>false</string>
+                        <string>0</string>
                     </falseValue>
                 </boolean>
             </elements>
