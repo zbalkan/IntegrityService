@@ -47,6 +47,11 @@ namespace IntegrityService.Utils
             {
                 return default;
             }
+            catch (UnauthorizedAccessException)
+            {
+                //we don't want to throw this exception from getting access list
+                return default;
+            }
 
             acl.Owner = FileSystem.OwnerName(fileSystemSecurity);
             acl.PrimaryGroupOfOwner = FileSystem.PrimaryGroupOfOwnerName(fileSystemSecurity);

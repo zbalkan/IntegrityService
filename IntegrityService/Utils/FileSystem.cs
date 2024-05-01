@@ -13,6 +13,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using IntegrityService.FIM;
 using NUlid;
+using Polly;
 
 namespace IntegrityService.Utils
 {
@@ -23,6 +24,8 @@ namespace IntegrityService.Utils
         private static Regex Pattern => _pattern ??= new Regex(GeneratePattern(), RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
         private static Regex? _pattern;
+
+        private static readonly Policy retryPolicy = Policy.Handle<Exception>().RetryForever();
 
         internal static void StartSearch()
         {
@@ -42,12 +45,14 @@ namespace IntegrityService.Utils
             Console.WriteLine($"File filtering completed: {sw.Elapsed}");
 
             sw.Restart();
-            var changes = PrepareData(filtered);
-            sw.Stop();
-            Console.WriteLine($"File data preparation completed: {sw.Elapsed}");
+            //var changes = PrepareData(filtered);
+            //sw.Stop();
+            //Console.WriteLine($"File data preparation completed: {sw.Elapsed}");
 
-            sw.Restart();
-            Database.Context.FileSystemChanges.InsertBulk(changes, changes.Count());
+            //sw.Restart();
+            //Database.Context.FileSystemChanges.InsertBulk(changes, changes.Count());
+
+            Parallel.ForEach(filtered, new ParallelOptions() { MaxDegreeOfParallelism = 100 }, path => GenerateChange(path));
             sw.Stop();
             Console.WriteLine($"File insert bulk completed: {sw.Elapsed}");
         }
@@ -183,6 +188,25 @@ namespace IntegrityService.Utils
             }
         }
 
+        private static void GenerateChange(string path)
+        {
+            var change = new FileSystemChange
+            {
+                Id = Ulid.NewUlid().ToString(),
+                ChangeCategory = ChangeCategory.Discovery,
+                ConfigChangeType = ConfigChangeType.FileSystem,
+                Entity = path,
+                DateTime = DateTime.Now,
+                FullPath = path,
+                SourceComputer = Environment.MachineName,
+                CurrentHash = CalculateFileDigest(path),
+                PreviousHash = string.Empty,
+                ACLs = path.GetACL()
+            };
+
+            retryPolicy.Execute(() => Database.Context.FileSystemChanges.Insert(change));
+        }
+
         public static string CalculateFileDigest(string path)
         {
             var digest = string.Empty;
@@ -225,7 +249,7 @@ namespace IntegrityService.Utils
             sb.Append("(?:^(");
             sb.Append(new StringBuilder(20).AppendJoin('|', Settings.Instance.MonitoredPaths).Sanitize());
             sb.Append(@")\\?.*$))");
-
+            sb.Append(')');
             return sb.ToString();
         }
 

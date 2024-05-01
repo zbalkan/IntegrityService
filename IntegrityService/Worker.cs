@@ -13,7 +13,7 @@ namespace IntegrityService
         private readonly FileSystemMonitor _fsMonitor;
         private readonly BackgroundWorkerQueue _backgroundWorkerQueue;
         private RegistryMonitor _regMonitor;
-        
+
         public Worker(ILogger<Worker> logger, BackgroundWorkerQueue backgroundWorkerQueue)
         {
             _logger = logger;
