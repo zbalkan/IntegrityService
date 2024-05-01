@@ -5,11 +5,9 @@
 [![Release](https://github.com/zbalkan/IntegrityService/actions/workflows/dotnet.yml/badge.svg)](https://github.com/zbalkan/IntegrityService/actions/workflows/dotnet.yml)
 
 ## Overview
-File Integrity Monitoring (FIM) is a security related requirement for monitoring critical locations:
-* directories in Linux
-* directories and Registry keys in Windows.
+Integrity Service is a security related requirement for monitoring critical directories and Registry keys in Windows.
 
-This application provides a FIM service for Windows.
+Yes, we need a better name.
 
 ## Usage
 1. Install the service via `sc.exe` manually, or using `install.bat` or `IntegrityService.msi`.
@@ -112,6 +110,7 @@ For ease of use, an ADMX file is created. So, the monitored paths, excluded path
 </table>
 
 ### Event Logs
+
 Event logs IDs are taken from [WINFIM.NET](https://github.com/redblueteam/WinFIM.NET). Thanks [redblueteam](https://github.com/redblueteam) for inspiration.
 
 | Event ID | Description |
@@ -127,16 +126,22 @@ Event logs IDs are taken from [WINFIM.NET](https://github.com/redblueteam/WinFIM
 
 
 ## Installation
+
 ### Plain installation
+
 1. Download the executable.
 2. Use the `install.bat` and `uninstall.bat` for your purposes.
+
 ### MSI package installation
+
 Use the `IntegrityService.Installer.msi` file to install. This is specifically used for ease of deployment. It will install the service with an automatic start setting. It does not start the service immediately. It is up to the administrators to let it start on next boot or an immediate start.
 
 ### Details
+
 The second project called `IntegrityService.Installer` is a Wix project to create the uninstaller. Currently, it seeks for a single-file executable in path ".\publish\", which is the Publish path in my profile. You just need to change it to match yours.
 
-### Suggested PublishProfile.pubxml setup
+### Suggested `PublishProfile.pubxml` setup
+
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
 <!--
@@ -158,9 +163,11 @@ https://go.microsoft.com/fwlink/?LinkID=208121.
 ```
 
 ## Development
-You need to have .NET 6 for the service. The installer project requires Wix Toolset, and that requires enabling .NET 3.5 on development machine.
+
+You need to have .NET 8 for the service. The installer project requires Wix Toolset, and that requires enabling .NET 3.5 on development machine.
 
 ## Roadmap
+
 - [x] Include ACLs
 - [x] Monitor Registry
 - [x] Generate installer, preferably in MSI format.
@@ -169,7 +176,11 @@ You need to have .NET 6 for the service. The installer project requires Wix Tool
 - [x] Fine tune MSI
 
 ## Special thanks to:
+
 ### Icons8
+
 [Film Noir](https://icons8.com/icon/6883/film-noir) icon by [Icons8](https://icons8.com) is used for the executable.
+
 ### Mariano S. Cosentino
+
 Thanks to Mariano S. Cosentino's [REG_2_ADMX script](https://mscosentino-en.blogspot.com/2010/02/convert-registry-file-to-admx-policy.html), the initial draft of the ADMX files are created.
