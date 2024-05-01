@@ -224,7 +224,7 @@ namespace IntegrityService.Utils
             // Add included paths
             sb.Append("(?:^(");
             sb.Append(new StringBuilder(20).AppendJoin('|', Settings.Instance.MonitoredPaths).Sanitize());
-            sb.Append(@")\\?.*$))");
+            sb.Append(@")\\?.*$)))");
 
             return sb.ToString();
         }
