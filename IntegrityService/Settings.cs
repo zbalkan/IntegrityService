@@ -86,30 +86,81 @@ namespace IntegrityService
 
         private void ReadOrCreateSubKeys()
         {
-            Registry.WriteMultiStringValue("MonitoredPaths", [string.Empty]);
-            MonitoredPaths = Registry.ReadMultiStringValue("MonitoredPaths");
+            var monitoredPaths = Registry.ReadMultiStringValue("MonitoredPaths");
+            if (monitoredPaths.Count == 0)
+            {
+                monitoredPaths = [@"C:\Windows\System32", @"C:\Windows\SysWOW64", @"C:\Program Files", @"C:\Program Files (x86)"];
+                Registry.WriteMultiStringValue("MonitoredPaths", monitoredPaths);
+            }
+            MonitoredPaths = monitoredPaths;
 
-            Registry.WriteMultiStringValue("ExcludedPaths", [string.Empty]);
-            ExcludedPaths = Registry.ReadMultiStringValue("ExcludedPaths");
+            var excludedPaths = Registry.ReadMultiStringValue("ExcludedPaths");
+            if (excludedPaths.Count == 0)
+            {
+                excludedPaths = [@"C:\Windows\System32\winevt", @"C:\Windows\System32\sru", @"C:\Windows\System32\config",
+                @"C:\Windows\System32\catroot2", @"C:\Windows\System32\LogFiles", @"C:\Windows\System32\wbem",
+                @"C:\Windows\System32\WDI\LogFiles", @"C:\Windows\System32\Microsoft\Protect\Recovery",
+                @"C:\Windows\SysWOW64\winevt", @"C:\Windows\SysWOW64\sru", @"C:\Windows\SysWOW64\config",
+                @"C:\Windows\SysWOW64\catroot2", @"C:\Windows\SysWOW64\LogFiles", @"C:\Windows\SysWOW64\wbem",
+                @"C:\Windows\SysWOW64\WDI\LogFiles", @"C:\Windows\SysWOW64\Microsoft\Protect\Recovery",
+                @"C:\Program Files\Windows Defender Advanced Threat Protection\Classification\Configuration",
+                @"C:\Program Files\Microsoft OneDrive\StandaloneUpdater\logs"];
+                Registry.WriteMultiStringValue("ExcludedPaths", excludedPaths);
+            }
+            ExcludedPaths = excludedPaths;
 
-            Registry.WriteMultiStringValue("ExcludedExtensions", [string.Empty]);
-            ExcludedExtensions = Registry.ReadMultiStringValue("ExcludedExtensions");
+            var excludedExtensions = Registry.ReadMultiStringValue("ExcludedExtensions");
+            if (excludedExtensions.Count == 0)
+            {
+                excludedExtensions = [".log", ".evtx", ".etl"];
+                Registry.WriteMultiStringValue("ExcludedExtensions", excludedExtensions);
+            }
+            ExcludedExtensions = excludedExtensions;
 
-            Registry.WriteDwordValue("EnableRegistryMonitoring", 0);
-            EnableRegistryMonitoring = Registry.ReadDwordValue("EnableRegistryMonitoring") == 1;
+            var registryMonitoring = Registry.ReadDwordValue("EnableRegistryMonitoring");
+            if (registryMonitoring == -1)
+            {
+                Registry.WriteDwordValue("EnableRegistryMonitoring", 0);
+                registryMonitoring = 0;
+            }
+            EnableRegistryMonitoring = registryMonitoring == 1;
 
-            Registry.WriteMultiStringValue("MonitoredKeys", [string.Empty]);
-            MonitoredKeys = Registry.ReadMultiStringValue("MonitoredKeys");
+            var monitoredKeys = Registry.ReadMultiStringValue("MonitoredKeys");
+            if (monitoredKeys.Count == 0)
+            {
+                monitoredKeys = [@"Computer\HKEY_LOCAL_MACHINE\SOFTWARE\FIM",
+                @"Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run",
+                @"Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce",
+                @"Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"];
+                Registry.WriteMultiStringValue("MonitoredKeys", monitoredKeys);
+            }
+            MonitoredKeys = monitoredKeys;
 
-            Registry.WriteMultiStringValue("ExcludedKeys", [string.Empty]);
-            ExcludedKeys = Registry.ReadMultiStringValue("ExcludedKeys");
+            var excludedKeys = Registry.ReadMultiStringValue("ExcludedKeys");
+            if (excludedKeys.Count == 0)
+            {
+                excludedKeys = [string.Empty];
+                Registry.WriteMultiStringValue("ExcludedKeys", excludedKeys);
+            }
+            ExcludedKeys = excludedKeys;
 
-            Registry.WriteDwordValue("HeartbeatInterval", DEFAULT_HEARTBEAT_INTERVAL);
+
             var heartbeat = Registry.ReadDwordValue("HeartbeatInterval");
-            HeartbeatInterval = heartbeat >= 0 ? heartbeat : DEFAULT_HEARTBEAT_INTERVAL;
+            if (heartbeat == -1)
+            {
+                Registry.WriteDwordValue("HeartbeatInterval", DEFAULT_HEARTBEAT_INTERVAL);
+                heartbeat = DEFAULT_HEARTBEAT_INTERVAL;
+            }
 
-            Registry.WriteDwordValue("DisableLocalDatabase", 0);
-            DisableLocalDatabase = Registry.ReadDwordValue("DisableLocalDatabase") == 1;
+            HeartbeatInterval = heartbeat;
+
+            var disableLocalDatabase = Registry.ReadDwordValue("DisableLocalDatabase");
+            if (disableLocalDatabase == -1)
+            {
+                Registry.WriteDwordValue("DisableLocalDatabase", 0);
+                disableLocalDatabase = 0;
+            }
+            DisableLocalDatabase = disableLocalDatabase == 1;
         }
     }
 }

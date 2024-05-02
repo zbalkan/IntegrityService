@@ -20,10 +20,6 @@ namespace IntegrityService.Utils
     {
         private static readonly SHA256 Sha256 = SHA256.Create();
 
-        private static Regex Pattern => _pattern ??= new Regex(GeneratePattern(), RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
-
-        private static Regex? _pattern;
-
         internal static void StartSearch()
         {
             var sw = new Stopwatch();
@@ -84,14 +80,22 @@ namespace IntegrityService.Utils
 
         private static IEnumerable<string> FilterAll(IEnumerable<string> paths)
         {
+            var pattern = new Regex(GeneratePattern(), RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
             var matches = from path in paths.AsParallel().WithMergeOptions(ParallelMergeOptions.NotBuffered)
-                          where Pattern.IsMatch(path)
+                          where pattern.IsMatch(path)
                           select path;
 
             return matches.ToList();
         }
 
-        public static bool IsExcluded(string path) => !Pattern.IsMatch(path);
+        public static bool IsExcluded(string path)
+        {
+            foreach (var excluded in Settings.Instance.ExcludedPaths)
+            {
+                if (path.StartsWith(excluded, StringComparison.InvariantCultureIgnoreCase)) { return true; }
+            }
+            return false;
+        }
 
         public static string OwnerName(FileSecurity fileSecurity)
         {
@@ -224,7 +228,7 @@ namespace IntegrityService.Utils
             // Add included paths
             sb.Append("(?:^(");
             sb.Append(new StringBuilder(20).AppendJoin('|', Settings.Instance.MonitoredPaths).Sanitize());
-            sb.Append(@")\\?.*$)))");
+            sb.Append(@")\\?.*$))");
 
             return sb.ToString();
         }

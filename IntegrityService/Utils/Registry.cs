@@ -16,7 +16,7 @@ namespace IntegrityService.Utils
             .OpenSubKey(FimKeyName, true) ?? Microsoft.Win32.Registry.LocalMachine.OpenSubKey("Software", true).CreateSubKey(FimKeyName, true);
 #pragma warning restore CS8602 // Dereference of a possibly null reference.
 
-        public static void WriteMultiStringValue(string value, IEnumerable<string> valueData, bool overwrite = false)
+        public static void WriteMultiStringValue(string value, IEnumerable<string> valueData, bool overwrite = true)
         {
             if (string.IsNullOrEmpty(value))
             {
@@ -49,11 +49,22 @@ namespace IntegrityService.Utils
                 throw new ArgumentException($"'{nameof(value)}' cannot be null or empty.", nameof(value));
             }
 
-            var valueData = Root.GetValue(value);
-            return valueData != null ? ((string[])valueData).Where(path => !string.IsNullOrEmpty(path)).ToList() : new List<string>(0);
+            var valueData = Root.GetValue(value, new List<string>());
+
+            //if (valueData == null) return [];
+
+            var multiStringValue = new List<string>();
+
+            if (multiStringValue.Count == 0) return [];
+
+            multiStringValue.AddRange(valueData as List<string>);
+
+            if (multiStringValue.Count == 0) return [];
+            return
+                multiStringValue.Where(path => !string.IsNullOrEmpty(path)).ToList();
         }
 
-        public static void WriteDwordValue(string value, int valueData, bool overwrite = false)
+        public static void WriteDwordValue(string value, int valueData, bool overwrite = true)
         {
             if (string.IsNullOrEmpty(value))
             {
@@ -85,7 +96,7 @@ namespace IntegrityService.Utils
 
             if (valueData == null)
             {
-                return 0;
+                return -1;
             }
 
             if (int.TryParse(valueData.ToString(), out var valueDataAsInt))
