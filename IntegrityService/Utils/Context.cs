@@ -4,13 +4,14 @@ using LiteDB;
 
 namespace IntegrityService.Utils
 {
-    internal sealed class Context : IDisposable
+    internal class Context : IDisposable
     {
         public ILiteCollection<FileSystemChange> FileSystemChanges { get; }
 
         public ILiteCollection<RegistryChange> RegistryChanges { get; }
 
         private readonly LiteDatabase _database;
+        private bool disposedValue;
 
         /// <summary>
         ///     The default size is 800MB
@@ -44,6 +45,24 @@ namespace IntegrityService.Utils
             RegistryChanges.EnsureIndex(x => x.Entity);
         }
 
-        public void Dispose() => _database.Dispose();
+        private void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    _database.Dispose();
+                }
+
+                disposedValue = true;
+            }
+        }
+
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
     }
 }

@@ -2,17 +2,7 @@
 {
     internal static class Database
     {
-        public static Context Context
-        {
-            get
-            {
-                if (_context == null)
-                {
-                    _context = new Context();
-                }
-                return _context;
-            }
-        }
+        public static Context Context => _context ??= new Context();
 
         private static Context _context;
 
