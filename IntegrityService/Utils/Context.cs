@@ -21,17 +21,13 @@ namespace IntegrityService.Utils
         private const long MB = 1024 * 1024;
 
         /// <summary>
-        ///     The default file name is fim.db
-        /// </summary>
-        private const string DatabaseFileName = "fim.db";
-        /// <summary>
         ///     Hardcoded database file name is fim.db. Initial database size is set to 800MB for performance reasons.
         /// </summary>
         public Context()
         {
             _database = new LiteDatabase(new ConnectionString()
             {
-                Filename = DatabaseFileName,
+                Filename = Settings.Instance.DatabasePath,
                 Connection = ConnectionType.Direct,
                 InitialSize = InitialDatabaseSize
             });

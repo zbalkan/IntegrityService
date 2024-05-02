@@ -1,6 +1,7 @@
 ﻿using IntegrityService.Utils;
 using System;
 using System.Collections.Generic;
+using System.IO;
 
 namespace IntegrityService
 {
@@ -58,6 +59,12 @@ namespace IntegrityService
         /// </summary>
         public bool Success { get; }
 
+        /// <summary>
+        ///     The default file name is fim.db
+        /// </summary>
+        public readonly string DatabasePath = $"{Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData)}\\FIM\\fim.db";
+
+
         internal static Settings Instance => Lazy.Value;
 
         private const int DEFAULT_HEARTBEAT_INTERVAL = 60;
@@ -65,6 +72,7 @@ namespace IntegrityService
 
         private Settings()
         {
+            Directory.CreateDirectory(Directory.GetParent(DatabasePath)!.ToString());
             try
             {
                 ReadOrCreateSubKeys();
