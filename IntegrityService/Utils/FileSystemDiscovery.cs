@@ -39,78 +39,111 @@ namespace IntegrityService.Utils
             UpdateDiscoveryDatabase(sw, filtered);
         }
 
+        private static List<string> FilterByPattern(IEnumerable<string> paths)
+        {
+            var includePattern = new Regex(GetIncludePattern(), RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+            var matches = (from path in paths.AsParallel().WithMergeOptions(ParallelMergeOptions.NotBuffered)
+                           where includePattern.IsMatch(path)
+                           select path).ToList();
+
+            var excludePathPatternString = GetExcludePathPattern();
+            if (!string.IsNullOrEmpty(excludePathPatternString))
+            {
+                var excludePathPattern = new Regex(excludePathPatternString, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+                matches = (from path in matches.AsParallel().WithMergeOptions(ParallelMergeOptions.NotBuffered)
+                           where excludePathPattern.IsMatch(path)
+                           select path).ToList();
+            }
+
+            var excludeExtPatternString = GetExcludeExtPattern();
+            if (!string.IsNullOrEmpty(excludeExtPatternString))
+            {
+                var excludeExtPattern = new Regex(excludeExtPatternString, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+                matches = (from path in matches.AsParallel().WithMergeOptions(ParallelMergeOptions.NotBuffered)
+                           where excludeExtPattern.IsMatch(path)
+                           select path).ToList();
+            }
+
+            return matches;
+        }
+
+        private static string GetExcludeExtPattern()
+        {
+            if (Settings.Instance.ExcludedExtensions.Length > 0)
+            {
+                var sb = new StringBuilder(20);
+                sb.Append("^(?!.*(");
+                sb.Append(Sanitize(new StringBuilder(20).AppendJoin('|', Settings.Instance.ExcludedExtensions)));
+                sb.Append(")$).*$");
+                return sb.ToString();
+            }
+            return string.Empty;
+        }
+
+        private static string GetExcludePathPattern()
+        {
+            if (Settings.Instance.ExcludedPaths.Length > 0)
+            {
+                var sb = new StringBuilder(100);
+                sb.Append("^(?!(");
+                sb.Append(Sanitize(new StringBuilder(20).AppendJoin('|', Settings.Instance.ExcludedPaths)));
+                sb.Append(")).*$");
+                return sb.ToString();
+            }
+            return string.Empty;
+        }
+
+        // Use multiple patterns and iterate
+        private static string GetIncludePattern()
+        {
+            var sb = new StringBuilder(100);
+            sb.Append("(?:^(");
+            sb.Append(Sanitize(new StringBuilder(20).AppendJoin('|', Settings.Instance.MonitoredPaths)));
+            sb.Append(@")\\?.*$)");
+
+            return sb.ToString();
+        }
+
+        private static StringBuilder Sanitize(StringBuilder sb) => sb
+            .Replace(@"\", @"\\")
+            .Replace(@"\\\\", @"\\")
+            .Replace(".", @"\.")
+            .Replace(" ", "\\ ")
+            .Replace("(", "\\(")
+            .Replace(")", "\\)");
+
         private List<string> ContinueFromLastScan(Stopwatch sw, List<string> filtered)
         {
             _logger.LogInformation("Filtering out the data in the database...");
             sw.Restart();
+            var initialCount = filtered.Count;
             var filteredOut = filtered.RemoveAll(x => Database.Context.FileSystemChanges.Exists(c => c.Entity.Equals(x)));
             sw.Stop();
             _logger.LogInformation("Filtering out completed: {elapsed}", sw.Elapsed);
             if (filteredOut > 0)
             {
                 _logger.LogInformation("Number of files not in database: {filteredCount} (filtered out {filteredOut}, %{percentage})",
-                    filtered.Count, filteredOut, ((double)filteredOut * 100 / filtered.Count).ToString("0.00"));
+                    filtered.Count, filteredOut, (double)filteredOut * 100 / initialCount);
             }
             else
             {
-                _logger.LogInformation("Nothing to filter out.");
+                _logger.LogInformation("Nothing to filter out. Discovery database is empty.");
             }
 
             return filtered;
         }
-
-        private List<string> FilterAll(IEnumerable<string> paths)
-        {
-            var pattern = new Regex(GeneratePattern(), RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
-            var matches = from path in paths.AsParallel().WithMergeOptions(ParallelMergeOptions.NotBuffered)
-                          where pattern.IsMatch(path)
-                          select path;
-
-            return matches.ToList();
-        }
-
         private List<string> FilterByConfig(Stopwatch sw, ConcurrentBag<string> files)
         {
             _logger.LogInformation("Starting filtering by configuration values...");
             sw.Restart();
-            var filtered = FilterAll(files);
+            var filtered = FilterByPattern(files);
             sw.Stop();
             _logger.LogInformation("Path filtering completed: {elapsed}", sw.Elapsed);
-            var diff = files.Count - filtered.Count;
             _logger.LogInformation("Number of files to be monitored: {filteredCount} (filtered out {diff}, %{percentage})",
-                filtered.Count, diff, ((double)diff * 100 / files.Count).ToString("0.00"));
+                filtered.Count, files.Count - filtered.Count, (double)(files.Count - filtered.Count) * 100 / files.Count);
             return filtered;
         }
-
-        private string GeneratePattern()
-        {
-            var sb = new StringBuilder(100);
-
-            // Start with negative lookahead for exclusion
-            sb.Append("(?:(?!(^(");
-            if (Settings.Instance.ExcludedPaths.Count > 0)
-            {
-                sb.Append(Sanitize(new StringBuilder(20).AppendJoin('|', Settings.Instance.ExcludedPaths)));
-                sb.Append(@")\\?.*)");
-            }
-
-            if (Settings.Instance.ExcludedExtensions.Count > 0)
-            {
-                sb.Append("|(^.*(");
-                sb.Append(Sanitize(new StringBuilder(20).AppendJoin('|', Settings.Instance.ExcludedExtensions)));
-                sb.Append(')');
-            }
-
-            sb.Append("$))");
-
-            // Add included paths
-            sb.Append("(?:^(");
-            sb.Append(Sanitize(new StringBuilder(20).AppendJoin('|', Settings.Instance.MonitoredPaths)));
-            sb.Append(@")\\?.*$))");
-
-            return sb.ToString();
-        }
-
         private ConcurrentBag<string> RunNtfsDiscovery(out Stopwatch sw)
         {
             _logger.LogInformation("Starting file search...");
@@ -123,15 +156,6 @@ namespace IntegrityService.Utils
 
             return files;
         }
-
-        private StringBuilder Sanitize(StringBuilder sb) => sb
-            .Replace(@"\", @"\\")
-            .Replace(@"\\\\", @"\\")
-            .Replace(".", @"\.")
-            .Replace(" ", "\\ ")
-            .Replace("(", "\\(")
-            .Replace(")", "\\)");
-
         private void UpdateDiscoveryDatabase(Stopwatch sw, List<string> filtered)
         {
             _logger.LogInformation("Starting inventory discovery (path and hash)...");

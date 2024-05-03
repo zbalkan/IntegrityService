@@ -1,10 +1,8 @@
-﻿using IntegrityService.FIM;
-using Microsoft.Diagnostics.Tracing.Parsers.Kernel;
+﻿using System;
+using System.Linq;
+using IntegrityService.FIM;
 using Microsoft.Win32;
 using NUlid;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace IntegrityService.Utils
 {
@@ -19,17 +17,14 @@ namespace IntegrityService.Utils
             .OpenSubKey(FimKeyName, true) ?? Microsoft.Win32.Registry.LocalMachine.OpenSubKey("Software", true).CreateSubKey(FimKeyName, true);
 #pragma warning restore CS8602 // Dereference of a possibly null reference.
 
-        public static void WriteMultiStringValue(string value, IEnumerable<string> valueData, bool overwrite = true)
+        public static void WriteMultiStringValue(string value, string[] valueData, bool overwrite = true)
         {
             if (string.IsNullOrEmpty(value))
             {
-                throw new ArgumentException($"'{nameof(value)}' cannot be null or empty.", nameof(value));
+                throw new ArgumentException("Value cannot be null or empty.", nameof(value));
             }
 
-            if (valueData is null)
-            {
-                throw new ArgumentNullException(nameof(valueData));
-            }
+            ArgumentNullException.ThrowIfNull(valueData);
 
             try
             {
@@ -45,29 +40,25 @@ namespace IntegrityService.Utils
             }
         }
 
-        public static List<string> ReadMultiStringValue(string value)
+        public static string[] ReadMultiStringValue(string value)
         {
             if (string.IsNullOrEmpty(value))
             {
-                throw new ArgumentException($"'{nameof(value)}' cannot be null or empty.", nameof(value));
+                throw new ArgumentException("Value cannot be null or empty.", nameof(value));
             }
 
-            var valueData = Root.GetValue(value, new List<string>());
+            var valueData = Root.GetValue(value, null);
 
-            var multiStringValue = new List<string>();
-
-            multiStringValue.AddRange(valueData as List<string>);
-
-            if (multiStringValue.Count == 0) return [];
-            return
-                multiStringValue.Where(path => !string.IsNullOrEmpty(path)).ToList();
+            return (valueData == null || valueData is not string[] multiStringValue)
+                ? []
+                : multiStringValue.Where(path => !string.IsNullOrEmpty(path)).ToArray();
         }
 
         public static void WriteDwordValue(string value, int valueData, bool overwrite = true)
         {
             if (string.IsNullOrEmpty(value))
             {
-                throw new ArgumentException($"'{nameof(value)}' cannot be null or empty.", nameof(value));
+                throw new ArgumentException("Value cannot be null or empty.", nameof(value));
             }
 
             try
@@ -88,7 +79,7 @@ namespace IntegrityService.Utils
         {
             if (string.IsNullOrEmpty(value))
             {
-                throw new ArgumentException($"'{nameof(value)}' cannot be null or empty.", nameof(value));
+                throw new ArgumentException("Value cannot be null or empty.", nameof(value));
             }
 
             var valueData = Root.GetValue(value);
@@ -106,20 +97,20 @@ namespace IntegrityService.Utils
             return 0;
         }
 
-        public static void GenerateChange(RegistryTraceData ev, ChangeCategory changeCategory, string keyName, RegistryKey key)
+        public static void GenerateChange(RegistryKey key, string valueName, string valueData, ChangeCategory changeCategory)
         {
             var change = new RegistryChange
             {
                 Id = Ulid.NewUlid().ToString(),
                 ChangeCategory = changeCategory,
                 ConfigChangeType = ConfigChangeType.Registry,
-                Entity = keyName,
+                Entity = key.Name,
                 DateTime = DateTime.Now,
-                Key = keyName,
-                Hive = Enum.GetName(ParseHive(keyName)) ?? string.Empty,
+                Key = key.Name,
+                Hive = Enum.GetName(ParseHive(key.Name)) ?? string.Empty,
                 SourceComputer = Environment.MachineName,
-                ValueName = ev.ValueName,
-                ValueData = key.GetValue(ev.ValueName)?.ToString() ?? string.Empty,
+                ValueName = valueName,
+                ValueData = valueData,
                 ACLs = key.GetACL()
             };
             Database.Context.RegistryChanges.Insert(change);

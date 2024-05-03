@@ -1,7 +1,7 @@
 ﻿using IntegrityService.Utils;
 using System;
-using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace IntegrityService
 {
@@ -23,19 +23,19 @@ namespace IntegrityService
         ///     File extensions to exclude from monitoring.
         ///     Default: Empty list.
         /// </summary>
-        public List<string> ExcludedExtensions { get; private set; }
+        public string[] ExcludedExtensions { get; private set; }
 
         /// <summary>
         ///     Registry keys to exclude from monitoring.
         ///     Default: Empty list.
         /// </summary>
-        public List<string> ExcludedKeys { get; private set; }
+        public string[] ExcludedKeys { get; private set; }
 
         /// <summary>
         ///     Filesystem directories to exclude from monitoring.
         ///     Default: Empty list.
         /// </summary>
-        public List<string> ExcludedPaths { get; private set; }
+        public string[] ExcludedPaths { get; private set; }
 
         /// <summary>
         ///     Interval in seconds to send an informational heartbeat log entry to allow monitoring of the service itself. It can be disabled by setting it 0.
@@ -47,23 +47,43 @@ namespace IntegrityService
         ///     Registry keys to monitor.
         ///     Default: Empty list.
         /// </summary>
-        public List<string> MonitoredKeys { get; private set; }
+        public string[] MonitoredKeys { get; private set; }
 
         /// <summary>
         ///     Filesystem directories to monitor.
         ///     Default: Empty list.
         /// </summary>
-        public List<string> MonitoredPaths { get; private set; }
+        public string[] MonitoredPaths { get; private set; }
         /// <summary>
         ///     A flag that returns true if application loads the Settings successfully.
         /// </summary>
         public bool Success { get; }
+        /// <summary>
+        ///     A flag that returns true if file discovery task is completed.
+        /// </summary>
+        public bool IsFileDiscoveryCompleted
+        {
+            get
+            {
+                return Registry.ReadDwordValue("FileDiscoveryCompleted") == 1;
+            }
+            set
+            {
+                if (value)
+                {
+                    Registry.WriteDwordValue("FileDiscoveryCompleted", 1, true);
+                }
+                else
+                {
+                    Registry.WriteDwordValue("FileDiscoveryCompleted", 0, true);
+                }
+            }
+        }
 
         /// <summary>
         ///     The default file name is fim.db
         /// </summary>
         public readonly string DatabasePath = $"{Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData)}\\FIM\\fim.db";
-
 
         internal static Settings Instance => Lazy.Value;
 
@@ -87,15 +107,15 @@ namespace IntegrityService
         private void ReadOrCreateSubKeys()
         {
             var monitoredPaths = Registry.ReadMultiStringValue("MonitoredPaths");
-            if (monitoredPaths.Count == 0)
+            if (monitoredPaths.Length == 0)
             {
                 monitoredPaths = [@"C:\Windows\System32", @"C:\Windows\SysWOW64", @"C:\Program Files", @"C:\Program Files (x86)"];
                 Registry.WriteMultiStringValue("MonitoredPaths", monitoredPaths);
             }
-            MonitoredPaths = monitoredPaths;
+            MonitoredPaths = monitoredPaths.Order().ToArray();
 
             var excludedPaths = Registry.ReadMultiStringValue("ExcludedPaths");
-            if (excludedPaths.Count == 0)
+            if (excludedPaths.Length == 0)
             {
                 excludedPaths = [@"C:\Windows\System32\winevt", @"C:\Windows\System32\sru", @"C:\Windows\System32\config",
                 @"C:\Windows\System32\catroot2", @"C:\Windows\System32\LogFiles", @"C:\Windows\System32\wbem",
@@ -107,15 +127,15 @@ namespace IntegrityService
                 @"C:\Program Files\Microsoft OneDrive\StandaloneUpdater\logs"];
                 Registry.WriteMultiStringValue("ExcludedPaths", excludedPaths);
             }
-            ExcludedPaths = excludedPaths;
+            ExcludedPaths = excludedPaths.Order().ToArray();
 
             var excludedExtensions = Registry.ReadMultiStringValue("ExcludedExtensions");
-            if (excludedExtensions.Count == 0)
+            if (excludedExtensions.Length == 0)
             {
                 excludedExtensions = [".log", ".evtx", ".etl"];
                 Registry.WriteMultiStringValue("ExcludedExtensions", excludedExtensions);
             }
-            ExcludedExtensions = excludedExtensions;
+            ExcludedExtensions = excludedExtensions.Order().ToArray();
 
             var registryMonitoring = Registry.ReadDwordValue("EnableRegistryMonitoring");
             if (registryMonitoring == -1)
@@ -126,7 +146,7 @@ namespace IntegrityService
             EnableRegistryMonitoring = registryMonitoring == 1;
 
             var monitoredKeys = Registry.ReadMultiStringValue("MonitoredKeys");
-            if (monitoredKeys.Count == 0)
+            if (monitoredKeys.Length == 0)
             {
                 monitoredKeys = [@"Computer\HKEY_LOCAL_MACHINE\SOFTWARE\FIM",
                 @"Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run",
@@ -134,16 +154,15 @@ namespace IntegrityService
                 @"Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"];
                 Registry.WriteMultiStringValue("MonitoredKeys", monitoredKeys);
             }
-            MonitoredKeys = monitoredKeys;
+            MonitoredKeys = monitoredKeys.Order().ToArray();
 
             var excludedKeys = Registry.ReadMultiStringValue("ExcludedKeys");
-            if (excludedKeys.Count == 0)
+            if (excludedKeys.Length == 0)
             {
                 excludedKeys = [string.Empty];
                 Registry.WriteMultiStringValue("ExcludedKeys", excludedKeys);
             }
-            ExcludedKeys = excludedKeys;
-
+            ExcludedKeys = excludedKeys.Order().ToArray();
 
             var heartbeat = Registry.ReadDwordValue("HeartbeatInterval");
             if (heartbeat == -1)
@@ -161,6 +180,12 @@ namespace IntegrityService
                 disableLocalDatabase = 0;
             }
             DisableLocalDatabase = disableLocalDatabase == 1;
+
+            var fileDiscoveryCompleted = Registry.ReadDwordValue("FileDiscoveryCompleted");
+            if (fileDiscoveryCompleted == -1)
+            {
+                IsFileDiscoveryCompleted = false;
+            }
         }
     }
 }

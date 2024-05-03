@@ -52,10 +52,7 @@ namespace IntegrityService.Utils
 
         public static string OwnerName(FileSecurity fileSecurity)
         {
-            if (fileSecurity is null)
-            {
-                throw new ArgumentNullException(nameof(fileSecurity));
-            }
+            ArgumentNullException.ThrowIfNull(fileSecurity);
             IdentityReference? sid = null;
             try
             {
@@ -65,16 +62,16 @@ namespace IntegrityService.Utils
                     return string.Empty;
                 }
 
-                var ntAccount = sid.Translate(typeof(NTAccount)) as NTAccount;
-                if (ntAccount == null)
+                if (sid.Translate(typeof(NTAccount)) is not NTAccount ntAccount)
                 {
                     return string.Empty;
                 }
 
                 return ntAccount.Value;
             }
-            catch (IdentityNotMappedException)
+            catch (IdentityNotMappedException ex)
             {
+                Debug.WriteLine(ex);
                 return sid != null ? sid.ToString() : string.Empty;
             }
             catch
@@ -85,10 +82,7 @@ namespace IntegrityService.Utils
 
         public static string PrimaryGroupOfOwnerName(FileSecurity fileSecurity)
         {
-            if (fileSecurity is null)
-            {
-                throw new ArgumentNullException(nameof(fileSecurity));
-            }
+            ArgumentNullException.ThrowIfNull(fileSecurity);
 
             IdentityReference? primaryGroup = null;
             try
@@ -99,8 +93,7 @@ namespace IntegrityService.Utils
                     return string.Empty;
                 }
 
-                var ntAccount = primaryGroup.Translate(typeof(NTAccount)) as NTAccount;
-                if (ntAccount == null)
+                if (primaryGroup.Translate(typeof(NTAccount)) is not NTAccount ntAccount)
                 {
                     return string.Empty;
                 }

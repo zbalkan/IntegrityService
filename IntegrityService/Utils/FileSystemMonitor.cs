@@ -22,7 +22,7 @@ namespace IntegrityService.Utils
         {
             _logger = logger;
             _duplicateCheckBuffer = new FixedSizeDictionary<string, DateTime>();
-            _watchers = new List<FileSystemWatcher>();
+            _watchers = [];
         }
         // This should run async
         public void Start() => InvokeWatchers();

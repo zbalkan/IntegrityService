@@ -33,7 +33,7 @@ namespace IntegrityService.Utils
         public RegistryMonitor(ILogger logger)
         {
             _logger = logger;
-            _regHandleToKeyName = new Dictionary<ulong, string>();
+            _regHandleToKeyName = [];
             _mainSession = new TraceEventSession("RegistryWatcher");
             _rundownSession = new TraceEventSession("RegistryWatcher-rundown");
             _pid = Environment.ProcessId;
@@ -46,12 +46,11 @@ namespace IntegrityService.Utils
 
         public void Stop() => _cancellationTokenSource.Cancel();
 
+        private static RegistryKey GetKeyFromTraceData(RegistryTraceData ev) => RegistryKey.FromHandle(new Microsoft.Win32.SafeHandles.SafeRegistryHandle(new IntPtr((long)ev.KeyHandle), true));
+
         private static void MakeKernelParserStateless(ETWTraceEventSource traceSessionSource)
         {
-            if (traceSessionSource is null)
-            {
-                throw new ArgumentNullException(nameof(traceSessionSource));
-            }
+            ArgumentNullException.ThrowIfNull(traceSessionSource);
 
             const KernelTraceEventParser.ParserTrackingOptions options = KernelTraceEventParser.ParserTrackingOptions.None;
             var kernelParser = new KernelTraceEventParser(traceSessionSource, options);
@@ -117,14 +116,14 @@ namespace IntegrityService.Utils
             {
                 if (Filter(ev))
                 {
-                    var keyName = GetFullKeyName(ev.KeyHandle, ev.ValueName);
+                    var key = GetKeyFromTraceData(ev);
+
                     _logger
                    .LogInformation("Category: {category}\nChange Type: {changeType}\nDescription: Key event.\nTimestamp: {timestamp}\nEvent Name: {event}\nKey Handle: {keyHandle}\nKey Name: {keyName}\nProcess Id: {processId}\nThread ID: {threadId}\nIndex: {index}\nStatus:{status}\nElapsed: {elapsed}",
-                   Enum.GetName(changeCategory), Enum.GetName(ConfigChangeType.Registry), ev.TimeStampRelativeMSec, ev.EventName, ev.KeyHandle, keyName, ev.ProcessID, ev.ThreadID, ev.Index, Enum.GetName((RegistryEventCategory)ev.Status), ev.ElapsedTimeMSec);
+                   Enum.GetName(changeCategory), Enum.GetName(ConfigChangeType.Registry), ev.TimeStampRelativeMSec, ev.EventName, ev.KeyHandle, key.Name, ev.ProcessID, ev.ThreadID, ev.Index, Enum.GetName((RegistryEventCategory)ev.Status), ev.ElapsedTimeMSec);
                     _ = _regHandleToKeyName.Remove(ev.KeyHandle);
 
-                    var key = RegistryKey.FromHandle(new Microsoft.Win32.SafeHandles.SafeRegistryHandle(new IntPtr((long)ev.KeyHandle), true));
-                    Registry.GenerateChange(ev, changeCategory, keyName, key);
+                    Registry.GenerateChange(key, ev.ValueName, key.GetValue(ev.ValueName)?.ToString() ?? string.Empty, changeCategory);
                 }
             }
             catch (Exception ex)
@@ -132,7 +131,6 @@ namespace IntegrityService.Utils
                 ex.Log(_logger);
             }
         }
-
         private void ProcessKcbCreateEvent(RegistryTraceData ev)
         {
             _logger

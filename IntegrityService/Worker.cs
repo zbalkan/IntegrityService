@@ -19,25 +19,19 @@ namespace IntegrityService
             _logger = logger;
             _fsMonitor = new FileSystemMonitor(_logger);
             _backgroundWorkerQueue = backgroundWorkerQueue;
+            Database.Start();
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             _ = NativeMethods.SetConsoleCtrlHandler(Handler, true);
 
-            if (Settings.Instance.Success)
-            {
-                _logger.LogInformation("Read settings successfully");
-            }
-            else
-            {
-                _logger.LogError("Failed to read settings.");
-                Environment.Exit(1);
-            }
+            ReloadConfig();
 
-            if (!Settings.Instance.DisableLocalDatabase && Registry.ReadDwordValue("FileDiscoveryCompleted") == 0)
+            if (!Settings.Instance.DisableLocalDatabase && !Settings.Instance.IsFileDiscoveryCompleted)
             {
                 _backgroundWorkerQueue.QueueBackgroundWorkItem(_ => StartFilesystemDiscoveryAsync(stoppingToken).Unwrap());
+                ReloadConfig();
             }
             _fsMonitor.Start();
 
@@ -66,6 +60,19 @@ namespace IntegrityService
             }
         }
 
+        private void ReloadConfig()
+        {
+            if (Settings.Instance.Success)
+            {
+                _logger.LogInformation("Read settings successfully");
+            }
+            else
+            {
+                _logger.LogError("Failed to read settings.");
+                Environment.Exit(1);
+            }
+        }
+
         private async Task<Task> StartFilesystemDiscoveryAsync(CancellationToken token)
         {
             var tcs = new TaskCompletionSource();
@@ -76,13 +83,10 @@ namespace IntegrityService
                        {
                            _logger.LogInformation(
                                "File discovery not completed. Initiating file system discovery. It will take time.");
-                           Database.Start();
-                           Registry.WriteDwordValue("FileDiscoveryCompleted", 0, true);
                            var fsDiscovery = new FileSystemDiscovery(_logger);
                            fsDiscovery.Start();
-                           Registry.WriteDwordValue("FileDiscoveryCompleted", 1, true);
+                           Settings.Instance.IsFileDiscoveryCompleted = true;
                            _logger.LogInformation("File system discovery completed.");
-                           Environment.Exit(0); // Kill the service here. The OS will restart the service.
                        },
                        token);
             }
