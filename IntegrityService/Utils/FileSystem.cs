@@ -18,8 +18,6 @@ namespace IntegrityService.Utils
 {
     internal static class FileSystem
     {
-        private static readonly SHA256 Sha256 = SHA256.Create();
-
         internal static void StartSearch()
         {
             var sw = new Stopwatch();
@@ -38,12 +36,7 @@ namespace IntegrityService.Utils
             Console.WriteLine($"File filtering completed: {sw.Elapsed}");
 
             sw.Restart();
-            var changes = PrepareData(filtered);
-            sw.Stop();
-            Console.WriteLine($"File data preparation completed: {sw.Elapsed}");
-
-            sw.Restart();
-            Database.Context.FileSystemChanges.InsertBulk(changes, changes.Count());
+            Parallel.ForEach(filtered, new ParallelOptions() { MaxDegreeOfParallelism = 10 }, path => GenerateChange(path));
             sw.Stop();
             Console.WriteLine($"File insert bulk completed: {sw.Elapsed}");
         }
@@ -69,7 +62,6 @@ namespace IntegrityService.Utils
                                       Attributes.Offline |
                                       Attributes.ReparsePoint |
                                       Attributes.SparseFile)) == 0)
-                        // TODO: Generate regex from rules and use just that one.
                         .Select(n => n.FullName);
 
                 allPaths.AddRange(files);
@@ -78,7 +70,7 @@ namespace IntegrityService.Utils
             return allPaths;
         }
 
-        private static IEnumerable<string> FilterAll(IEnumerable<string> paths)
+        private static List<string> FilterAll(IEnumerable<string> paths)
         {
             var pattern = new Regex(GeneratePattern(), RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
             var matches = from path in paths.AsParallel().WithMergeOptions(ParallelMergeOptions.NotBuffered)
@@ -164,45 +156,51 @@ namespace IntegrityService.Utils
             }
         }
 
-        private static IEnumerable<FileSystemChange> PrepareData(IEnumerable<string> paths)
-        {
-            //var count = 0;
-            foreach (var path in paths)
-            {
-                var change = new FileSystemChange
-                {
-                    Id = Ulid.NewUlid().ToString(),
-                    ChangeCategory = ChangeCategory.Discovery,
-                    ConfigChangeType = ConfigChangeType.FileSystem,
-                    Entity = path,
-                    DateTime = DateTime.Now,
-                    FullPath = path,
-                    SourceComputer = Environment.MachineName,
-                    CurrentHash = CalculateFileDigest(path),
-                    PreviousHash = string.Empty,
-                    ACLs = path.GetACL()
-                };
-                yield return change;
-                //Debug.WriteLine($"Count: {count++}, Total: {paths.Count()}");
-            }
-        }
-
         public static string CalculateFileDigest(string path)
         {
             var digest = string.Empty;
 
             try
             {
-                using var fileStream = File.OpenRead(path);
-                digest = Convert.ToHexString(Sha256.ComputeHash(fileStream));
+                var fileStream = new FileStream(path, FileMode.OpenOrCreate,
+            FileAccess.Read);
+                using var bufferedStream = new BufferedStream(fileStream, 1024 * 32);
+                var sha = SHA256.Create();
+                var checksum = sha.ComputeHash(bufferedStream);
+                digest = BitConverter.ToString(checksum).Replace("-", string.Empty);
             }
-            catch (Exception ex)
+            catch (UnauthorizedAccessException ex)
             {
-                Debug.WriteLine(ex.Message);
+                // Access denied
+                Debug.WriteLine(ex);
             }
-
+            catch (IOException ex)
+            {
+                // File is locked by another process
+                Debug.WriteLine(ex);
+            }
             return digest;
         }
+
+        private static void GenerateChange(string path)
+        {
+            var change = new FileSystemChange
+            {
+                Id = Ulid.NewUlid().ToString(),
+                ChangeCategory = ChangeCategory.Discovery,
+                ConfigChangeType = ConfigChangeType.FileSystem,
+                Entity = path,
+                DateTime = DateTime.Now,
+                FullPath = path,
+                SourceComputer = Environment.MachineName,
+                CurrentHash = CalculateFileDigest(path),
+                PreviousHash = string.Empty,
+                ACLs = path.GetACL()
+            };
+
+            Database.Context.FileSystemChanges.Insert(change);
+        }
+
 
         private static string GeneratePattern()
         {
