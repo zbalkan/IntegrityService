@@ -1,4 +1,7 @@
-﻿using Microsoft.Win32;
+﻿using IntegrityService.FIM;
+using Microsoft.Diagnostics.Tracing.Parsers.Kernel;
+using Microsoft.Win32;
+using NUlid;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -51,11 +54,7 @@ namespace IntegrityService.Utils
 
             var valueData = Root.GetValue(value, new List<string>());
 
-            //if (valueData == null) return [];
-
             var multiStringValue = new List<string>();
-
-            if (multiStringValue.Count == 0) return [];
 
             multiStringValue.AddRange(valueData as List<string>);
 
@@ -105,6 +104,52 @@ namespace IntegrityService.Utils
             }
 
             return 0;
+        }
+
+        public static void GenerateChange(RegistryTraceData ev, ChangeCategory changeCategory, string keyName, RegistryKey key)
+        {
+            var change = new RegistryChange
+            {
+                Id = Ulid.NewUlid().ToString(),
+                ChangeCategory = changeCategory,
+                ConfigChangeType = ConfigChangeType.Registry,
+                Entity = keyName,
+                DateTime = DateTime.Now,
+                Key = keyName,
+                Hive = Enum.GetName(ParseHive(keyName)) ?? string.Empty,
+                SourceComputer = Environment.MachineName,
+                ValueName = ev.ValueName,
+                ValueData = key.GetValue(ev.ValueName)?.ToString() ?? string.Empty,
+                ACLs = key.GetACL()
+            };
+            Database.Context.RegistryChanges.Insert(change);
+        }
+
+        private static RegistryHive ParseHive(string keyName)
+        {
+            if (keyName.Contains("HKEY_LOCAL_MACHINE"))
+            {
+                return RegistryHive.LocalMachine;
+            }
+
+            if (keyName.Contains("HKEY_CURRENT_USER"))
+            {
+                return RegistryHive.CurrentUser;
+            }
+
+            if (keyName.Contains("HKEY_CURRENT_CONFIG"))
+            {
+                return RegistryHive.CurrentConfig;
+            }
+
+            if (keyName.Contains("HKEY_CLASSES_ROOT"))
+            {
+                return RegistryHive.ClassesRoot;
+            }
+            else
+            {
+                return RegistryHive.Users;
+            }
         }
     }
 }
