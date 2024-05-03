@@ -18,8 +18,10 @@ namespace IntegrityService.Utils
 {
     internal static class FileSystem
     {
+        // Move this to FilesystemDiscovery class, leave static methods only.
         internal static void StartSearch()
         {
+            Console.WriteLine("Starting file search...");
             var sw = new Stopwatch();
             sw.Start();
             var files = InvokeNtfsSearch();
@@ -28,17 +30,34 @@ namespace IntegrityService.Utils
                 return;
             }
             sw.Stop();
-            Console.WriteLine($"File search completed: {sw.Elapsed}");
+            Console.WriteLine($"Filesystem search completed: {sw.Elapsed}");
+            Console.WriteLine($"Number of all files in the device: {files.Count}");
 
+            Console.WriteLine("Starting filtering by configuration values...");
             sw.Restart();
             var filtered = FilterAll(files);
             sw.Stop();
-            Console.WriteLine($"File filtering completed: {sw.Elapsed}");
+            Console.WriteLine($"Path filtering completed: {sw.Elapsed}");
+            var diff = files.Count - filtered.Count;
+            Console.WriteLine($"Number of files to be monitored: {filtered.Count} (filtered out {diff}, %{diff * 100 / files.Count:0.###})");
 
+            Console.WriteLine("Filtering out the data in the database...");
+            sw.Restart();
+            var filteredOut = filtered.RemoveAll(x => Database.Context.FileSystemChanges.Exists(c => c.Entity.Equals(x)));
+            sw.Stop();
+            Console.WriteLine($"Filtering out completed: {sw.Elapsed}");
+            if (filteredOut > 0)
+            {
+                Console.WriteLine($"Number of files not in database: {filtered.Count} (filtered out {filteredOut}, %{filteredOut * 100 / filtered.Count:0.###})");
+            }
+            else
+                Console.WriteLine("Nothing to filter out.");
+
+            Console.WriteLine("Starting inventory discovery (path and hash)...");
             sw.Restart();
             Parallel.ForEach(filtered, new ParallelOptions() { MaxDegreeOfParallelism = 10 }, path => GenerateChange(path));
             sw.Stop();
-            Console.WriteLine($"File insert bulk completed: {sw.Elapsed}");
+            Console.WriteLine($"Database update completed: {sw.Elapsed}");
         }
 
         private static ConcurrentBag<string>? InvokeNtfsSearch()

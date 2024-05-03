@@ -39,10 +39,7 @@ namespace IntegrityService
             {
                 _backgroundWorkerQueue.QueueBackgroundWorkItem(_ => StartFilesystemDiscoveryAsync(stoppingToken).Unwrap());
             }
-            else
-            {
-                _fsMonitor.Start();
-            }
+            _fsMonitor.Start();
 
             if (Settings.Instance.EnableRegistryMonitoring)
             {
