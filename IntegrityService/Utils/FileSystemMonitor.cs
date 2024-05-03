@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using NUlid;
 
 namespace IntegrityService.Utils
 {
@@ -103,22 +102,8 @@ namespace IntegrityService.Utils
                     previousHash = previousChange[0]?.CurrentHash ?? string.Empty;
                 }
 
-                var change = new FileSystemChange
-                {
-                    Id = Ulid.NewUlid().ToString(),
-                    ChangeCategory = category,
-                    ConfigChangeType = ConfigChangeType.FileSystem,
-                    Entity = path,
-                    DateTime = DateTime.Now,
-                    FullPath = path,
-                    SourceComputer = Environment.MachineName,
-                    CurrentHash = FileSystem.CalculateFileDigest(path),
-                    PreviousHash = previousHash,
-                    ACLs = path.GetACL()
-                };
-
-                Database.Context.FileSystemChanges.Insert(change);
-                _logger.LogInformation("Category: {category}\nChange Type: {changeType}\nPath: {path}\nCurrent Hash: {currentHash}\nPreviousHash: {previousHash}", Enum.GetName(category), Enum.GetName(ConfigChangeType.FileSystem), path, change.CurrentHash, change.PreviousHash);
+                FileSystem.GenerateChange(path, category, out var change);
+                _logger.LogInformation("Category: {category}\nChange Type: {changeType}\nPath: {path}\nCurrent Hash: {currentHash}\nPreviousHash: {previousHash}", Enum.GetName(change.ChangeCategory), Enum.GetName(ConfigChangeType.FileSystem), path, change.CurrentHash, change.PreviousHash);
             }
             _logger.LogInformation("Category: {category}\nChange Type: {changeType}\nPath: {path}\nCurrent Hash: {currentHash}\nPreviousHash: {previousHash}", Enum.GetName(category), Enum.GetName(ConfigChangeType.FileSystem), path, FileSystem.CalculateFileDigest(path), string.Empty);
         }

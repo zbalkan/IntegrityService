@@ -52,7 +52,7 @@ namespace IntegrityService
             {
                 if (Settings.Instance.HeartbeatInterval >= 0)
                 {
-                    _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
+                    _logger.LogInformation("HEARTBEAT: Worker running at: {time}", DateTimeOffset.Now);
                 }
 
                 var workItem = await _backgroundWorkerQueue.DequeueAsync(stoppingToken);
@@ -75,10 +75,11 @@ namespace IntegrityService
                 await Task.Run(() =>
                        {
                            _logger.LogInformation(
-                               "Could not find the database file. Initiating file system discovery. It will take time.");
+                               "File discovery not completed. Initiating file system discovery. It will take time.");
                            Database.Start();
                            Registry.WriteDwordValue("FileDiscoveryCompleted", 0, true);
-                           FileSystem.StartSearch();
+                           var fsDiscovery = new FileSystemDiscovery(_logger);
+                           fsDiscovery.Start();
                            Registry.WriteDwordValue("FileDiscoveryCompleted", 1, true);
                            _logger.LogInformation("File system discovery completed.");
                            Environment.Exit(0); // Kill the service here. The OS will restart the service.
