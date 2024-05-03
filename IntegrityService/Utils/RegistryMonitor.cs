@@ -40,14 +40,38 @@ namespace IntegrityService.Utils
             _cancellationTokenSource = new CancellationTokenSource();
         }
 
+        /// <summary>
+        ///     Start monitoring selected Registry keys
+        /// </summary>
+        /// <exception cref="FieldAccessException"></exception>
+        /// <exception cref="TargetException"></exception>
         public void Start() =>
             // No baseline database for registry keys
             StartSession();
 
+        /// <summary>
+        ///     Stop monitoring selected Registry keys
+        /// </summary>
+        /// <exception cref="AggregateException"></exception>
         public void Stop() => _cancellationTokenSource.Cancel();
 
+        /// <summary>
+        ///     Get the Registry Key name from the event trace
+        /// </summary>
+        /// <param name="ev">ETW event trace</param>
+        /// <returns>Registry Key</returns>
+        /// <exception cref="UnauthorizedAccessException"></exception>
+        /// <exception cref="System.Security.SecurityException"></exception>
+        /// <exception cref="OverflowException"></exception>
         private static RegistryKey GetKeyFromTraceData(RegistryTraceData ev) => RegistryKey.FromHandle(new Microsoft.Win32.SafeHandles.SafeRegistryHandle(new IntPtr((long)ev.KeyHandle), true));
 
+        /// <summary>
+        ///     Prepare ETW parser
+        /// </summary>
+        /// <param name="traceSessionSource">WTW trace event source to listen</param>
+        /// <exception cref="FieldAccessException"></exception>
+        /// <exception cref="TargetException"></exception>
+        /// <exception cref="ArgumentNullException"></exception>
         private static void MakeKernelParserStateless(ETWTraceEventSource traceSessionSource)
         {
             ArgumentNullException.ThrowIfNull(traceSessionSource);
@@ -158,6 +182,11 @@ namespace IntegrityService.Utils
             _ = _rundownSession.Source.Process();
         }
 
+        /// <summary>
+        ///     Start a new ETW session
+        /// </summary>
+        /// <exception cref="FieldAccessException"></exception>
+        /// <exception cref="TargetException"></exception>
         private void StartSession()
         {
             _logger.LogInformation("Started ETW session {session} for Registry changes.", _mainSession.SessionName);
