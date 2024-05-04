@@ -1,5 +1,6 @@
 ﻿using IntegrityService.Utils;
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
@@ -44,6 +45,28 @@ namespace IntegrityService
         public int HeartbeatInterval { get; private set; }
 
         /// <summary>
+        ///     A flag that returns true if file discovery task is completed.
+        /// </summary>
+        public bool IsFileDiscoveryCompleted
+        {
+            get
+            {
+                return Registry.ReadDwordValue("FileDiscoveryCompleted") == 1;
+            }
+            set
+            {
+                if (value)
+                {
+                    Registry.WriteDwordValue("FileDiscoveryCompleted", 1);
+                }
+                else
+                {
+                    Registry.WriteDwordValue("FileDiscoveryCompleted", 0);
+                }
+            }
+        }
+
+        /// <summary>
         ///     Registry keys to monitor.
         ///     Default: Empty list.
         /// </summary>
@@ -59,51 +82,37 @@ namespace IntegrityService
         /// </summary>
         public bool Success { get; }
         /// <summary>
-        ///     A flag that returns true if file discovery task is completed.
+        ///     Path to LiteDB database file
         /// </summary>
-        public bool IsFileDiscoveryCompleted
-        {
-            get
-            {
-                return Registry.ReadDwordValue("FileDiscoveryCompleted") == 1;
-            }
-            set
-            {
-                if (value)
-                {
-                    Registry.WriteDwordValue("FileDiscoveryCompleted", 1, true);
-                }
-                else
-                {
-                    Registry.WriteDwordValue("FileDiscoveryCompleted", 0, true);
-                }
-            }
-        }
-
-        /// <summary>
-        ///     The default file name is fim.db
-        /// </summary>
+        /// <exception cref="PlatformNotSupportedException"></exception>
         public readonly string DatabasePath = $"{Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData)}\\FIM\\fim.db";
-
         internal static Settings Instance => Lazy.Value;
-
         private const int DEFAULT_HEARTBEAT_INTERVAL = 60;
         private static readonly Lazy<Settings> Lazy = new(() => new Settings());
 
+        /// <summary>
+        ///     Private ctor of the Settings singleton
+        /// </summary>
+        /// <exception cref="IOException"></exception>
+        /// <exception cref="UnauthorizedAccessException"></exception>
+        /// <exception cref="NotSupportedException"></exception>
+        /// <exception cref="System.Security.SecurityException"></exception>
         private Settings()
         {
-            Directory.CreateDirectory(Directory.GetParent(DatabasePath)!.ToString());
+            _ = Directory.CreateDirectory(Directory.GetParent(DatabasePath)!.ToString());
             try
             {
                 ReadOrCreateSubKeys();
                 Success = true;
             }
-            catch
+            catch(Exception ex)
             {
+                Debug.WriteLine(ex);
                 Success = false;
             }
         }
 
+        /// <exception cref="OverflowException"></exception>
         private void ReadOrCreateSubKeys()
         {
             var monitoredPaths = Registry.ReadMultiStringValue("MonitoredPaths");
@@ -117,14 +126,24 @@ namespace IntegrityService
             var excludedPaths = Registry.ReadMultiStringValue("ExcludedPaths");
             if (excludedPaths.Length == 0)
             {
-                excludedPaths = [@"C:\Windows\System32\winevt", @"C:\Windows\System32\sru", @"C:\Windows\System32\config",
-                @"C:\Windows\System32\catroot2", @"C:\Windows\System32\LogFiles", @"C:\Windows\System32\wbem",
-                @"C:\Windows\System32\WDI\LogFiles", @"C:\Windows\System32\Microsoft\Protect\Recovery",
-                @"C:\Windows\SysWOW64\winevt", @"C:\Windows\SysWOW64\sru", @"C:\Windows\SysWOW64\config",
-                @"C:\Windows\SysWOW64\catroot2", @"C:\Windows\SysWOW64\LogFiles", @"C:\Windows\SysWOW64\wbem",
-                @"C:\Windows\SysWOW64\WDI\LogFiles", @"C:\Windows\SysWOW64\Microsoft\Protect\Recovery",
-                @"C:\Program Files\Windows Defender Advanced Threat Protection\Classification\Configuration",
-                @"C:\Program Files\Microsoft OneDrive\StandaloneUpdater\logs"];
+                excludedPaths = [@"C:\Windows\System32\winevt",
+                    @"C:\Windows\System32\sru",
+                    @"C:\Windows\System32\config",
+                    @"C:\Windows\System32\catroot2",
+                    @"C:\Windows\System32\LogFiles",
+                    @"C:\Windows\System32\wbem",
+                    @"C:\Windows\System32\WDI\LogFiles",
+                    @"C:\Windows\System32\Microsoft\Protect\Recovery",
+                    @"C:\Windows\SysWOW64\winevt",
+                    @"C:\Windows\SysWOW64\sru",
+                    @"C:\Windows\SysWOW64\config",
+                    @"C:\Windows\SysWOW64\catroot2",
+                    @"C:\Windows\SysWOW64\LogFiles",
+                    @"C:\Windows\SysWOW64\wbem",
+                    @"C:\Windows\SysWOW64\WDI\LogFiles",
+                    @"C:\Windows\SysWOW64\Microsoft\Protect\Recovery",
+                    @"C:\Program Files\Windows Defender Advanced Threat Protection\Classification\Configuration",
+                    @"C:\Program Files\Microsoft OneDrive\StandaloneUpdater\logs"];
                 Registry.WriteMultiStringValue("ExcludedPaths", excludedPaths);
             }
             ExcludedPaths = excludedPaths.Order().ToArray();

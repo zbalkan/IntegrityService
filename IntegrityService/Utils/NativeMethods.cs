@@ -11,13 +11,4 @@ namespace IntegrityService.Utils
         // https://docs.microsoft.com/en-us/windows/console/handlerroutine?WT.mc_id=DT-MVP-5003978
         internal delegate bool SetConsoleCtrlEventHandler(CtrlType sig);
     }
-
-    internal enum CtrlType
-    {
-        CtrlCEvent = 0,
-        CtrlBreakEvent = 1,
-        CtrlCloseEvent = 2,
-        CtrlLogoffEvent = 5,
-        CtrlShutdownEvent = 6
-    }
 }

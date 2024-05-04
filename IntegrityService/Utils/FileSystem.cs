@@ -15,6 +15,14 @@ namespace IntegrityService.Utils
 {
     internal static class FileSystem
     {
+        /// <summary>
+        ///     Calculate <see cref="SHA256"/> digest of a file
+        /// </summary>
+        /// <param name="path">Full pathof the file</param>
+        /// <returns><see cref="SHA256"/> digest converted into <see cref="string"/></returns>
+        /// <exception cref="NotSupportedException"></exception>
+        /// <exception cref="System.Security.SecurityException"></exception>
+        /// <exception cref="System.Reflection.TargetInvocationException"></exception>
         public static string CalculateFileDigest(string path)
         {
             var digest = string.Empty;
@@ -41,6 +49,11 @@ namespace IntegrityService.Utils
             return digest;
         }
 
+        /// <summary>
+        ///     Check if the given path is in the excluded paths
+        /// </summary>
+        /// <param name="path">Ful path of the file to be checked</param>
+        /// <returns>True if path is in excluded paths</returns>
         public static bool IsExcluded(string path)
         {
             foreach (var excluded in Settings.Instance.ExcludedPaths)
@@ -50,66 +63,15 @@ namespace IntegrityService.Utils
             return false;
         }
 
-        public static string OwnerName(FileSecurity fileSecurity)
-        {
-            ArgumentNullException.ThrowIfNull(fileSecurity);
-            IdentityReference? sid = null;
-            try
-            {
-                sid = fileSecurity.GetOwner(typeof(SecurityIdentifier));
-                if (sid == null)
-                {
-                    return string.Empty;
-                }
-
-                if (sid.Translate(typeof(NTAccount)) is not NTAccount ntAccount)
-                {
-                    return string.Empty;
-                }
-
-                return ntAccount.Value;
-            }
-            catch (IdentityNotMappedException ex)
-            {
-                Debug.WriteLine(ex);
-                return sid != null ? sid.ToString() : string.Empty;
-            }
-            catch
-            {
-                return string.Empty;
-            }
-        }
-
-        public static string PrimaryGroupOfOwnerName(FileSecurity fileSecurity)
-        {
-            ArgumentNullException.ThrowIfNull(fileSecurity);
-
-            IdentityReference? primaryGroup = null;
-            try
-            {
-                primaryGroup = fileSecurity.GetGroup(typeof(SecurityIdentifier));
-                if (primaryGroup == null)
-                {
-                    return string.Empty;
-                }
-
-                if (primaryGroup.Translate(typeof(NTAccount)) is not NTAccount ntAccount)
-                {
-                    return string.Empty;
-                }
-
-                return ntAccount.Value;
-            }
-            catch (IdentityNotMappedException)
-            {
-                return primaryGroup != null ? primaryGroup.ToString() : string.Empty;
-            }
-            catch
-            {
-                return string.Empty;
-            }
-        }
-
+        /// <summary>
+        ///     Generates new file system change record from parameters and saves into database
+        /// </summary>
+        /// <param name="path">The path to filekey</param>
+        /// <param name="category"><see cref="ChangeCategory"></param>
+        /// <param name="fileSystemChange">The change object</param>
+        /// <exception cref="NotSupportedException"></exception>
+        /// <exception cref="System.Security.SecurityException"></exception>
+        /// <exception cref="System.Reflection.TargetInvocationException"></exception>
         internal static void GenerateChange(string path, ChangeCategory category, out FileSystemChange fileSystemChange)
         {
             fileSystemChange = new FileSystemChange
@@ -129,6 +91,13 @@ namespace IntegrityService.Utils
             Database.Context.FileSystemChanges.Insert(fileSystemChange);
         }
 
+        /// <summary>
+        ///     Reads file list fron NTFS indexes
+        /// </summary>
+        /// <returns>List of all files</returns>
+        /// <exception cref="IOException"></exception>
+        /// <exception cref="UnauthorizedAccessException"></exception>
+        /// <exception cref="AggregateException"></exception>
         internal static ConcurrentBag<string> InvokeNtfsSearch()
         {
             var ntfsDrives = DriveInfo.GetDrives()

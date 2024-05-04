@@ -1,11 +1,32 @@
 name: Release when tagged
 
 on:
+  workflow_dispatch:
+
   push:
     branches: [master]
+    paths-ignore:
+      - '**.md'
+      - '**.txt'
+      - '**.ADML'
+      - '**.ADMX'
+      - '**.ico'
+      - '**.reg'
+    tags:
+      - "*.*.*"
 
   pull_request:
     branches: [master]
+    paths-ignore:
+      - '**.md'
+      - '**.txt'
+      - '**.ADML'
+      - '**.ADMX'
+      - '**.ico'
+      - '**.reg'
+
+permissions:
+  contents: write
 
 jobs:
   release:
@@ -19,10 +40,15 @@ jobs:
           dotnet-version: 8.0.x
 
       - name: Install Wix
-        uses: actions/checkout@v4
-        with:
-          repository: fbarresi/wix
-          path: wix
+        run: |
+          dotnet tool install --global wix
+          wix --version
+
+      - name: Install Wix extension
+        run: |
+          cd IntegrityService.Installer
+          wix extension add WixToolset.Util.wixext/5.0.0
+          wix extension list
 
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v2
@@ -30,10 +56,13 @@ jobs:
           msbuild-architecture: x64
 
       - name: Restore and publish main project
-        run: |
-          msbuild IntegrityService\IntegrityService.csproj /t:restore /t:publish /p:Configuration=Release /p:SelfContained=true /p:RuntimeIdentifier=win-x64 /p:PublishsingleFile=true
-          New-Item -ItemType Directory -Name .\publish\ -Force -Confirm:$false
-          Copy-Item -Path ".\IntegrityService\bin\Release\net8.0-windows10.0.17763.0\win-x64\publish\IntegrityService.exe" -Destination .\publish\ -Verbose
+        run: msbuild IntegrityService\IntegrityService.csproj /t:restore /t:publish /p:Configuration=Release /p:SelfContained=true /p:RuntimeIdentifier=win-x64 /p:PublishsingleFile=true
+
+      - name: Create a publish directory
+        run: mkdir D:\a\IntegrityService\IntegrityService\publish
+
+      - name: Copy executable in the publish directory
+        run: Copy-Item -Path D:\a\IntegrityService\IntegrityService\IntegrityService\bin\Release\net8.0-windows10.0.17763.0\win-x64\IntegrityService.exe -Destination D:\a\IntegrityService\IntegrityService\publish\ -Verbose
 
       - name: Enumerate root folder
         shell: powershell
@@ -41,29 +70,39 @@ jobs:
 
       - name: Build installer
         run: |
-          $source = (Get-Item (Get-Location)).FullName
-          $source
-          wix\tools\candle.exe "IntegrityService.Installer\Product.wxs" -out "$source\obj\Product.wixobj" -nologo -arch x86 -ext WixUtilExtension -fips -pedantic -v       
-          ls -r
           cd IntegrityService.Installer
-          &"$source\wix\tools\Light.exe" "$source\obj\Product.wixobj" -nologo -out $source\publish\IntegrityService.Installer.msi -ext WixUtilExtension -pdbout $source\publish\IntegrityService.Installer.wixpdb -cultures:null -spdb -contentsfile $source\obj\IntegrityService.Installer.wixproj.BindContentsFileListnull.txt -outputsfile $source\obj\IntegrityService.Installer.wixproj.BindOutputsFileListnull.txt -builtoutputsfile $source\obj\IntegrityService.Installer.wixproj.BindBuiltOutputsFileListnull.txt -wixprojectfile $source\IntegrityService.Installer\IntegrityService.Installer.wixproj -pedantic -v
-
-      - name: Generate hashes
-        shell: powershell
-        run: Get-ChildItem -Path .\"publish" -File | ForEach-Object { $hash = Get-FileHash -Path $_.FullName -Algorithm SHA256; $line= "(SHA256)`t$($hash.Hash)`t$($_.Name)"; $line | Out-File -FilePath .\publish\hashes.txt -Append -Encoding unicode -NoClobber }
+          wix extension list
+          wix build -arch x64 -ext "D:\a\IntegrityService\IntegrityService\IntegrityService.Installer\.wix\extensions\WixToolset.Util.wixext\5.0.0\wixext5\WixToolset.Util.wixext.dll" -pdbtype none -i publish -o "D:\a\IntegrityService\IntegrityService\publish\IntegrityService.msi" "D:\a\IntegrityService\IntegrityService\IntegrityService.Installer\Product.wxs"
+          Write-Output "Testing installer file location:"
+          Test-Path -Path D:\a\IntegrityService\IntegrityService\publish\IntegrityService.msi
+          Remove-Item -Path D:\a\IntegrityService\IntegrityService\publish\IntegrityService.exe -Confirm:$false
 
       - name: Enumerate root folder
         shell: powershell
         run: ls -r
 
-      - name: Release
-        uses: softprops/action-gh-release@v2
+      - name: Enumerate files to publish
+        shell: powershell
+        run: Get-ChildItem -Path D:\a\IntegrityService\IntegrityService\publish
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
         with:
-          tag_name: alpha
-          generate_release_notes: true
-          files: |
-            publish\IntegrityService.exe
-            publish\IntegrityService.Installer.msi
-            publish\hashes.txt
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body: "See commit log for details"
+          draft: false
+          prerelease: false
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+          asset_path: D:\a\IntegrityService\IntegrityService\publish\IntegrityService.msi
+          asset_name: IntegrityService.msi
+          asset_content_type: application/zip

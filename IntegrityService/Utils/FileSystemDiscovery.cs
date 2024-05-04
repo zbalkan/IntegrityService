@@ -28,6 +28,15 @@ namespace IntegrityService.Utils
         {
             _logger = logger;
         }
+        /// <summary>
+        ///     Start file discovery with filtering
+        /// </summary>
+        /// <exception cref="System.IO.IOException"></exception>
+        /// <exception cref="System.UnauthorizedAccessException"></exception>
+        /// <exception cref="System.AggregateException"></exception>
+        /// <exception cref="RegexMatchTimeoutException"></exception>
+        /// <exception cref="System.OperationCanceledException"></exception>
+        /// <exception cref="System.OverflowException"></exception>
         internal void Start()
         {
             var files = RunNtfsDiscovery(out var sw);
@@ -39,6 +48,15 @@ namespace IntegrityService.Utils
             UpdateDiscoveryDatabase(sw, filtered);
         }
 
+        /// <summary>
+        ///     Filters out the initial list
+        /// </summary>
+        /// <param name="paths">Initial list of file paths</param>
+        /// <returns>Filtered out fil paths</returns>
+        /// <exception cref="RegexMatchTimeoutException"></exception>
+        /// <exception cref="System.OperationCanceledException"></exception>
+        /// <exception cref="System.AggregateException"></exception>
+        /// <exception cref="System.OverflowException"></exception>
         private static List<string> FilterByPattern(IEnumerable<string> paths)
         {
             var includePattern = new Regex(GetIncludePattern(), RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
@@ -68,6 +86,11 @@ namespace IntegrityService.Utils
             return matches;
         }
 
+        /// <summary>
+        ///     Generate the excluded extensions related RegEx pattern
+        /// </summary>
+        /// <returns>RegEx pattern as string</returns>
+        /// <exception cref="System.OverflowException"></exception>
         private static string GetExcludeExtPattern()
         {
             if (Settings.Instance.ExcludedExtensions.Length > 0)
@@ -81,6 +104,11 @@ namespace IntegrityService.Utils
             return string.Empty;
         }
 
+        /// <summary>
+        ///     Generate the excluded paths related RegEx pattern
+        /// </summary>
+        /// <returns>RegEx pattern as string</returns>
+        /// <exception cref="System.OverflowException"></exception>
         private static string GetExcludePathPattern()
         {
             if (Settings.Instance.ExcludedPaths.Length > 0)
@@ -94,7 +122,11 @@ namespace IntegrityService.Utils
             return string.Empty;
         }
 
-        // Use multiple patterns and iterate
+        /// <summary>
+        ///     Generate the included paths related RegEx pattern
+        /// </summary>
+        /// <returns>RegEx pattern as string</returns>
+        /// <exception cref="System.OverflowException"></exception>
         private static string GetIncludePattern()
         {
             var sb = new StringBuilder(100);
@@ -133,6 +165,16 @@ namespace IntegrityService.Utils
 
             return filtered;
         }
+        /// <summary>
+        ///     Runs multiple filterin options to optimize the scan
+        /// </summary>
+        /// <param name="sw">Stopwatch for statistics</param>
+        /// <param name="files">List of initial file paths</param>
+        /// <returns>List of filtered out file paths</returns>
+        /// <exception cref="RegexMatchTimeoutException"></exception>
+        /// <exception cref="System.OperationCanceledException"></exception>
+        /// <exception cref="System.AggregateException"></exception>
+        /// <exception cref="System.OverflowException"></exception>
         private List<string> FilterByConfig(Stopwatch sw, ConcurrentBag<string> files)
         {
             _logger.LogInformation("Starting filtering by configuration values...");
@@ -144,6 +186,14 @@ namespace IntegrityService.Utils
                 filtered.Count, files.Count - filtered.Count, (double)(files.Count - filtered.Count) * 100 / files.Count);
             return filtered;
         }
+        /// <summary>
+        ///     Initiates the NTFS scan
+        /// </summary>
+        /// <param name="sw">Stopwatch for statistics</param>
+        /// <returns>List of all files in the device</returns>
+        /// <exception cref="System.IO.IOException"></exception>
+        /// <exception cref="System.UnauthorizedAccessException"></exception>
+        /// <exception cref="System.AggregateException"></exception>
         private ConcurrentBag<string> RunNtfsDiscovery(out Stopwatch sw)
         {
             _logger.LogInformation("Starting file search...");
