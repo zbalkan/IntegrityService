@@ -49,9 +49,15 @@ jobs:
       - name: Restore and publish main project
         run: |
           msbuild IntegrityService\IntegrityService.csproj /t:restore /t:publish /p:Configuration=Release /p:SelfContained=true /p:RuntimeIdentifier=win-x64 /p:PublishsingleFile=true
-          New-Item -ItemType Directory -Name D:\a\IntegrityService\IntegrityService\publish\ -Force -Confirm:$false
-          Copy-Item -Path ".\IntegrityService\bin\Release\net8.0-windows10.0.17763.0\win-x64\publish\IntegrityService.exe" -Destination D:\a\IntegrityService\IntegrityService\publish\ -Verbose
-
+          $resExistErr=[System.Management.Automation.ErrorCategory]::ResourceExists
+          try {
+              New-Item -ItemType Directory -Name "D:\a\IntegrityService\IntegrityService\publish\" -Force -Confirm:$false -ErrorAction Stop
+          }
+          catch [System.IO.IOException] 
+          {
+              if ($_.CategoryInfo.Category -eq $resExistErr) {Write-host "Dir Exist"}
+          }         
+          Copy-Item -Path ".\IntegrityService\bin\Release\net8.0-windows10.0.17763.0\win-x64\publish\IntegrityService.exe" -Destination "D:\a\IntegrityService\IntegrityService\publish\" -Verbose
       - name: Enumerate root folder
         shell: powershell
         run: ls -r
