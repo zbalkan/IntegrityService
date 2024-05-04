@@ -59,7 +59,7 @@ jobs:
           {
               if ($_.CategoryInfo.Category -eq $resExistErr) {Write-host "Dir Exist"}
           }         
-          Copy-Item -Path "D:\a\IntegrityService\IntegrityService\IntegrityService\bin\Release\net8.0-windows10.0.17763.0\win-x64\IntegrityService.exe" -Destination "D:\a\IntegrityService\IntegrityService\publish" -Verbose
+          Copy-Item -Path "D:\a\IntegrityService\IntegrityService\IntegrityService\bin\Release\net8.0-windows10.0.17763.0\win-x64\IntegrityService.exe" -Destination "D:\a\IntegrityService\IntegrityService\publish\" -Verbose
 
       - name: Enumerate root folder
         shell: powershell
@@ -67,8 +67,6 @@ jobs:
 
       - name: Build installer
         run: |
-          $source = (Get-Item (Get-Location)).FullName
-          $source
           wix\tools\candle.exe "IntegrityService.Installer\Product.wxs" -out "$source\obj\Product.wixobj" -nologo -arch x86 -ext WixUtilExtension -fips -pedantic -v       
           ls -r
           cd IntegrityService.Installer
