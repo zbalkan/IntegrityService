@@ -67,6 +67,7 @@ jobs:
 
       - name: Build installer
         run: |
+          pwd
           wix\tools\candle.exe "IntegrityService.Installer\Product.wxs" -out "$source\obj\Product.wixobj" -nologo -arch x86 -ext WixUtilExtension -fips -pedantic -v       
           ls -r
           cd IntegrityService.Installer
