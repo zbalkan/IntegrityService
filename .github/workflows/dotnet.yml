@@ -55,10 +55,10 @@ jobs:
           try {
               New-Item -ItemType Directory -Name "D:\a\IntegrityService\IntegrityService\publish\" -Force -Confirm:$false -ErrorAction Stop
           }
-          catch [System.IO.IOException] 
+          catch [System.IO.IOException]
           {
               if ($_.CategoryInfo.Category -eq $resExistErr) {Write-host "Dir Exist"}
-          }         
+          }
           Copy-Item -Path "D:\a\IntegrityService\IntegrityService\IntegrityService\bin\Release\net8.0-windows10.0.17763.0\win-x64\IntegrityService.exe" -Destination "D:\a\IntegrityService\IntegrityService\publish" -Verbose
 
       - name: Enumerate root folder
@@ -67,12 +67,10 @@ jobs:
 
       - name: Build installer
         run: |
-          $source = (Get-Item (Get-Location)).FullName
-          $source
-          wix\tools\candle.exe "IntegrityService.Installer\Product.wxs" -out "$source\obj\Product.wixobj" -nologo -arch x86 -ext WixUtilExtension -fips -pedantic -v       
-          ls -r
           cd IntegrityService.Installer
-          &"$source\wix\tools\Light.exe" "$source\obj\Product.wixobj" -nologo -out $source\publish\IntegrityService.Installer.msi -ext WixUtilExtension -pdbout $source\publish\IntegrityService.Installer.wixpdb -cultures:null -spdb -contentsfile $source\obj\IntegrityService.Installer.wixproj.BindContentsFileListnull.txt -outputsfile $source\obj\IntegrityService.Installer.wixproj.BindOutputsFileListnull.txt -builtoutputsfile $source\obj\IntegrityService.Installer.wixproj.BindBuiltOutputsFileListnull.txt -wixprojectfile $source\IntegrityService.Installer\IntegrityService.Installer.wixproj -pedantic -v
+          wix extension add WixToolset.Util.wixext/5.0.0
+          wix extension list
+          wix build -arch x64 -ext ./publish/.wix/extensions/WixToolset.Util.wixext/5.0.0/wixext5/WixToolset.Util.wixext.dll -pdbtype none -i publish -o ./publish/IntegrityService.msi IntegrityService.Installer/Product.wxs
 
       - name: Generate hashes
         shell: powershell
