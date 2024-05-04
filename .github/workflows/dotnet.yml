@@ -3,12 +3,27 @@ name: Release when tagged
 on:
   push:
     branches: [master]
+    paths-ignore:
+      - '**.md'
+      - '**.txt'
+      - '**.ADML'
+      - '**.ADMX'
+      - '**.ico'
+      - '**.reg'
+      - '**.yml'
     tags:
       - "*.*.*"
 
   pull_request:
     branches: [master]
-
+    paths-ignore:
+      - '**.md'
+      - '**.txt'
+      - '**.ADML'
+      - '**.ADMX'
+      - '**.ico'
+      - '**.reg'
+      - '**.yml'
 jobs:
   release:
     runs-on: windows-latest
