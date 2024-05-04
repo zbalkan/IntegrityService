@@ -34,8 +34,8 @@ jobs:
       - name: Restore and publish main project
         run: |
           msbuild IntegrityService\IntegrityService.csproj /t:restore /t:publish /p:Configuration=Release /p:SelfContained=true /p:RuntimeIdentifier=win-x64 /p:PublishsingleFile=true
-          New-Item -ItemType Directory -Name .\publish\ -Force -Confirm:$false
-          Copy-Item -Path ".\IntegrityService\bin\Release\net8.0-windows10.0.17763.0\win-x64\publish\IntegrityService.exe" -Destination .\publish\ -Verbose
+          New-Item -ItemType Directory -Name D:\a\IntegrityService\IntegrityService\publish\ -Force -Confirm:$false
+          Copy-Item -Path ".\IntegrityService\bin\Release\net8.0-windows10.0.17763.0\win-x64\publish\IntegrityService.exe" -Destination D:\a\IntegrityService\IntegrityService\publish\ -Verbose
 
       - name: Enumerate root folder
         shell: powershell
@@ -52,7 +52,7 @@ jobs:
 
       - name: Generate hashes
         shell: powershell
-        run: Get-ChildItem -Path .\"publish" -File | ForEach-Object { $hash = Get-FileHash -Path $_.FullName -Algorithm SHA256; $line= "(SHA256)`t$($hash.Hash)`t$($_.Name)"; $line | Out-File -FilePath .\publish\hashes.txt -Append -Encoding unicode -NoClobber }
+        run: Get-ChildItem -Path "D:\a\IntegrityService\IntegrityService\publish" -File | ForEach-Object { $hash = Get-FileHash -Path $_.FullName -Algorithm SHA256; $line= "(SHA256)`t$($hash.Hash)`t$($_.Name)"; $line | Out-File -FilePath D:\a\IntegrityService\IntegrityService\publish\hashes.txt -Append -Encoding unicode -NoClobber }
 
       - name: Enumerate root folder
         shell: powershell
@@ -63,8 +63,8 @@ jobs:
         with:
           generate_release_notes: true
           files: |
-            publish\IntegrityService.exe
-            publish\IntegrityService.Installer.msi
-            publish\hashes.txt
+            D:\a\IntegrityService\IntegrityService\publish\IntegrityService.exe
+            D:\a\IntegrityService\IntegrityService\publish\IntegrityService.Installer.msi
+            D:\a\IntegrityService\IntegrityService\publish\hashes.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
