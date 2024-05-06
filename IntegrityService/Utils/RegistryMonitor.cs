@@ -84,14 +84,15 @@ namespace IntegrityService.Utils
             kernelField?.SetValue(traceSessionSource, kernelParser);
         }
 
-        private bool Filter(RegistryTraceData ev) =>
-            ev.ProcessID == _pid
+        private bool FilterMonitored(RegistryTraceData ev)
+        {
+            var keyName = GetFullKeyName(ev.KeyHandle, ev.KeyName);
+            return ev.ProcessID == _pid
             ||
             ev.ProcessID == -1
             ||
-            IsMonitored(ev)
-            ||
-            !IsExcluded(ev);
+            (Settings.Instance.IsMonitoredKey(keyName));
+        }
 
         private string GetFullKeyName(ulong keyHandle, string eventKeyName)
         {
@@ -104,30 +105,6 @@ namespace IntegrityService.Utils
             return Path.Combine(baseKeyName, eventKeyName);
         }
 
-        private bool IsExcluded(RegistryTraceData ev)
-        {
-            var keyName = GetFullKeyName(ev.KeyHandle, ev.KeyName);
-
-            foreach (var key in Settings.Instance.ExcludedKeys)
-            {
-                if (keyName.StartsWith(key, StringComparison.OrdinalIgnoreCase))
-                    return true;
-            }
-            return false;
-        }
-
-        private bool IsMonitored(RegistryTraceData ev)
-        {
-            var keyName = GetFullKeyName(ev.KeyHandle, ev.KeyName);
-
-            foreach (var key in Settings.Instance.MonitoredKeys)
-            {
-                if (keyName.StartsWith(key, StringComparison.OrdinalIgnoreCase))
-                    return true;
-            }
-            return false;
-        }
-
         private Action<RegistryTraceData> NewChangeEvent() => (ev) => ProcessEvent(ev, ChangeCategory.Changed);
 
         private Action<RegistryTraceData> NewCreateEvent() => (ev) => ProcessEvent(ev, ChangeCategory.Created);
@@ -138,7 +115,7 @@ namespace IntegrityService.Utils
         {
             try
             {
-                if (Filter(ev))
+                if (FilterMonitored(ev))
                 {
                     var key = GetKeyFromTraceData(ev);
 

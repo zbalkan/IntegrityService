@@ -4,9 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Filesystem.Ntfs;
 using System.Linq;
-using System.Security.AccessControl;
 using System.Security.Cryptography;
-using System.Security.Principal;
 using System.Threading.Tasks;
 using IntegrityService.FIM;
 using NUlid;
@@ -47,20 +45,6 @@ namespace IntegrityService.Utils
                 Debug.WriteLine(ex);
             }
             return digest;
-        }
-
-        /// <summary>
-        ///     Check if the given path is in the excluded paths
-        /// </summary>
-        /// <param name="path">Ful path of the file to be checked</param>
-        /// <returns>True if path is in excluded paths</returns>
-        public static bool IsExcluded(string path)
-        {
-            foreach (var excluded in Settings.Instance.ExcludedPaths)
-            {
-                if (path.StartsWith(excluded, StringComparison.InvariantCultureIgnoreCase)) { return true; }
-            }
-            return false;
         }
 
         /// <summary>

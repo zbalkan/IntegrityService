@@ -6,7 +6,7 @@ using System.IO;
 
 namespace IntegrityService.Utils
 {
-    internal sealed class FileSystemMonitor : IMonitor
+    internal class FileSystemMonitor : IMonitor
     {
         /// <summary>
         ///     Windows file system creates multiple events for creation and change events. These are by design but creates pollution.
@@ -85,12 +85,16 @@ namespace IntegrityService.Utils
 
         private void ProcessEvent(string path, ChangeCategory category)
         {
-            if (FileSystem.IsExcluded(path) || IsDuplicate(path))
+            if (!Settings.Instance.IsMonitoredPath(path) || IsDuplicate(path))
             {
                 return;
             }
 
-            if (!Settings.Instance.DisableLocalDatabase)
+            if (Settings.Instance.DisableLocalDatabase)
+            {
+                _logger.LogInformation("Category: {category}\nChange Type: {changeType}\nPath: {path}\nCurrent Hash: {currentHash}\nPreviousHash: {previousHash}", Enum.GetName(category), Enum.GetName(ConfigChangeType.FileSystem), path, FileSystem.CalculateFileDigest(path), string.Empty);
+            }
+            else
             {
                 var previousChange = Database.Context.FileSystemChanges.Query()
                                                                        .Where(x => x.FullPath.Equals(path))
@@ -105,7 +109,6 @@ namespace IntegrityService.Utils
                 FileSystem.GenerateChange(path, category, out var change);
                 _logger.LogInformation("Category: {category}\nChange Type: {changeType}\nPath: {path}\nCurrent Hash: {currentHash}\nPreviousHash: {previousHash}", Enum.GetName(change.ChangeCategory), Enum.GetName(ConfigChangeType.FileSystem), path, change.CurrentHash, change.PreviousHash);
             }
-            _logger.LogInformation("Category: {category}\nChange Type: {changeType}\nPath: {path}\nCurrent Hash: {currentHash}\nPreviousHash: {previousHash}", Enum.GetName(category), Enum.GetName(ConfigChangeType.FileSystem), path, FileSystem.CalculateFileDigest(path), string.Empty);
         }
 
         private bool IsDuplicate(string fullPath)
