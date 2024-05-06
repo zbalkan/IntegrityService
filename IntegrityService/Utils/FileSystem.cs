@@ -11,7 +11,7 @@ using NUlid;
 
 namespace IntegrityService.Utils
 {
-    internal static class FileSystem
+    internal static partial class FileSystem
     {
         /// <summary>
         ///     Calculate <see cref="SHA256"/> digest of a file
@@ -21,7 +21,7 @@ namespace IntegrityService.Utils
         /// <exception cref="NotSupportedException"></exception>
         /// <exception cref="System.Security.SecurityException"></exception>
         /// <exception cref="System.Reflection.TargetInvocationException"></exception>
-        public static string CalculateFileDigest(string path)
+        public static string CalculateFileHash(string path)
         {
             var digest = string.Empty;
 
@@ -56,8 +56,16 @@ namespace IntegrityService.Utils
         /// <exception cref="NotSupportedException"></exception>
         /// <exception cref="System.Security.SecurityException"></exception>
         /// <exception cref="System.Reflection.TargetInvocationException"></exception>
-        internal static void GenerateChange(string path, ChangeCategory category, out FileSystemChange fileSystemChange)
+        /// <exception cref="PathTooLongException"></exception>
+        /// <exception cref="UnauthorizedAccessException"></exception>
+        public static void GenerateChange(string path, ChangeCategory category, out FileSystemChange fileSystemChange)
         {
+            var hash = string.Empty;
+            if (GetObjectType(path) == ObjectType.File)
+            {
+                hash = CalculateFileHash(path);
+            }
+
             fileSystemChange = new FileSystemChange
             {
                 Id = Ulid.NewUlid().ToString(),
@@ -67,7 +75,7 @@ namespace IntegrityService.Utils
                 DateTime = DateTime.Now,
                 FullPath = path,
                 SourceComputer = Environment.MachineName,
-                CurrentHash = CalculateFileDigest(path),
+                CurrentHash = hash,
                 PreviousHash = string.Empty,
                 ACLs = path.GetACL()
             };
@@ -82,10 +90,10 @@ namespace IntegrityService.Utils
         /// <exception cref="IOException"></exception>
         /// <exception cref="UnauthorizedAccessException"></exception>
         /// <exception cref="AggregateException"></exception>
-        internal static ConcurrentBag<string> InvokeNtfsSearch()
+        public static ConcurrentBag<string> InvokeNtfsSearch()
         {
             var ntfsDrives = DriveInfo.GetDrives()
-                .Where(d => d.DriveFormat == "NTFS").ToList();
+                .Where(d => d.DriveFormat == "NTFS");
 
             var allPaths = new ConcurrentBag<string>();
 
@@ -109,6 +117,24 @@ namespace IntegrityService.Utils
             });
 
             return allPaths;
+        }
+
+        private static ObjectType GetObjectType(string path)
+        {
+            var attr = File.GetAttributes(path);
+            if (attr.HasFlag(FileAttributes.Directory))
+            {
+                return ObjectType.Directory;
+            }
+
+            // We know it is a file, but is it a regular file?
+            var file = new FileInfo(path);
+            if (file.LinkTarget != null)
+            {
+                return ObjectType.SymbolicLink;
+            }
+
+            return ObjectType.File;
         }
     }
 }

@@ -92,7 +92,7 @@ namespace IntegrityService.Utils
 
             if (Settings.Instance.DisableLocalDatabase)
             {
-                _logger.LogInformation("Category: {category}\nChange Type: {changeType}\nPath: {path}\nCurrent Hash: {currentHash}\nPreviousHash: {previousHash}", Enum.GetName(category), Enum.GetName(ConfigChangeType.FileSystem), path, FileSystem.CalculateFileDigest(path), string.Empty);
+                _logger.LogInformation("Category: {category}\nChange Type: {changeType}\nPath: {path}\nCurrent Hash: {currentHash}\nPreviousHash: {previousHash}", Enum.GetName(category), Enum.GetName(ConfigChangeType.FileSystem), path, FileSystem.CalculateFileHash(path), string.Empty);
             }
             else
             {
