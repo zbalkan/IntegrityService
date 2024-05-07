@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace IntegrityService.Utils
+namespace IntegrityService.IO.Security
 {
     public class AccessControlEntry
     {

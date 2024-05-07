@@ -1,12 +1,14 @@
-﻿using IntegrityService.FIM;
+﻿using IntegrityService.Data;
+using IntegrityService.FIM;
+using IntegrityService.Utils;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
 
-namespace IntegrityService.Utils
+namespace IntegrityService.Jobs
 {
-    internal class FileSystemMonitor : IMonitor
+    internal class FileSystemMonitorJob : IMonitor
     {
         /// <summary>
         ///     Windows file system creates multiple events for creation and change events. These are by design but creates pollution.
@@ -18,7 +20,7 @@ namespace IntegrityService.Utils
         private readonly List<FileSystemWatcher> _watchers;
         private bool _disposedValue;
 
-        public FileSystemMonitor(ILogger logger)
+        public FileSystemMonitorJob(ILogger logger)
         {
             _logger = logger;
             _duplicateCheckBuffer = new FixedSizeDictionary<string, DateTime>();
@@ -71,8 +73,21 @@ namespace IntegrityService.Utils
                 watcher.Error += OnError;
 
                 _watchers.Add(watcher);
-                _logger.LogInformation("Initiated file system watcher for director {directory}", path);
+                _logger.LogInformation("Initiated file system watcher for directory {directory}", path);
             }
+        }
+
+        private bool IsDuplicate(string fullPath)
+        {
+            var lastWriteTime = File.GetLastWriteTime(fullPath);
+            if (_duplicateCheckBuffer.ContainsKey(fullPath) &&
+                _duplicateCheckBuffer[fullPath] == lastWriteTime)
+            {
+                return true;
+            }
+
+            _duplicateCheckBuffer.AddOrUpdate(fullPath, lastWriteTime);
+            return false;
         }
 
         private void OnChanged(object sender, FileSystemEventArgs e) => ProcessEvent(e.FullPath, ChangeCategory.Changed);
@@ -110,17 +125,12 @@ namespace IntegrityService.Utils
                 _logger.LogInformation("Category: {category}\nChange Type: {changeType}\nPath: {path}\nCurrent Hash: {currentHash}\nPreviousHash: {previousHash}", Enum.GetName(change.ChangeCategory), Enum.GetName(ConfigChangeType.FileSystem), path, change.CurrentHash, change.PreviousHash);
             }
         }
-
-        private bool IsDuplicate(string fullPath)
+        #region Dispose
+        public void Dispose()
         {
-            if (_duplicateCheckBuffer.ContainsKey(fullPath) &&
-                _duplicateCheckBuffer[fullPath] == File.GetLastWriteTime(fullPath))
-            {
-                return true;
-            }
-
-            _duplicateCheckBuffer.AddOrUpdate(fullPath, File.GetLastWriteTime(fullPath));
-            return false;
+            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
 
         private void Dispose(bool disposing)
@@ -135,12 +145,6 @@ namespace IntegrityService.Utils
                 _disposedValue = true;
             }
         }
-
-        public void Dispose()
-        {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
-        }
+        #endregion Dispose
     }
 }

@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using IntegrityService.Data;
 using IntegrityService.FIM;
+using IntegrityService.Utils;
 using Microsoft.Extensions.Logging;
 
 // {{ FIM }}
@@ -16,12 +18,12 @@ using Microsoft.Extensions.Logging;
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY
 
-namespace IntegrityService.Utils
+namespace IntegrityService.Jobs
 {
-    internal class FileSystemDiscovery
+    internal class FileSystemDiscoveryJob
     {
         private readonly ILogger _logger;
-        public FileSystemDiscovery(ILogger logger)
+        public FileSystemDiscoveryJob(ILogger logger)
         {
             _logger = logger;
         }

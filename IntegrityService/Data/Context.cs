@@ -2,7 +2,7 @@
 using IntegrityService.FIM;
 using LiteDB;
 
-namespace IntegrityService.Utils
+namespace IntegrityService.Data
 {
     internal class Context : IDisposable
     {
@@ -16,7 +16,7 @@ namespace IntegrityService.Utils
         /// <summary>
         ///     The default size is 800MB
         /// </summary>
-        private const long InitialDatabaseSize = 800 * MB;
+        private const long InitialDatabaseSize = 80 * MB;
 
         private const long MB = 1024 * 1024;
 

@@ -12,7 +12,8 @@
         {
             Directory,
             File,
-            SymbolicLink
+            SymbolicLink,
+            Unknown
         }
     }
 }

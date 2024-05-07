@@ -4,6 +4,7 @@ using System.IO;
 using System.Reflection;
 using System.Threading;
 using IntegrityService.FIM;
+using IntegrityService.Utils;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tracing.Parsers;
 using Microsoft.Diagnostics.Tracing.Parsers.Kernel;
@@ -12,13 +13,13 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 using NtKeywords = Microsoft.Diagnostics.Tracing.Parsers.KernelTraceEventParser.Keywords;
 
-namespace IntegrityService.Utils
+namespace IntegrityService.Jobs
 {
     /// <summary>
     ///     A class capturing Registry events.
     /// </summary>
     /// <see href="https://github.com/lowleveldesign/lowleveldesign-blog-samples/blob/master/monitoring-registry-activity-with-etw/Program.fs"/>
-    internal class RegistryMonitor : IMonitor
+    internal partial class RegistryMonitorJob : IMonitor
     {
         const NtKeywords StackFlags = NtKeywords.None;
         const NtKeywords TraceFlags = NtKeywords.Registry;
@@ -30,7 +31,7 @@ namespace IntegrityService.Utils
         private readonly TraceEventSession _rundownSession;
 
         private bool _disposedValue;
-        public RegistryMonitor(ILogger logger)
+        public RegistryMonitorJob(ILogger logger)
         {
             _logger = logger;
             _regHandleToKeyName = [];
@@ -63,7 +64,7 @@ namespace IntegrityService.Utils
         /// <exception cref="UnauthorizedAccessException"></exception>
         /// <exception cref="System.Security.SecurityException"></exception>
         /// <exception cref="OverflowException"></exception>
-        private static RegistryKey GetKeyFromTraceData(RegistryTraceData ev) => RegistryKey.FromHandle(new Microsoft.Win32.SafeHandles.SafeRegistryHandle(new IntPtr((long)ev.KeyHandle), true));
+        private static RegistryKey GetKeyFromTraceData(RegistryTraceData ev) => RegistryKey.FromHandle(new Microsoft.Win32.SafeHandles.SafeRegistryHandle(new nint((long)ev.KeyHandle), true));
 
         /// <summary>
         ///     Prepare ETW parser
@@ -91,7 +92,7 @@ namespace IntegrityService.Utils
             ||
             ev.ProcessID == -1
             ||
-            (Settings.Instance.IsMonitoredKey(keyName));
+            Settings.Instance.IsMonitoredKey(keyName);
         }
 
         private string GetFullKeyName(ulong keyHandle, string eventKeyName)
@@ -124,7 +125,7 @@ namespace IntegrityService.Utils
                    Enum.GetName(changeCategory), Enum.GetName(ConfigChangeType.Registry), ev.TimeStampRelativeMSec, ev.EventName, ev.KeyHandle, key.Name, ev.ProcessID, ev.ThreadID, ev.Index, Enum.GetName((RegistryEventCategory)ev.Status), ev.ElapsedTimeMSec);
                     _ = _regHandleToKeyName.Remove(ev.KeyHandle);
 
-                    Registry.GenerateChange(key, ev.ValueName, key.GetValue(ev.ValueName)?.ToString() ?? string.Empty, changeCategory);
+                    IO.Registry.GenerateChange(key, ev.ValueName, key.GetValue(ev.ValueName)?.ToString() ?? string.Empty, changeCategory);
                 }
             }
             catch (Exception ex)
@@ -240,6 +241,7 @@ namespace IntegrityService.Utils
                 _disposedValue = true;
             }
         }
+
         #endregion Dispose
     }
 }

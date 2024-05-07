@@ -1,8 +1,5 @@
-﻿using System.Runtime.InteropServices;
-
-namespace IntegrityService.Utils
+﻿namespace IntegrityService.Utils
 {
-
     internal enum CtrlType
     {
         CtrlCEvent = 0,

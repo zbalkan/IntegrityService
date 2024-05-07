@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Linq;
+using IntegrityService.Data;
 using IntegrityService.FIM;
+using IntegrityService.IO.Security;
+using IntegrityService.Utils;
 using Microsoft.Win32;
 using NUlid;
 
-namespace IntegrityService.Utils
+namespace IntegrityService.IO
 {
     /// <summary>
     ///     Static class to access Registry.
@@ -99,7 +102,7 @@ namespace IntegrityService.Utils
 
             var valueData = Root.GetValue(value, null);
 
-            return (valueData == null || valueData is not string[] multiStringValue)
+            return valueData == null || valueData is not string[] multiStringValue
                 ? []
                 : multiStringValue.Where(path => !string.IsNullOrEmpty(path)).ToArray();
         }
