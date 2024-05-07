@@ -264,7 +264,7 @@ namespace IntegrityService
         private Regex GenerateMonitoredKeysPattern()
         {
             var sb = new StringBuilder(100);
-            sb.Append("^(?:\"?");
+            sb.Append("^(?:\"?(");
             sb.Append(Sanitize(new StringBuilder(20).AppendJoin(")|(?:", MonitoredKeys)));
             sb.Append(")).*$");
             return new Regex(sb.ToString(), RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
