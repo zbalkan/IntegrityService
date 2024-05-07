@@ -6,7 +6,9 @@ using System.IO.Filesystem.Ntfs;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
+using IntegrityService.Data;
 using IntegrityService.FIM;
+using IntegrityService.IO.Security;
 using NUlid;
 
 namespace IntegrityService.Utils
@@ -58,10 +60,18 @@ namespace IntegrityService.Utils
         /// <exception cref="System.Reflection.TargetInvocationException"></exception>
         /// <exception cref="PathTooLongException"></exception>
         /// <exception cref="UnauthorizedAccessException"></exception>
-        public static void GenerateChange(string path, ChangeCategory category, out FileSystemChange fileSystemChange)
+        public static void GenerateChange(string path, ChangeCategory category, out FileSystemChange? fileSystemChange)
         {
             var hash = string.Empty;
-            if (GetObjectType(path) == ObjectType.File)
+
+            var objectType = GetObjectType(path);
+            if(objectType == ObjectType.Unknown)
+            {
+                fileSystemChange = null;
+                return;
+            }
+
+            if (objectType == ObjectType.File)
             {
                 hash = CalculateFileHash(path);
             }
@@ -121,20 +131,28 @@ namespace IntegrityService.Utils
 
         private static ObjectType GetObjectType(string path)
         {
-            var attr = File.GetAttributes(path);
-            if (attr.HasFlag(FileAttributes.Directory))
+            try
             {
-                return ObjectType.Directory;
-            }
+                var attr = File.GetAttributes(path);
+                if (attr.HasFlag(FileAttributes.Directory))
+                {
+                    return ObjectType.Directory;
+                }
 
-            // We know it is a file, but is it a regular file?
-            var file = new FileInfo(path);
-            if (file.LinkTarget != null)
+                // We know it is a file, but is it a regular file?
+                var file = new FileInfo(path);
+                if (file.LinkTarget != null)
+                {
+                    return ObjectType.SymbolicLink;
+                }
+
+                return ObjectType.File;
+            }
+            catch (Exception)
             {
-                return ObjectType.SymbolicLink;
-            }
 
-            return ObjectType.File;
+                return ObjectType.Unknown;
+            }
         }
     }
 }

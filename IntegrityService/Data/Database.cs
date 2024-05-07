@@ -1,4 +1,4 @@
-﻿namespace IntegrityService.Utils
+﻿namespace IntegrityService.Data
 {
     internal static class Database
     {

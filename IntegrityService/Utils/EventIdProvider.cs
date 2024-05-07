@@ -21,60 +21,72 @@ namespace IntegrityService.Utils
         /// <returns>Event ID</returns>
         public ushort ComputeEventId(LogEvent logEvent)
         {
+            ushort eventId = 7780;
             switch (logEvent)
             {
                 case { Level: LogEventLevel.Error }:
-                    return 7770;
+                    eventId = 7770;
+                    break;
                 case { Level: LogEventLevel.Information }:
                     {
-                        if (logEvent.Properties.TryGetValue("changeType", out var changeType))
+                        if (!logEvent.Properties.TryGetValue("changeType", out var changeType))
                         {
-                            if (Equals(changeType, "FileSystem"))
-                            {
-                                if (logEvent.Properties.TryGetValue("category", out var category))
-                                {
-                                    if (Equals(category, "Created"))
-                                    {
-                                        return 7776;
-                                    }
-
-                                    if (Equals(category, "Changed"))
-                                    {
-                                        return 7777;
-                                    }
-
-                                    if (Equals(category, "Deleted"))
-                                    {
-                                        return 7778;
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                if (logEvent.Properties.TryGetValue("category", out var category))
-                                {
-                                    if (Equals(category, "Created"))
-                                    {
-                                        return 7786;
-                                    }
-
-                                    if (Equals(category, "Changed"))
-                                    {
-                                        return 7787;
-                                    }
-
-                                    if (Equals(category, "Deleted"))
-                                    {
-                                        return 7788;
-                                    }
-                                }
-                            }
+                            break;
                         }
-                        break;
+                        if (Equals(changeType, "FileSystem"))
+                        {
+                            if (!logEvent.Properties.TryGetValue("category", out var category))
+                            {
+                                break;
+                            }
+                            if (Equals(category, "Created"))
+                            {
+                                eventId = 7776;
+                                break;
+                            }
+
+                            if (Equals(category, "Changed"))
+                            {
+                                eventId = 7777;
+                                break;
+                            }
+
+                            if (Equals(category, "Deleted"))
+                            {
+                                eventId = 7778;
+                                break;
+                            }
+                            break;
+                        }
+                        else
+                        {
+                            if (!logEvent.Properties.TryGetValue("category", out var category))
+                            {
+                                break;
+                            }
+                            if (Equals(category, "Created"))
+                            {
+                                eventId = 7786;
+                                break;
+                            }
+
+                            if (Equals(category, "Changed"))
+                            {
+                                eventId = 7787;
+                                break;
+                            }
+
+                            if (Equals(category, "Deleted"))
+                            {
+                                eventId = 7788;
+                                break;
+                            }
+                            break;
+                        }
                     }
             }
 
-            return 7780;
+            return eventId;
         }
 
         private static bool Equals(LogEventPropertyValue a, string b) =>
