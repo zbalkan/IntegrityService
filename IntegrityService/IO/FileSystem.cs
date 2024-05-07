@@ -65,15 +65,22 @@ namespace IntegrityService.Utils
             var hash = string.Empty;
 
             var objectType = GetObjectType(path);
-            if(objectType == ObjectType.Unknown)
+            if (objectType == ObjectType.Unknown && category != ChangeCategory.Deleted)
             {
                 fileSystemChange = null;
                 return;
             }
 
+            var previousHash = string.Empty;
             if (objectType == ObjectType.File)
             {
                 hash = CalculateFileHash(path);
+
+                var previousChange = Database.Context.FileSystemChanges.Query()
+                                           .Where(x => x.FullPath.Equals(path, StringComparison.Ordinal))
+                                           .OrderByDescending(c => c.DateTime)
+                                           .FirstOrDefault();
+                previousHash = previousChange?.CurrentHash ?? string.Empty;
             }
 
             fileSystemChange = new FileSystemChange
@@ -86,7 +93,7 @@ namespace IntegrityService.Utils
                 FullPath = path,
                 SourceComputer = Environment.MachineName,
                 CurrentHash = hash,
-                PreviousHash = string.Empty,
+                PreviousHash = previousHash,
                 ACLs = path.GetACL()
             };
 
@@ -131,28 +138,34 @@ namespace IntegrityService.Utils
 
         private static ObjectType GetObjectType(string path)
         {
+            var objectType = ObjectType.Unknown;
             try
             {
-                var attr = File.GetAttributes(path);
-                if (attr.HasFlag(FileAttributes.Directory))
+                if (Path.Exists(path))
                 {
-                    return ObjectType.Directory;
-                }
+                    var attr = File.GetAttributes(path);
+                    if (attr.HasFlag(FileAttributes.Directory))
+                    {
+                        objectType = ObjectType.Directory;
+                    }
 
-                // We know it is a file, but is it a regular file?
-                var file = new FileInfo(path);
-                if (file.LinkTarget != null)
-                {
-                    return ObjectType.SymbolicLink;
-                }
+                    // We know it is a file, but is it a regular file?
+                    var file = new FileInfo(path);
+                    if (file.LinkTarget != null)
+                    {
+                        objectType = ObjectType.SymbolicLink;
+                    }
 
-                return ObjectType.File;
+                    objectType = ObjectType.File;
+                }
             }
             catch (Exception)
             {
-
-                return ObjectType.Unknown;
+                // When a file is deleted, this returns null
+                objectType = ObjectType.Unknown;
             }
+
+            return objectType;
         }
     }
 }
