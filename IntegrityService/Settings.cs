@@ -212,9 +212,9 @@ namespace IntegrityService
             if (ExcludedExtensions.Length > 0)
             {
                 var sb = new StringBuilder(20);
-                sb.Append("^(?!.*(");
-                sb.Append(Sanitize(new StringBuilder(20).AppendJoin('|', ExcludedExtensions)));
-                sb.Append(")$).*$");
+                sb.Append("^.*(?:");
+                sb.Append(Sanitize(new StringBuilder(20).AppendJoin("|", ExcludedExtensions)));
+                sb.Append(").*$");
                 return new Regex(sb.ToString(), RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
             }
             return null;
@@ -230,9 +230,9 @@ namespace IntegrityService
             if (ExcludedKeys.Length > 0)
             {
                 var sb = new StringBuilder(100);
-                sb.Append("^(?!(");
-                sb.Append(Sanitize(new StringBuilder(20).AppendJoin(")|(?:", ExcludedKeys)));
-                sb.Append(")).*$");
+                sb.Append("^(?:");
+                sb.Append(Sanitize(new StringBuilder(20).AppendJoin("|", ExcludedKeys)));
+                sb.Append(").*$");
                 return new Regex(sb.ToString(), RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
             }
             return null;
@@ -248,9 +248,9 @@ namespace IntegrityService
             if (ExcludedPaths.Length > 0)
             {
                 var sb = new StringBuilder(100);
-                sb.Append("^(?!(");
-                sb.Append(Sanitize(new StringBuilder(20).AppendJoin('|', ExcludedPaths)));
-                sb.Append(")).*$");
+                sb.Append("^(?:");
+                sb.Append(Sanitize(new StringBuilder(20).AppendJoin("|", ExcludedPaths)));
+                sb.Append(").*$");
                 return new Regex(sb.ToString(), RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
             }
             return null;
@@ -265,7 +265,7 @@ namespace IntegrityService
         {
             var sb = new StringBuilder(100);
             sb.Append("^(?:\"?(");
-            sb.Append(Sanitize(new StringBuilder(20).AppendJoin(")|(?:", MonitoredKeys)));
+            sb.Append(Sanitize(new StringBuilder(20).AppendJoin("|", MonitoredKeys)));
             sb.Append(")).*$");
             return new Regex(sb.ToString(), RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
         }
