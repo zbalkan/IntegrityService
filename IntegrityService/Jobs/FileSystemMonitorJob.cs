@@ -111,16 +111,6 @@ namespace IntegrityService.Jobs
             }
             else
             {
-                var previousChange = Database.Context.FileSystemChanges.Query()
-                                                                       .Where(x => x.FullPath.Equals(path))
-                                                                       .OrderByDescending(c => c.DateTime)
-                                                                       .ToList();
-                var previousHash = string.Empty;
-                if (previousChange.Count > 0)
-                {
-                    previousHash = previousChange[0]?.CurrentHash ?? string.Empty;
-                }
-
                 FileSystem.GenerateChange(path, category, out var change);
                 _logger.LogInformation("Category: {category}\nChange Type: {changeType}\nPath: {path}\nCurrent Hash: {currentHash}\nPreviousHash: {previousHash}", Enum.GetName(change.ChangeCategory), Enum.GetName(ConfigChangeType.FileSystem), path, change.CurrentHash, change.PreviousHash);
             }
