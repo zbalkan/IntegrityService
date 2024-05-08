@@ -1,10 +1,9 @@
-﻿using IntegrityService.Data;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using IntegrityService.FIM;
 using IntegrityService.Utils;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.IO;
 
 namespace IntegrityService.Jobs
 {
@@ -112,6 +111,7 @@ namespace IntegrityService.Jobs
             else
             {
                 FileSystem.GenerateChange(path, category, out var change);
+                // TODO: If change is null, the log operation throws an error. Handle null value.
                 _logger.LogInformation("Category: {category}\nChange Type: {changeType}\nPath: {path}\nCurrent Hash: {currentHash}\nPreviousHash: {previousHash}", Enum.GetName(change.ChangeCategory), Enum.GetName(ConfigChangeType.FileSystem), path, change.CurrentHash, change.PreviousHash);
             }
         }

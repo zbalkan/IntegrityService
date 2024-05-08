@@ -187,7 +187,7 @@ namespace IntegrityService
                 return matches;
             }
             return from path in matches.AsParallel().WithMergeOptions(ParallelMergeOptions.NotBuffered)
-                   where excludedExtensionsPattern.IsMatch(path)
+                   where !excludedExtensionsPattern.IsMatch(path)
                    select path;
         }
 
@@ -198,7 +198,7 @@ namespace IntegrityService
                 return matches;
             }
             return from path in matches.AsParallel().WithMergeOptions(ParallelMergeOptions.NotBuffered)
-                   where excludedPathsPattern.IsMatch(path)
+                   where !excludedPathsPattern.IsMatch(path)
                    select path;
         }
 
@@ -214,7 +214,7 @@ namespace IntegrityService
                 var sb = new StringBuilder(20);
                 sb.Append("^.*(?:");
                 sb.Append(Sanitize(new StringBuilder(20).AppendJoin("|", ExcludedExtensions)));
-                sb.Append(").*$");
+                sb.Append(")$");
                 return new Regex(sb.ToString(), RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
             }
             return null;
