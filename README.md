@@ -1,26 +1,29 @@
 # IntegrityService
 
-[![DevSkim](https://github.com/zbalkan/IntegrityService/actions/workflows/devskim.yml/badge.svg)](https://github.com/zbalkan/IntegrityService/actions/workflows/devskim.yml)
-
-[![Release](https://github.com/zbalkan/IntegrityService/actions/workflows/dotnet.yml/badge.svg)](https://github.com/zbalkan/IntegrityService/actions/workflows/dotnet.yml)
+[![DevSkim](https://github.com/zbalkan/IntegrityService/actions/workflows/devskim.yml/badge.svg)](https://github.com/zbalkan/IntegrityService/actions/workflows/devskim.yml) [![Release](https://github.com/zbalkan/IntegrityService/actions/workflows/dotnet.yml/badge.svg)](https://github.com/zbalkan/IntegrityService/actions/workflows/dotnet.yml)
 
 ## Overview
+
 Integrity Service is a security related requirement for monitoring critical directories and Registry keys in Windows.
 
 Yes, we need a better name.
 
 ## Usage
-1. Install the service via `sc.exe` manually, or using `install.bat` or `IntegrityService.msi`.
-2. If local file search started, the file system monitoring will initiate a service restart when search is completed.
-3. Use the `default.reg` file for local and ADMX file for domain installations to manage the configuration.
-4. The service does not provide enough information about a security incident, but constitutes a supportive information to collaborate. It is advised to use `Sysmon` and collaborate events together. Related Sysmon event IDs are 2, 9, 11, 12, 13, 14, 15, 23 and 26.
+
+1. Install the service using `IntegrityService.msi`.
+2. The default values will be written to Registry.
+3. The filesystem monitoring will always be started.
+4. If the database is not disabled, and there is not a completed filesystem discovery, a filesystem discovery will be started.
+5. Use the ADMX file for domain installations to manage the configuration.
+6. The service does not provide enough information about a security incident, but constitutes a supportive information to collaborate. It is advised to use `Sysmon` and collaborate events together. Related Sysmon event IDs are 2, 9, 11, 12, 13, 14, 15, 23 and 26.
 
 ## Internals
+
 It is designed to be a Windows Service. In first use, it will start a scan based on the settings from Windows Registry, under `HKLM\SOFTWARE\FIM`.
 
 If there is no path to monitor defined in the Registry, service will not do any action (no default value hard-coded).
 
-In the first use, it will run a full discovery, search for all the files, calculate SHA256 checksum and save it in a local database as the baseline. File search process reads the data from NTFS MFT (Master File Table) so it will take up to 10 seconds. But file search will generally catch at least 100.000 files and folders on a fresh Windows 10 installation and take about 30 to 90 minutes for calculating hashes, obtaining and parsing ACLs and writing to database depending on the number of files and the system specifications. This search can be disabled via Group Policy or registry. If you will use a central logging solution, you can disable it. When the discovery is completed, the service will kill itself. The First Error Action is set to restart, so the OS will restart the service after discovery. If you disabled the local database, just skip to the next paragraph.
+In the first use, it will run a full discovery, search for all the files, calculate SHA256 checksum and save it in a local database as the baseline. File search process reads the data from NTFS MFT (Master File Table) so it will take up to 10 seconds. But file search will generally catch at least 500.000 files and folders on a fresh Windows 10 installation and take about 30 to 90 minutes for calculating hashes, obtaining and parsing ACLs and writing to database depending on the number of files and the system specifications. This search can be disabled via Group Policy or Registry. If you disabled the local database, just skip to the next paragraph.
 
 The service  will subscribe to file system events and when any changes occur, it will create an event log and update the database. You can see the SHA256 hashes for the current and (if exist) previous versions.
 
@@ -29,6 +32,7 @@ Windows has a lot of quirks when it comes to low level callbacks, especially for
 For ease of use, an ADMX file is created. So, the monitored paths, excluded paths (such as log folders), and excluded file extensions (such as log, evtx, etl) can be set via Group Policy. Suggested values for Group Policies can be found below.
 
 ## Suggested values
+
 <table style="border-collapse: collapse; width: 100%; height: 144px;" border="1">
     <tbody>
         <tr style="height: 18px;">
@@ -124,13 +128,7 @@ Event logs IDs are taken from [WINFIM.NET](https://github.com/redblueteam/WinFIM
 | 7788 | Registry key deletion |
 | 7780 | Other events (heartbeat checks in every 60 seconds, service start and stop, etc.) |
 
-
 ## Installation
-
-### Plain installation
-
-1. Download the executable.
-2. Use the `install.bat` and `uninstall.bat` for your purposes.
 
 ### MSI package installation
 
