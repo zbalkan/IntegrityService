@@ -6,8 +6,8 @@ namespace IntegrityService.IO.Security
     {
         public string Owner { get; set; }
 
-        public string? PrimaryGroupOfOwner { get; set; }
-
         public List<AccessControlEntry> Permissions { get; set; }
+
+        public string? PrimaryGroupOfOwner { get; set; }
     }
 }

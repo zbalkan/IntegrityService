@@ -9,16 +9,20 @@ namespace IntegrityService.Utils
         /// <summary>
         ///     Returns event ID based on log content
         /// </summary>
-        /// <para>Event ID 7770 - An exception occurred</para>
-        /// <para>Event ID 7776 – File / Directory creation</para>
-        /// <para>Event ID 7777 – File modification</para>
-        /// <para>Event ID 7778 – File / Directory deletion</para>
-        /// <para>Event ID 7786 – Registry key creation</para>
-        /// <para>Event ID 7787 – Registry key/value modification</para>
-        /// <para>Event ID 7788 – Registry key deletion</para>
-        /// <para>Event ID 7780 – Other events</para>
-        /// <param name="logEvent">Log event to return the Event ID</param>
-        /// <returns>Event ID</returns>
+        /// <para> Event ID 7770 - An exception occurred </para>
+        /// <para> Event ID 7776 – File / Directory creation </para>
+        /// <para> Event ID 7777 – File modification </para>
+        /// <para> Event ID 7778 – File / Directory deletion </para>
+        /// <para> Event ID 7786 – Registry key creation </para>
+        /// <para> Event ID 7787 – Registry key/value modification </para>
+        /// <para> Event ID 7788 – Registry key deletion </para>
+        /// <para> Event ID 7780 – Other events </para>
+        /// <param name="logEvent">
+        ///     Log event to return the Event ID
+        /// </param>
+        /// <returns>
+        ///     Event ID
+        /// </returns>
         public ushort ComputeEventId(LogEvent logEvent)
         {
             ushort eventId = 7780;
@@ -27,6 +31,7 @@ namespace IntegrityService.Utils
                 case { Level: LogEventLevel.Error }:
                     eventId = 7770;
                     break;
+
                 case { Level: LogEventLevel.Information }:
                     {
                         if (!logEvent.Properties.TryGetValue("changeType", out var changeType))

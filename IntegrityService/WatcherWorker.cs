@@ -2,26 +2,41 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using IntegrityService.Data;
+using IntegrityService.FIM;
 using IntegrityService.Jobs;
+using IntegrityService.Message;
 using IntegrityService.Utils;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace IntegrityService
 {
-    public class Worker : BackgroundService
+    public partial class WatcherWorker : BackgroundService
     {
         private readonly BackgroundWorkerQueue _backgroundWorkerQueue;
+
+        private readonly ILiteDbContext _ctx;
+
+        private readonly FileSystemDiscoveryJob _fsDiscovery;
+
         private readonly FileSystemMonitorJob _fsMonitor;
-        private readonly ILogger<Worker> _logger;
+
+        private readonly ILogger<WatcherWorker> _logger;
+
         private RegistryMonitorJob _regMonitor;
 
-        public Worker(ILogger<Worker> logger, BackgroundWorkerQueue backgroundWorkerQueue)
+        public WatcherWorker(ILogger<WatcherWorker> logger,
+                      BackgroundWorkerQueue backgroundWorkerQueue,
+                      IMessageStore<FileSystemChange, FileSystemChangeMessage> fsStore,
+                      IMessageStore<RegistryChange, RegistryChangeMessage> regStore,
+                      ILiteDbContext ctx)
         {
             _logger = logger;
             _backgroundWorkerQueue = backgroundWorkerQueue;
-            _fsMonitor = new FileSystemMonitorJob(_logger);
-            Database.Start();
+            _fsMonitor = new FileSystemMonitorJob(_logger, fsStore, ctx);
+            _regMonitor = new RegistryMonitorJob(_logger, regStore);
+            _fsDiscovery = new FileSystemDiscoveryJob(_logger, fsStore, ctx);
+            _ctx = ctx;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -39,7 +54,6 @@ namespace IntegrityService
 
             if (Settings.Instance.EnableRegistryMonitoring)
             {
-                _regMonitor = new RegistryMonitorJob(_logger);
                 _regMonitor.Start();
             }
 
@@ -74,7 +88,7 @@ namespace IntegrityService
                 _regMonitor.Dispose();
             }
 
-            Database.Stop();
+            _ctx?.Dispose();
         }
 
         private bool Handler(CtrlType signal)
@@ -119,8 +133,7 @@ namespace IntegrityService
                 {
                     _logger.LogInformation(
                         "File discovery not completed. Initiating file system discovery. It will take time.");
-                    var fsDiscovery = new FileSystemDiscoveryJob(_logger);
-                    fsDiscovery.Start();
+                    _fsDiscovery.Start();
                     Settings.Instance.IsFileDiscoveryCompleted = true;
                     _logger.LogInformation("File system discovery completed.");
                 },

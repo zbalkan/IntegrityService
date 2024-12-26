@@ -11,8 +11,11 @@
         public enum ObjectType
         {
             Directory,
+
             File,
+
             SymbolicLink,
+
             Unknown
         }
     }

@@ -16,13 +16,20 @@ namespace IntegrityService.Utils
     internal static partial class FileSystem
     {
         /// <summary>
-        ///     Calculate <see cref="SHA256"/> digest of a file
+        ///     Calculate <see cref="SHA256" /> digest of a file
         /// </summary>
-        /// <param name="path">Full pathof the file</param>
-        /// <returns><see cref="SHA256"/> digest converted into <see cref="string"/></returns>
-        /// <exception cref="NotSupportedException"></exception>
-        /// <exception cref="System.Security.SecurityException"></exception>
-        /// <exception cref="System.Reflection.TargetInvocationException"></exception>
+        /// <param name="path">
+        ///     Full pathof the file
+        /// </param>
+        /// <returns>
+        ///     <see cref="SHA256" /> digest converted into <see cref="string" />
+        /// </returns>
+        /// <exception cref="NotSupportedException">
+        /// </exception>
+        /// <exception cref="System.Security.SecurityException">
+        /// </exception>
+        /// <exception cref="System.Reflection.TargetInvocationException">
+        /// </exception>
         public static string CalculateFileHash(string path)
         {
             var digest = string.Empty;
@@ -49,26 +56,21 @@ namespace IntegrityService.Utils
             return digest;
         }
 
-        /// <summary>
-        ///     Generates new file system change record from parameters and saves into database
-        /// </summary>
-        /// <param name="path">The path to filekey</param>
-        /// <param name="category"><see cref="ChangeCategory"></param>
-        /// <param name="fileSystemChange">The change object</param>
-        /// <exception cref="NotSupportedException"></exception>
-        /// <exception cref="System.Security.SecurityException"></exception>
-        /// <exception cref="System.Reflection.TargetInvocationException"></exception>
-        /// <exception cref="PathTooLongException"></exception>
-        /// <exception cref="UnauthorizedAccessException"></exception>
-        public static void GenerateChange(string path, ChangeCategory category, out FileSystemChange? fileSystemChange)
+        /// <summary> Generates new file system change record from parameters and saves into
+        /// database </summary> <param name="path">The path to filekey</param> <param
+        /// name="category"><see cref="ChangeCategory"></param> <param name="fileSystemChange">The
+        /// change object</param> <exception cref="NotSupportedException"></exception> <exception
+        /// cref="System.Security.SecurityException"></exception> <exception
+        /// cref="System.Reflection.TargetInvocationException"></exception> <exception
+        /// cref="PathTooLongException"></exception> <exception cref="UnauthorizedAccessException"></exception>
+        public static FileSystemChange? GenerateChange(string path, ChangeCategory category, ILiteDbContext ctx)
         {
             var hash = string.Empty;
 
             var objectType = GetObjectType(path);
             if (objectType == ObjectType.Unknown && category != ChangeCategory.Deleted)
             {
-                fileSystemChange = null;
-                return;
+                return null;
             }
 
             var previousHash = string.Empty;
@@ -76,14 +78,15 @@ namespace IntegrityService.Utils
             {
                 hash = CalculateFileHash(path);
 
-                var previousChange = Database.Context.FileSystemChanges.Query()
+                var previousChange = ctx.FileSystemChanges.Query()
                                            .Where(x => x.FullPath.Equals(path, StringComparison.Ordinal))
+                                           .ToList()
                                            .OrderByDescending(c => c.DateTime)
                                            .FirstOrDefault();
                 previousHash = previousChange?.CurrentHash ?? string.Empty;
             }
 
-            fileSystemChange = new FileSystemChange
+            return new FileSystemChange
             {
                 Id = Ulid.NewUlid().ToString(),
                 ChangeCategory = category,
@@ -96,17 +99,20 @@ namespace IntegrityService.Utils
                 PreviousHash = previousHash,
                 ACLs = path.GetACL()
             };
-
-            Database.Context.FileSystemChanges.Insert(fileSystemChange);
         }
 
         /// <summary>
         ///     Reads file list fron NTFS indexes
         /// </summary>
-        /// <returns>List of all files</returns>
-        /// <exception cref="IOException"></exception>
-        /// <exception cref="UnauthorizedAccessException"></exception>
-        /// <exception cref="AggregateException"></exception>
+        /// <returns>
+        ///     List of all files
+        /// </returns>
+        /// <exception cref="IOException">
+        /// </exception>
+        /// <exception cref="UnauthorizedAccessException">
+        /// </exception>
+        /// <exception cref="AggregateException">
+        /// </exception>
         public static ConcurrentBag<string> InvokeNtfsSearch()
         {
             var ntfsDrives = DriveInfo.GetDrives()
