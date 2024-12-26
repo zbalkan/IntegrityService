@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using IntegrityService.Data;
 using IntegrityService.FIM;
 using IntegrityService.Message;
@@ -124,14 +125,16 @@ namespace IntegrityService.Jobs
             }
             else
             {
-                // TODO: Create change event, then send to messagestore
-                var change = FileSystem.GenerateChange(path, category, _ctx);
+                var change = FileSystemChange.FromPath(path, category);
 
                 if (change != null)
                 {
-                    _messageStore.Add(change);
+                    if(change.ObjectType == FileSystem.ObjectType.File)
+                    {
+                        change.PreviousHash = FileSystemChange.RetrievePreviousHash(path, _ctx);
+                    }
 
-                    //Database.Context.FileSystemChanges.Insert(change);
+                    _messageStore.Add(change);
                     _logger.LogInformation("Category: {category}\nChange Type: {changeType}\nPath: {path}\nCurrent Hash: {currentHash}\nPreviousHash: {previousHash}", Enum.GetName(change.ChangeCategory), Enum.GetName(ConfigChangeType.FileSystem), path, change.CurrentHash, change.PreviousHash);
                 }
             }

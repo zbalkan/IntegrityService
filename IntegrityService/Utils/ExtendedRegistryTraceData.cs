@@ -103,7 +103,6 @@ namespace IntegrityService.Utils
                     break;
             }
 
-
             var userInfo = Process.GetProcessById(ProcessID).Owner();
             Username = userInfo.Name;
             UserSID = userInfo.User?.Value ?? string.Empty;

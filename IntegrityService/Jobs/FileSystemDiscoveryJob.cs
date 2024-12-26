@@ -1,6 +1,8 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using IntegrityService.Data;
 using IntegrityService.FIM;
@@ -61,9 +63,14 @@ namespace IntegrityService.Jobs
 
         private void Add(string path)
         {
-            var change = FileSystem.GenerateChange(path, ChangeCategory.Discovery, _ctx);
+            var change = FileSystemChange.FromPath(path, ChangeCategory.Discovery);
             if (change != null)
             {
+                if (change.ObjectType == FileSystem.ObjectType.File)
+                {
+                    change.PreviousHash = FileSystemChange.RetrievePreviousHash(path, _ctx);
+                }
+
                 _messageStore.Add(change);
             }
         }

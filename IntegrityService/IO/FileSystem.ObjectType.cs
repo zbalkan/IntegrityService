@@ -1,6 +1,6 @@
 ﻿namespace IntegrityService.Utils
 {
-    internal static partial class FileSystem
+    public static partial class FileSystem
     {
         /// <summary>
         ///     Filesystem object type.

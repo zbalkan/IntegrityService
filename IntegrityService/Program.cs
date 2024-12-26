@@ -40,7 +40,6 @@ namespace IntegrityService
                     IConfiguration configuration = new ConfigurationBuilder()
                     .AddWindowsRegistry(Registry.RootName, Registry.Hive, false)
                     .Build();
-
                 })
                 .UseWindowsService();
     }
