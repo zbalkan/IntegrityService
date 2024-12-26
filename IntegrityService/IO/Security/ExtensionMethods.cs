@@ -1,13 +1,10 @@
-﻿// {{ FIM }}
-// Copyright (C) {{ 2022 }}  {{ Zafer Balkan }}
+﻿// {{ FIM }} Copyright (C) {{ 2022 }} {{ Zafer Balkan }}
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// This program is free software: you can redistribute it and/or modify it under the terms of the
+// GNU Affero General Public License as published by the Free Software Foundation, either version 3
+// of the License, or (at your option) any later version.
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY
 
 using System;
 using System.Collections.Generic;
@@ -30,37 +27,38 @@ namespace IntegrityService.IO.Security
         /// <summary>
         ///     Get custom formatted ACL
         /// </summary>
-        /// <param name="path">File path</param>
-        /// <returns>Custom formatted ACL</returns>
-        /// <exception cref="System.Security.SecurityException"></exception>
-        /// <exception cref="UnauthorizedAccessException"></exception>
-        /// <exception cref="NotSupportedException"></exception>
-        /// <exception cref="PathTooLongException"></exception>
+        /// <param name="path">
+        ///     File path
+        /// </param>
+        /// <returns>
+        ///     Custom formatted ACL
+        /// </returns>
+        /// <exception cref="System.Security.SecurityException">
+        /// </exception>
+        /// <exception cref="UnauthorizedAccessException">
+        /// </exception>
+        /// <exception cref="NotSupportedException">
+        /// </exception>
+        /// <exception cref="PathTooLongException">
+        /// </exception>
         public static string GetACL(this string path) => ToJson(new AccessControlList().OfFileSystem(new FileInfo(path)));
 
         /// <summary>
         ///     Get custom formatted ACL
         /// </summary>
-        /// <param name="key">Registry key</param>
-        /// <returns>Custom formatted ACL</returns>
-        /// <exception cref="System.Security.SecurityException"></exception>
-        /// <exception cref="IdentityNotMappedException"></exception>
-        /// <exception cref="SystemException"></exception>
+        /// <param name="key">
+        ///     Registry key
+        /// </param>
+        /// <returns>
+        ///     Custom formatted ACL
+        /// </returns>
+        /// <exception cref="System.Security.SecurityException">
+        /// </exception>
+        /// <exception cref="IdentityNotMappedException">
+        /// </exception>
+        /// <exception cref="SystemException">
+        /// </exception>
         public static string GetACL(this RegistryKey key) => ToJson(new AccessControlList().OfRegistryKey(key));
-
-        private static AccessControlEntry ToAce(this RegistryAccessRule rule) => new()
-        {
-            UserOrGroup = rule.IdentityReference.Value,
-            Permissions = rule.RegistryRights.ListFlags().ToList(),
-            IsInherited = rule.IsInherited
-        };
-
-        private static AccessControlEntry ToAce(this FileSystemAccessRule rule) => new()
-        {
-            UserOrGroup = rule.IdentityReference.Value,
-            Permissions = rule.FileSystemRights.ListFlags().ToList(),
-            IsInherited = rule.IsInherited
-        };
 
         private static IEnumerable<string> ListFlags<T>(this T value) where T : struct, Enum
         {
@@ -104,31 +102,52 @@ namespace IntegrityService.IO.Security
         /// <summary>
         ///     Get formatted ACL of a Registry key
         /// </summary>
-        /// <param name="acl">ACL object</param>
-        /// <param name="key">Registry key</param>
-        /// <returns>Formatted ACL</returns>
-        /// <exception cref="System.Security.SecurityException"></exception>
-        /// <exception cref="IdentityNotMappedException"></exception>
-        /// <exception cref="SystemException"></exception>
+        /// <param name="acl">
+        ///     ACL object
+        /// </param>
+        /// <param name="key">
+        ///     Registry key
+        /// </param>
+        /// <returns>
+        ///     Formatted ACL
+        /// </returns>
+        /// <exception cref="System.Security.SecurityException">
+        /// </exception>
+        /// <exception cref="IdentityNotMappedException">
+        /// </exception>
+        /// <exception cref="SystemException">
+        /// </exception>
         private static AccessControlList OfRegistryKey(this AccessControlList acl, RegistryKey key)
         {
-            var registryPermissions = key.GetAccessControl(AccessControlSections.All);
-            acl.Owner = registryPermissions.GetOwner(typeof(NTAccount))?.Value ?? string.Empty;
-            acl.PrimaryGroupOfOwner = registryPermissions.GetGroup(typeof(NTAccount))?.Value ?? string.Empty;
-            acl.Permissions = registryPermissions
-                .GetAccessRules(true, true, typeof(NTAccount))
-                .Cast<RegistryAccessRule>()
-                .Select(rule => rule.ToAce())
-                .ToList();
+            try
+            {
+                var registryPermissions = key.GetAccessControl(AccessControlSections.All);
+                acl.Owner = registryPermissions.GetOwner(typeof(NTAccount))?.Value ?? string.Empty;
+                acl.PrimaryGroupOfOwner = registryPermissions.GetGroup(typeof(NTAccount))?.Value ?? string.Empty;
+                acl.Permissions = registryPermissions
+                    .GetAccessRules(true, true, typeof(NTAccount))
+                    .Cast<RegistryAccessRule>()
+                    .Select(rule => rule.ToAce())
+                    .ToList();
+            }
+            catch (Exception)
+            {
+                // return same acl
+            }
 
             return acl;
         }
+
         /// <summary>
         ///     Translate file owner name from SID
         /// </summary>
-        /// <param name="fileSecurity"></param>
-        /// <returns>Translated owner name, original SID or empty string.</returns>
-        /// <exception cref="ArgumentNullException"></exception>
+        /// <param name="fileSecurity">
+        /// </param>
+        /// <returns>
+        ///     Translated owner name, original SID or empty string.
+        /// </returns>
+        /// <exception cref="ArgumentNullException">
+        /// </exception>
         private static string OwnerName(FileSecurity fileSecurity)
         {
             ArgumentNullException.ThrowIfNull(fileSecurity);
@@ -163,9 +182,14 @@ namespace IntegrityService.IO.Security
         /// <summary>
         ///     Translate primary group name from SID
         /// </summary>
-        /// <param name="fileSecurity">FileSecurity object to parse</param>
-        /// <returns>Transled group name, original SID or empty string.</returns>
-        /// <exception cref="ArgumentNullException"></exception>
+        /// <param name="fileSecurity">
+        ///     FileSecurity object to parse
+        /// </param>
+        /// <returns>
+        ///     Transled group name, original SID or empty string.
+        /// </returns>
+        /// <exception cref="ArgumentNullException">
+        /// </exception>
         private static string PrimaryGroupOfOwnerName(FileSecurity fileSecurity)
         {
             ArgumentNullException.ThrowIfNull(fileSecurity);
@@ -197,6 +221,20 @@ namespace IntegrityService.IO.Security
                 return string.Empty;
             }
         }
+
+        private static AccessControlEntry ToAce(this RegistryAccessRule rule) => new()
+        {
+            UserOrGroup = rule.IdentityReference.Value,
+            Permissions = rule.RegistryRights.ListFlags().ToList(),
+            IsInherited = rule.IsInherited
+        };
+
+        private static AccessControlEntry ToAce(this FileSystemAccessRule rule) => new()
+        {
+            UserOrGroup = rule.IdentityReference.Value,
+            Permissions = rule.FileSystemRights.ListFlags().ToList(),
+            IsInherited = rule.IsInherited
+        };
 
         private static string ToJson(AccessControlList? ac)
         {

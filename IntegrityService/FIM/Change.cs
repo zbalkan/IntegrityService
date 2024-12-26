@@ -2,18 +2,20 @@
 
 namespace IntegrityService.FIM
 {
-    public class Change
+    public class Change : IChange
     {
-        public string Id { get; set; }
+        public string ACLs { get; set; }
 
-        public string Entity { get; set; }
-
-        public string SourceComputer { get; set; }
-
-        public DateTime DateTime { get; set; }
+        public ChangeCategory ChangeCategory { get; set; }
 
         public ConfigChangeType ConfigChangeType { get; set; }
 
-        public ChangeCategory ChangeCategory { get; set; }
+        public DateTime DateTime { get; set; }
+
+        public string Entity { get; set; }
+
+        public string Id { get; set; }
+
+        public string SourceComputer { get; set; }
     }
 }

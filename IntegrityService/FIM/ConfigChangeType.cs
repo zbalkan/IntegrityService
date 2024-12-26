@@ -3,6 +3,7 @@
     public enum ConfigChangeType
     {
         Registry,
+
         FileSystem
     }
 }

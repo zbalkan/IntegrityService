@@ -8,18 +8,25 @@ namespace IntegrityService.Utils
     /// <summary>
     ///     A queue for long running jobs
     /// </summary>
-    public class BackgroundWorkerQueue : IDisposable
+    public partial class BackgroundWorkerQueue : IDisposable
     {
         private readonly SemaphoreSlim _signal = new(0);
+
         private readonly ConcurrentQueue<Func<CancellationToken, Task>> _workItems = new();
+
         private bool disposedValue;
 
         /// <summary>
         ///     Dequeue a job if cancellation token exists
         /// </summary>
-        /// <param name="cancellationToken">A cancellation token to stop the jobs and dequeue</param>
-        /// <returns>return job to stop</returns>
-        /// <exception cref="OperationCanceledException"></exception>
+        /// <param name="cancellationToken">
+        ///     A cancellation token to stop the jobs and dequeue
+        /// </param>
+        /// <returns>
+        ///     return job to stop
+        /// </returns>
+        /// <exception cref="OperationCanceledException">
+        /// </exception>
         public async Task<Func<CancellationToken, Task>?> DequeueAsync(CancellationToken cancellationToken)
         {
             if (!_workItems.IsEmpty)
@@ -35,9 +42,13 @@ namespace IntegrityService.Utils
         /// <summary>
         ///     Add a new job to the queue
         /// </summary>
-        /// <param name="workItem">New job as <see cref="Task"/></param>
-        /// <exception cref="ArgumentNullException"></exception>
-        /// <exception cref="SemaphoreFullException"></exception>
+        /// <param name="workItem">
+        ///     New job as <see cref="Task" />
+        /// </param>
+        /// <exception cref="ArgumentNullException">
+        /// </exception>
+        /// <exception cref="SemaphoreFullException">
+        /// </exception>
         public void QueueBackgroundWorkItem(Func<CancellationToken, Task> workItem)
         {
             ArgumentNullException.ThrowIfNull(workItem);
@@ -47,6 +58,7 @@ namespace IntegrityService.Utils
         }
 
         #region Dispose
+
         public void Dispose()
         {
             // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
@@ -66,6 +78,7 @@ namespace IntegrityService.Utils
                 disposedValue = true;
             }
         }
+
         #endregion Dispose
     }
 }
