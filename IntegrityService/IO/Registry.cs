@@ -33,26 +33,6 @@ namespace IntegrityService.IO
 
         private const string FimKeyName = "FIM";
 
-        /// <summary>
-        /// Generates new Registry change record from parameters
-        /// </summary>
-        /// <param name="eev"></param>
-        /// <returns></returns>
-        public static RegistryChange GenerateChange(ExtendedRegistryTraceData eev) => new RegistryChange
-        {
-            Id = Ulid.NewUlid().ToString(),
-            ChangeCategory = eev.ChangeCategory,
-            ConfigChangeType = ConfigChangeType.Registry,
-            Entity = eev.FullName,
-            DateTime = DateTime.Now,
-            Key = eev.FullName,
-            Hive = Enum.GetName(eev.Hive) ?? string.Empty,
-            SourceComputer = Environment.MachineName,
-            ValueName = eev.ValueName ?? string.Empty,
-            ValueData = eev.ValueData ?? string.Empty,
-            ACLs = eev.Key?.GetACL()
-        };
-
         /// <summary> Translates the Registry value data in Dword to Int32 </summary> <param
         /// name="value">Name of the Registry value</param> <returns><see cref="int"></returns>
         /// <exception cref="ArgumentException"></exception> <exception

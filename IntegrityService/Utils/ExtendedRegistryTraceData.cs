@@ -7,7 +7,7 @@ using Microsoft.Win32;
 
 namespace IntegrityService.Utils
 {
-    internal class ExtendedRegistryTraceData
+    public class ExtendedRegistryTraceData
     {
         public ChangeCategory ChangeCategory { get; set; }
 

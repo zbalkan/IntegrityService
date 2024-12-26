@@ -165,7 +165,7 @@ namespace IntegrityService.Jobs
                             .LogInformation("<Data>Change Type: {changeType:l}\nEvent Data:\n{ev:l}</Data>",
                             Enum.GetName(ConfigChangeType.Registry), ev.ToString());
 
-                        var change = IO.Registry.GenerateChange(ev);
+                        var change = RegistryChange.FromTrace(ev);
                         if (change != null)
                         {
                             _messageStore.Add(change);
