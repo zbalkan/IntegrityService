@@ -5,6 +5,8 @@ on:
 
   push:
     branches: [master]
+    tags:
+      - "*.*.*"
     paths-ignore:
       - '**.md'
       - '**.txt'
@@ -12,20 +14,6 @@ on:
       - '**.ADMX'
       - '**.ico'
       - '**.reg'
-    tags:
-      - "*.*.*"
-
-  pull_request:
-    branches: [master]
-    paths-ignore:
-      - '**.md'
-      - '**.txt'
-      - '**.ADML'
-      - '**.ADMX'
-      - '**.ico'
-      - '**.reg'
-    tags:
-      - "*.*.*"
 
 permissions:
   contents: write
@@ -45,13 +33,11 @@ jobs:
         run: |
           dotnet tool install --global wix
           wix --version
-
       - name: Install Wix extension
         run: |
           cd IntegrityService.Installer
           wix extension add WixToolset.Util.wixext/5.0.0
           wix extension list
-
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v2
         with:
@@ -78,7 +64,6 @@ jobs:
           Write-Output "Testing installer file location:"
           Test-Path -Path D:\a\IntegrityService\IntegrityService\publish\IntegrityService.msi
           Remove-Item -Path D:\a\IntegrityService\IntegrityService\publish\IntegrityService.exe -Confirm:$false
-
       - name: Enumerate root folder
         shell: powershell
         run: ls -r
