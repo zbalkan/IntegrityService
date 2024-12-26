@@ -162,7 +162,7 @@ namespace IntegrityService.Jobs
                     try
                     {
                         _logger
-                            .LogInformation("<Data>Change Type: {changeType:l}\nEvent Data:\n{ev:l}</Data>",
+                            .LogInformation("Change Type: {changeType:l}\nEvent Data:\n{ev:l}",
                             Enum.GetName(ConfigChangeType.Registry), ev.ToString());
 
                         var change = RegistryChange.FromTrace(ev);

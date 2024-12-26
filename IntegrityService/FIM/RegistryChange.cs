@@ -36,7 +36,7 @@ namespace IntegrityService.FIM
             SourceComputer = Environment.MachineName,
             ValueName = eev.ValueName ?? string.Empty,
             ValueData = eev.ValueData ?? string.Empty,
-            ACLs = eev.Key?.GetACL(),
+            ACLs = eev.Key?.GetACL() ?? string.Empty,
             Username = eev.Username,
             UserSID = eev.UserSID
         };
