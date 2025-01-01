@@ -21,6 +21,8 @@ namespace IntegrityService.Jobs
     /// <see href="https://github.com/lowleveldesign/lowleveldesign-blog-samples/blob/master/monitoring-registry-activity-with-etw/Program.fs" />
     internal partial class RegistryMonitorJob : IMonitor
     {
+        private const string ETWSessionName = "RegistryWatcher";
+
         private const double MonitorTimeInSeconds = 0.2;
 
         private const NtKeywords TraceFlags = NtKeywords.Registry;
@@ -91,6 +93,46 @@ namespace IntegrityService.Jobs
             kernelField?.SetValue(traceSessionSource, kernelParser);
         }
 
+        private void CleanupExistingSession()
+        {
+            try
+            {
+                var activeSessions = TraceEventSession.GetActiveSessionNames();
+                if (activeSessions.Contains(ETWSessionName))
+                {
+                    using var session = new TraceEventSession(ETWSessionName);
+                    session.Stop();
+                    _logger.LogInformation("Cleaned up lingering ETW session 'RegistryWatcher' from a previous run.");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error while checking or cleaning up lingering ETW session.");
+            }
+        }
+
+        private string GetFullKeyName(ulong keyHandle, string eventKeyName, string eventValueName)
+        {
+            if (string.IsNullOrWhiteSpace(eventKeyName) && string.IsNullOrWhiteSpace(eventValueName))
+                return string.Empty;
+
+            var fullName = string.Empty;
+
+            if (keyHandle != 0 && _regHandleToKeyName.TryGetValue(keyHandle, out var result))
+            {
+                fullName = result;
+            }
+            if (!string.IsNullOrWhiteSpace(eventKeyName))
+                fullName += "\\" + eventKeyName;
+            if (!string.IsNullOrWhiteSpace(eventValueName))
+                fullName += "\\" + eventValueName;
+
+            fullName = Regex.Replace(fullName, @"\\REGISTRY\\MACHINE", "HKEY_LOCAL_MACHINE", RegexOptions.IgnoreCase);
+            fullName = Regex.Replace(fullName, @"\\REGISTRY\\USER", "HKEY_USERS", RegexOptions.IgnoreCase);
+
+            return fullName;
+        }
+
         private bool IsMonitoredEvent(string keyName, int pid)
         {
             if (pid == _pid || pid == -1)
@@ -134,11 +176,13 @@ namespace IntegrityService.Jobs
         /// </exception>
         private void StartSession()
         {
+            CleanupExistingSession();
+
             _logger.LogInformation("Started ETW session 'RegistryWatcher' for Registry changes.");
 
             while (!_cancellationTokenSource.IsCancellationRequested)
             {
-                var session = new TraceEventSession("RegistryWatcher", null);
+                var session = new TraceEventSession(ETWSessionName, null);
                 session.EnableKernelProvider(TraceFlags);
                 MakeKernelParserStateless(session.Source);
 
@@ -180,28 +224,6 @@ namespace IntegrityService.Jobs
                 session.Stop();
                 session.Dispose();
             }
-        }
-
-        private string GetFullKeyName(ulong keyHandle, string eventKeyName, string eventValueName)
-        {
-            if (string.IsNullOrWhiteSpace(eventKeyName) && string.IsNullOrWhiteSpace(eventValueName))
-                return string.Empty;
-
-            var fullName = string.Empty;
-
-            if (keyHandle != 0 && _regHandleToKeyName.TryGetValue(keyHandle, out var result))
-            {
-                fullName = result;
-            }
-            if (!string.IsNullOrWhiteSpace(eventKeyName))
-                fullName += "\\" + eventKeyName;
-            if (!string.IsNullOrWhiteSpace(eventValueName))
-                fullName += "\\" + eventValueName;
-
-            fullName = Regex.Replace(fullName, @"\\REGISTRY\\MACHINE", "HKEY_LOCAL_MACHINE", RegexOptions.IgnoreCase);
-            fullName = Regex.Replace(fullName, @"\\REGISTRY\\USER", "HKEY_USERS", RegexOptions.IgnoreCase);
-
-            return fullName;
         }
 
         #region Dispose

@@ -62,13 +62,16 @@ namespace IntegrityService.Utils
             FullName = fullName;
             Hive = ParseHive(FullName);
 
-            // Remove value to get the full key path and clean up forward slash if needed
-            var stripped = fullName.Replace(ValueName, string.Empty);
-            if (stripped.EndsWith('\\'))
+            var stripped = fullName;
+            if (!string.IsNullOrEmpty(ValueName))
             {
-                stripped = stripped.Substring(0, stripped.Length - 1);
+                // Remove value to get the full key path and clean up forward slash if needed
+                stripped = fullName.Replace(ValueName, string.Empty);
+                if (stripped.EndsWith('\\'))
+                {
+                    stripped = stripped.Substring(0, stripped.Length - 1);
+                }
             }
-
             // Remove the Hive name
             stripped = stripped.Substring(stripped.IndexOf('\\') + 1);
 
@@ -122,7 +125,7 @@ namespace IntegrityService.Utils
 
         public override int GetHashCode() => HashCode.Combine(FullName, Timestamp, ChangeCategory, ProcessID, ThreadID);
 
-        public override string ToString() => $"Timestamp: {Timestamp:O}\nEvent Name: {EventName}\nChange Category: {ChangeCategory}\nFull Name: {FullName}\nKey Name: {KeyName}\nValue Name: {ValueName}\nValue Data: {ValueData}\nProcess: {ProcessName} (PID: {ProcessID})\nUser Info: {Username} (SID: {UserSID}";
+        public override string ToString() => $"Timestamp: {Timestamp:O}\nEvent Name: {EventName}\nChange Category: {ChangeCategory}\nFull Name: {FullName}\nKey Name: {KeyName}\nValue Name: {ValueName}\nValue Data: {ValueData}\nProcess: {ProcessName} (PID: {ProcessID})\nUser Info: {Username} (SID: {UserSID})";
 
         private static RegistryHive ParseHive(string keyName)
         {
@@ -153,6 +156,11 @@ namespace IntegrityService.Utils
 
         private string? ExtractValueData()
         {
+            if (string.IsNullOrEmpty(ValueName))
+            {
+                return null;
+            }
+
             var o = Key!.GetValue(ValueName);
             string? result = null;
             if (o != null && !string.IsNullOrEmpty(o.ToString()))
