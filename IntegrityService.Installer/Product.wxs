@@ -3,7 +3,7 @@
 <!-- The manufacturer, for setup package publisher and folder info -->
 <?define Manufacturer = "Zafer Balkan" ?>
 <!-- The version number of this setup package-->
-<?define Version = "1.0.0" ?>
+<?define Version = "0.2.0" ?>
 <!-- UpgradeCode must be unique and not changed once the first version of the program is installed. -->
 <?define UpgradeCode = "{F63A79CE-F49E-4883-8CCA-D877B33CB981}" ?>
 <!-- Source folder for the single-file executable -->
