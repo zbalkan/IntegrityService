@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using IntegrityService.Data;
 using IntegrityService.FIM;
 using IntegrityService.Message;

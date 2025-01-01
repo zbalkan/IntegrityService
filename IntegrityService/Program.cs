@@ -31,11 +31,11 @@ namespace IntegrityService
                 {
                     _ = services.Configure<LiteDbOptions>(options => options.DatabasePath = Settings.DatabasePath);
                     _ = services.AddSingleton<ILiteDbContext, LiteDbContext>();
-                    _ = services.AddHostedService<WatcherWorker>();
-                    _ = services.AddHostedService<PersistenceWorker>();
                     _ = services.AddSingleton<BackgroundWorkerQueue>();
                     _ = services.AddSingleton<IMessageStore<FileSystemChange, FileSystemChangeMessage>, FileSystemMessageStore>();
                     _ = services.AddSingleton<IMessageStore<RegistryChange, RegistryChangeMessage>, RegistryMessageStore>();
+                    _ = services.AddHostedService<WatcherWorker>();
+                    _ = services.AddHostedService<PersistenceWorker>();
 
                     IConfiguration configuration = new ConfigurationBuilder()
                     .AddWindowsRegistry(Registry.RootName, Registry.Hive, false)

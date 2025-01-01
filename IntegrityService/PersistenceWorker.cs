@@ -43,33 +43,35 @@ namespace IntegrityService
             _ctx = ctx;
         }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-        {
-            _logger.LogInformation("Initiated Persistence Worker");
-            if (!Settings.Instance.DisableLocalDatabase)
-            {// This loop must continue until service is stopped.
-                while (!stoppingToken.IsCancellationRequested)
-                {
-                    // read from stores as bulk and write to database.
-                    var fsCount = Math.Min(_fsStore.Count(), BUCKET_SIZE);
-                    if (fsCount > 0)
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken) =>
+            Task.Run(async () =>
+            {
+                _logger.LogInformation("Initiated Persistence Worker");
+                if (!Settings.Instance.DisableLocalDatabase)
+                {// This loop must continue until service is stopped.
+                    while (!stoppingToken.IsCancellationRequested)
                     {
-                        _ = _ctx.FileSystemChanges.InsertBulk(_fsStore.Take(fsCount).Select(m => m.Change));
-                        Debug.WriteLine($"Succesfully inserted {fsCount} items.");
-                    }
+                        // read from stores as bulk and write to database.
+                        var fsCount = Math.Min(_fsStore.Count(), BUCKET_SIZE);
+                        if (fsCount > 0)
+                        {
+                            _ = _ctx.FileSystemChanges.InsertBulk(_fsStore.Take(fsCount).Select(m => m.Change));
+                            Debug.WriteLine($"Succesfully inserted {fsCount} items.");
+                        }
 
-                    var regCount = Math.Min(_regStore.Count(), BUCKET_SIZE);
-                    if (regCount > 0)
-                    {
-                        _ = _ctx.RegistryChanges.InsertBulk(_regStore.Take(regCount).Select(m => m.Change));
-                        Debug.WriteLine($"Succesfully inserted {regCount} items.");
-                    }
+                        var regCount = Math.Min(_regStore.Count(), BUCKET_SIZE);
+                        if (regCount > 0)
+                        {
+                            _ = _ctx.RegistryChanges.InsertBulk(_regStore.Take(regCount).Select(m => m.Change));
+                            Debug.WriteLine($"Succesfully inserted {regCount} items.");
+                        }
 
-                    // We don't want to wait, but run the task continuously. Comment the line below
-                    // when actall code is added
-                    await Task.Delay(INTERVAL, stoppingToken);
+                        // We don't want to wait, but run the task continuously. Comment the line below
+                        // when actall code is added
+                        await Task.Delay(INTERVAL, stoppingToken);
+                    }
                 }
-            }
-        }
+
+            });
     }
 }
