@@ -14,7 +14,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using IntegrityService.FIM;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.ObjectPool;
 
 namespace IntegrityService.Message
@@ -23,16 +22,9 @@ namespace IntegrityService.Message
     {
         private const string INDEX_NAME = "fileSystemChanges";
 
-        private readonly ILogger<FileSystemMessageStore> _logger;
-
         private readonly ObjectPool<StringBuilder> pool = new DefaultObjectPoolProvider().CreateStringBuilderPool();
 
         private readonly ConcurrentDictionary<string, FileSystemChangeMessage> store = new();
-
-        public FileSystemMessageStore(ILogger<FileSystemMessageStore> logger)
-        {
-            _logger = logger;
-        }
 
         public Task Add(FileSystemChange change)
         {
