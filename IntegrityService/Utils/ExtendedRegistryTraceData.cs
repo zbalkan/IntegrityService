@@ -72,6 +72,7 @@ namespace IntegrityService.Utils
                     stripped = stripped.Substring(0, stripped.Length - 1);
                 }
             }
+
             // Remove the Hive name
             stripped = stripped.Substring(stripped.IndexOf('\\') + 1);
 
@@ -106,9 +107,16 @@ namespace IntegrityService.Utils
                     break;
             }
 
-            var userInfo = Process.GetProcessById(ProcessID).Owner();
-            Username = userInfo.Name;
-            UserSID = userInfo.User?.Value ?? string.Empty;
+            try
+            {
+                var userInfo = Process.GetProcessById(ProcessID).Owner();
+                Username = userInfo.Name;
+                UserSID = userInfo.User?.Value ?? string.Empty;
+            }
+            catch
+            {
+                // ignore
+            }
         }
 
         public override bool Equals(object? obj)
