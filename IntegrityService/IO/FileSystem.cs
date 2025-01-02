@@ -11,6 +11,8 @@ namespace IntegrityService.Utils
 {
     public static partial class FileSystem
     {
+
+        private static SHA256 _sha = SHA256.Create();
         /// <summary>
         ///     Calculate <see cref="SHA256" /> digest of a file
         /// </summary>
@@ -34,12 +36,12 @@ namespace IntegrityService.Utils
             {
                 try
                 {
-                    var fileStream = new FileStream(path, FileMode.OpenOrCreate,
-                FileAccess.Read);
+                    var fileStream = new FileStream(path,
+                        FileMode.Open,
+                        FileAccess.Read);
                     using var bufferedStream = new BufferedStream(fileStream, 1024 * 32);
-                    var sha = SHA256.Create();
-                    var checksum = sha.ComputeHash(bufferedStream);
-                    digest = BitConverter.ToString(checksum).Replace("-", string.Empty);
+                    digest = BitConverter.ToString(_sha.ComputeHash(bufferedStream))
+                        .Replace("-", string.Empty);
                 }
                 catch (UnauthorizedAccessException ex)
                 {

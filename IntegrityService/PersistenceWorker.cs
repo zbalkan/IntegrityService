@@ -23,8 +23,6 @@ namespace IntegrityService
     {
         private const int BUCKET_SIZE = 5000;
 
-        private const int INTERVAL = 100; // 1 second
-
         private readonly ILiteDbContext _ctx;
 
         private readonly IMessageStore<FileSystemChange, FileSystemChangeMessage> _fsStore;
@@ -43,7 +41,7 @@ namespace IntegrityService
             _ctx = ctx;
         }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken) =>
+        protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
             Task.Run(async () =>
             {
                 _logger.LogInformation("Initiated Persistence Worker");
@@ -65,13 +63,8 @@ namespace IntegrityService
                             _ = _ctx.RegistryChanges.InsertBulk(_regStore.Take(regCount).Select(m => m.Change));
                             Debug.WriteLine($"Succesfully inserted {regCount} items.");
                         }
-
-                        // We don't want to wait, but run the task continuously. Comment the line below
-                        // when actall code is added
-                        await Task.Delay(INTERVAL, stoppingToken);
                     }
                 }
-
             });
     }
 }

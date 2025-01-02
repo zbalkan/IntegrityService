@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,11 +25,17 @@ namespace IntegrityService.Jobs
     {
         private const string ETWSessionName = "RegistryWatcher";
 
-        private const double MonitorTimeInSeconds = 5.0;
+        private const int EventQueueThreshold = 10000;
+
+        private const double MonitorTimeInSeconds = 0.2;
 
         private const NtKeywords TraceFlags = NtKeywords.Registry;
 
+        private readonly TimeSpan _cacheExpiration = TimeSpan.FromSeconds(MonitorTimeInSeconds);
+
         private readonly CancellationTokenSource _cancellationTokenSource;
+
+        private readonly ConcurrentDictionary<RegistryTraceData, DateTime> _deduplicationCache = new();
 
         private readonly ConcurrentQueue<RegistryTraceData> _eventQueue = new();
 
@@ -38,9 +45,7 @@ namespace IntegrityService.Jobs
 
         private readonly int _pid;
 
-        private readonly List<RegistryTraceData> _rawEvents;
-
-        private readonly Dictionary<ulong, string> _regHandleToKeyName = new Dictionary<ulong, string>();
+        private readonly Dictionary<ulong, string> _regHandleToKeyName = new();
 
         private bool _disposedValue;
 
@@ -50,50 +55,55 @@ namespace IntegrityService.Jobs
             _pid = Environment.ProcessId;
             _cancellationTokenSource = new CancellationTokenSource();
             _messageStore = regStore;
-            _rawEvents = new List<RegistryTraceData>();
         }
 
         /// <summary>
         ///     Start monitoring selected Registry keys
         /// </summary>
-        /// <exception cref="FieldAccessException">
-        /// </exception>
-        /// <exception cref="TargetException">
-        /// </exception>
-        public void Start() =>
+        public void Start()
+        {
+            CleanupExistingSession();
+            _logger.LogInformation("Started ETW session 'RegistryWatcher' for Registry changes.");
 
-            // No baseline database for registry keys
-            StartSession();
+            // Start tasks
+            var sessionTask = Task.Run(() => MonitorETWSession(_cancellationTokenSource.Token));
+            var cleanupTask = Task.Run(() => CleanupDeduplicationCacheAsync(_cancellationTokenSource.Token));
+            var processingTask = Task.Run(() => ProcessEventQueue(_cancellationTokenSource.Token));
+
+            // Wait for all tasks to complete
+            Task.WhenAll(sessionTask, cleanupTask, processingTask).Wait();
+        }
 
         /// <summary>
         ///     Stop monitoring selected Registry keys
         /// </summary>
-        /// <exception cref="AggregateException">
-        /// </exception>
         public void Stop() => _cancellationTokenSource.Cancel();
 
-        /// <summary>
-        ///     Prepare ETW parser
-        /// </summary>
-        /// <param name="traceSessionSource">
-        ///     WTW trace event source to listen
-        /// </param>
-        /// <exception cref="FieldAccessException">
-        /// </exception>
-        /// <exception cref="TargetException">
-        /// </exception>
-        /// <exception cref="ArgumentNullException">
-        /// </exception>
-        private static void MakeKernelParserStateless(ETWTraceEventSource traceSessionSource)
+        private async Task CleanupDeduplicationCacheAsync(CancellationToken stoppingToken)
         {
-            ArgumentNullException.ThrowIfNull(traceSessionSource);
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                try
+                {
+                    var expirationThreshold = DateTime.UtcNow - _cacheExpiration;
 
-            const KernelTraceEventParser.ParserTrackingOptions options = KernelTraceEventParser.ParserTrackingOptions.None;
-            var kernelParser = new KernelTraceEventParser(traceSessionSource, options);
+                    foreach (var kvp in _deduplicationCache)
+                    {
+                        // Remove entries older than the expiration threshold
+                        if (kvp.Value < expirationThreshold)
+                        {
+                            _deduplicationCache.TryRemove(kvp.Key, out _);
+                        }
+                    }
 
-            var t = traceSessionSource.GetType();
-            var kernelField = t.GetField("_Kernel", BindingFlags.Instance | BindingFlags.SetField | BindingFlags.NonPublic);
-            kernelField?.SetValue(traceSessionSource, kernelParser);
+                    // Wait before the next cleanup cycle
+                    await Task.Delay((int)(MonitorTimeInSeconds * 1000), stoppingToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error during deduplication cache cleanup.");
+                }
+            }
         }
 
         private void CleanupExistingSession()
@@ -114,35 +124,44 @@ namespace IntegrityService.Jobs
             }
         }
 
+        private void EnqueueRawEvent(RegistryTraceData ev)
+        {
+            // Attempt to add the RegistryTraceData to the deduplication cache
+            if (_deduplicationCache.TryAdd(ev, DateTime.UtcNow))
+            {
+                // If successfully added (not a duplicate), enqueue the event
+                _eventQueue.Enqueue((RegistryTraceData)ev.Clone());
+            }
+
+            if (_eventQueue.Count > EventQueueThreshold)
+            {
+                _logger.LogWarning("Event queue size exceeded 10,000 items. Consider throttling input.");
+            }
+        }
+
         private string GetFullKeyName(ulong keyHandle, string eventKeyName, string eventValueName)
         {
             if (string.IsNullOrWhiteSpace(eventKeyName) && string.IsNullOrWhiteSpace(eventValueName))
                 return string.Empty;
 
-            // Use a StringBuilder for more efficient string concatenation
             var fullNameBuilder = new System.Text.StringBuilder();
-
-            // Lookup the key handle in the dictionary
             if (keyHandle != 0 && _regHandleToKeyName.TryGetValue(keyHandle, out var handleName))
             {
                 fullNameBuilder.Append(handleName);
             }
 
-            // Append event key name if available
             if (!string.IsNullOrWhiteSpace(eventKeyName))
             {
                 if (fullNameBuilder.Length > 0) fullNameBuilder.Append('\\');
                 fullNameBuilder.Append(eventKeyName);
             }
 
-            // Append event value name if available
             if (!string.IsNullOrWhiteSpace(eventValueName))
             {
                 if (fullNameBuilder.Length > 0) fullNameBuilder.Append('\\');
                 fullNameBuilder.Append(eventValueName);
             }
 
-            // Replace registry prefixes with human-readable paths
             var fullName = fullNameBuilder.ToString();
             fullName = fullName.Replace(@"\REGISTRY\MACHINE", "HKEY_LOCAL_MACHINE", StringComparison.OrdinalIgnoreCase);
             fullName = fullName.Replace(@"\REGISTRY\USER", "HKEY_USERS", StringComparison.OrdinalIgnoreCase);
@@ -150,39 +169,61 @@ namespace IntegrityService.Jobs
             return fullName;
         }
 
-        private bool IsMonitoredEvent(string keyName, int pid)
-        {
-            if (pid == _pid || pid == -1)
-            {
-                return false;
-            }
+        private bool IsMonitoredEvent(string keyName, int pid) => pid != _pid && pid != -1 && !string.IsNullOrEmpty(keyName) && Settings.Instance.IsMonitoredKey(keyName);
 
-            if (string.IsNullOrEmpty(keyName))
-            {
-                return false;
-            }
-
-            return Settings.Instance.IsMonitoredKey(keyName);
-        }
-
-        private void ProcessEvent(RegistryTraceData ev)
+        /// <summary>
+        ///     Prepare ETW parser
+        /// </summary>
+        /// <param name="traceSessionSource">
+        ///     WTW trace event source to listen
+        /// </param>
+        private void MakeKernelParserStateless(ETWTraceEventSource traceSessionSource)
         {
             try
             {
-                var keyName = GetFullKeyName(ev.KeyHandle, ev.KeyName, ev.ValueName);
+                ArgumentNullException.ThrowIfNull(traceSessionSource);
 
-                if (IsMonitoredEvent(keyName, ev.ProcessID))
-                {
-                    _eventQueue.Enqueue((RegistryTraceData)ev!.Clone());
-                }
+                const KernelTraceEventParser.ParserTrackingOptions options = KernelTraceEventParser.ParserTrackingOptions.None;
+                var kernelParser = new KernelTraceEventParser(traceSessionSource, options);
+
+                var t = traceSessionSource.GetType();
+                var kernelField = t.GetField("_Kernel", BindingFlags.Instance | BindingFlags.SetField | BindingFlags.NonPublic);
+                kernelField?.SetValue(traceSessionSource, kernelParser);
             }
             catch (Exception ex)
             {
-                ex.Log(_logger);
+                _logger.LogError(ex, "Error during Kernel parser stateless configuration.");
             }
         }
 
-        private async Task ProcessEventQueueAsync(CancellationToken stoppingToken)
+        private void MonitorETWSession(CancellationToken stoppingToken)
+        {
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                var session = new TraceEventSession(ETWSessionName, null)
+                {
+                    BufferSizeMB = 1024
+                };
+
+                session.EnableKernelProvider(TraceFlags);
+                MakeKernelParserStateless(session.Source);
+
+                session.Source.Kernel.RegistryKCBRundownEnd += (RegistryTraceData data) => _regHandleToKeyName[data.KeyHandle] = data.KeyName;
+                session.Source.Kernel.RegistryCreate += EnqueueRawEvent;
+                session.Source.Kernel.RegistryDelete += EnqueueRawEvent;
+                session.Source.Kernel.RegistrySetValue += EnqueueRawEvent;
+                session.Source.Kernel.RegistryDeleteValue += EnqueueRawEvent;
+                session.Source.Kernel.RegistrySetInformation += EnqueueRawEvent;
+
+                using (session)
+                {
+                    var timer = new Timer((_) => session.Stop(), null, (int)(MonitorTimeInSeconds * 1000), Timeout.Infinite);
+                    session.Source.Process();
+                }
+            }
+        }
+
+        private void ProcessEventQueue(CancellationToken stoppingToken)
         {
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -192,7 +233,13 @@ namespace IntegrityService.Jobs
                     {
                         try
                         {
-                            var eev = new ExtendedRegistryTraceData(ev, GetFullKeyName(ev.KeyHandle, ev.KeyName, ev.ValueName));
+                            var fullname = GetFullKeyName(ev.KeyHandle, ev.KeyName, ev.ValueName);
+                            if (!IsMonitoredEvent(fullname, ev.ProcessID))
+                            {
+                                continue;
+                            }
+                            Debug.WriteLine($"Processing event: {ev.EventName} for {fullname}");
+                            var eev = new ExtendedRegistryTraceData(ev, fullname);
                             _logger.LogInformation("Change Type: {changeType:l}\nCategory: {category:l}\nEvent Data:\n{eev:l}",
                                 Enum.GetName(ConfigChangeType.Registry), Enum.GetName(eev.ChangeCategory), eev.ToString());
 
@@ -215,78 +262,10 @@ namespace IntegrityService.Jobs
             }
         }
 
-        /// <summary>
-        ///     Start a new ETW session
-        /// </summary>
-        /// <exception cref="FieldAccessException">
-        /// </exception>
-        /// <exception cref="TargetException">
-        /// </exception>
-        private void StartSession()
-        {
-            CleanupExistingSession();
-
-            _logger.LogInformation("Started ETW session 'RegistryWatcher' for Registry changes.");
-
-            // Start event queue processing
-            var processingTask = Task.Run(() => ProcessEventQueueAsync(_cancellationTokenSource.Token));
-
-            while (!_cancellationTokenSource.IsCancellationRequested)
-            {
-                var session = new TraceEventSession(ETWSessionName, null);
-                session.BufferSizeMB = 1024;
-                session.EnableKernelProvider(TraceFlags);
-                MakeKernelParserStateless(session.Source);
-
-                session.Source.Kernel.RegistryKCBRundownEnd += (RegistryTraceData data) => _regHandleToKeyName[data.KeyHandle] = data.KeyName;
-
-                session.Source.Kernel.RegistryCreate += ProcessEvent;
-                session.Source.Kernel.RegistryDelete += ProcessEvent;
-                session.Source.Kernel.RegistrySetValue += ProcessEvent;
-                session.Source.Kernel.RegistryDeleteValue += ProcessEvent;
-                session.Source.Kernel.RegistrySetInformation += ProcessEvent;
-
-                // Run for 200ms and cancel
-                using (session)
-                {
-                    var timer = new Timer((object? _) => session!.Stop(), null, (int)(MonitorTimeInSeconds * 1000), Timeout.Infinite);
-                    session.Source.Process();
-                }
-
-                foreach (var ev in _rawEvents)
-                {
-                    try
-                    {
-                        var eev = new ExtendedRegistryTraceData(ev, GetFullKeyName(ev.KeyHandle, ev.KeyName, ev.ValueName));
-                        _logger
-                            .LogInformation("Change Type: {changeType:l}\nCategory: {category:l}\nEvent Data:\n{eev:l}",
-                            Enum.GetName(ConfigChangeType.Registry), Enum.GetName(eev.ChangeCategory), eev.ToString());
-
-                        var change = RegistryChange.FromTrace(eev);
-                        if (change != null)
-                        {
-                            _messageStore.Add(change);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        ex.Log(_logger);
-                    }
-                }
-                _rawEvents.Clear();
-                session.Stop();
-                session.Dispose();
-            }
-
-            // Ensure processing task completes when stopping
-            processingTask.Wait();
-        }
-
         #region Dispose
 
         public void Dispose()
         {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
             Dispose(disposing: true);
             GC.SuppressFinalize(this);
         }

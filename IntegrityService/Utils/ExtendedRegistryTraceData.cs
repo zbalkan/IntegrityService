@@ -49,10 +49,9 @@ namespace IntegrityService.Utils
         {
             ElapsedTimeMSec = data.ElapsedTimeMSec;
             EventIndex = (int)data.EventIndex;
-            EventName = data.OpcodeName;
+            EventName = data.EventName;
             Index = data.Index;
             ProcessID = data.ProcessID;
-            ProcessName = data.ProcessName;
             Status = data.Status;
             ThreadID = data.ThreadID;
             Timestamp = data.TimeStamp;
@@ -107,15 +106,24 @@ namespace IntegrityService.Utils
                     break;
             }
 
-            try
+            var process = Process.GetProcessById(ProcessID);
+            if (process != null)
             {
-                var userInfo = Process.GetProcessById(ProcessID).Owner();
-                Username = userInfo.Name;
-                UserSID = userInfo.User?.Value ?? string.Empty;
+                ProcessName = process.ProcessName;
+                try
+                {
+                    var userInfo = process.Owner();
+                    Username = userInfo.Name;
+                    UserSID = userInfo.User?.Value ?? string.Empty;
+                }
+                catch
+                {
+                    // ignore
+                }
             }
-            catch
+            else
             {
-                // ignore
+                ProcessName = data.ProcessName;
             }
         }
 
