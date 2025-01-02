@@ -106,9 +106,25 @@ namespace IntegrityService.Utils
                     break;
             }
 
-            var userInfo = Process.GetProcessById(ProcessID).Owner();
-            Username = userInfo.Name;
-            UserSID = userInfo.User?.Value ?? string.Empty;
+            var process = Process.GetProcessById(ProcessID);
+            if (process != null)
+            {
+                ProcessName = process.ProcessName;
+                try
+                {
+                    var userInfo = process.Owner();
+                    Username = userInfo.Name;
+                    UserSID = userInfo.User?.Value ?? string.Empty;
+                }
+                catch
+                {
+                    // ignore
+                }
+            }
+            else
+            {
+                ProcessName = data.ProcessName;
+            }
         }
 
         public override bool Equals(object? obj)
