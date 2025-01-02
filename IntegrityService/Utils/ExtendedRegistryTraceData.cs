@@ -85,8 +85,10 @@ namespace IntegrityService.Utils
                 {
                     KeyName = Key.Name;
                 }
-
-                ValueData = ExtractValueData();
+                if (ChangeCategory != ChangeCategory.Deleted)
+                {
+                    ValueData = ExtractValueData();
+                }
             }
 
             switch ((RegistryEventCategory)(int)data.Opcode)
