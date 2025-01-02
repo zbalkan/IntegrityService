@@ -1,8 +1,9 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Reflection;
-using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 using IntegrityService.FIM;
 using IntegrityService.Message;
 using IntegrityService.Utils;
@@ -23,19 +24,21 @@ namespace IntegrityService.Jobs
     {
         private const string ETWSessionName = "RegistryWatcher";
 
-        private const double MonitorTimeInSeconds = 0.2;
+        private const double MonitorTimeInSeconds = 5.0;
 
         private const NtKeywords TraceFlags = NtKeywords.Registry;
 
         private readonly CancellationTokenSource _cancellationTokenSource;
 
-        private readonly List<ExtendedRegistryTraceData> _events;
+        private readonly ConcurrentQueue<RegistryTraceData> _eventQueue = new();
 
         private readonly ILogger _logger;
 
         private readonly IMessageStore<RegistryChange, RegistryChangeMessage> _messageStore;
 
         private readonly int _pid;
+
+        private readonly List<RegistryTraceData> _rawEvents;
 
         private readonly Dictionary<ulong, string> _regHandleToKeyName = new Dictionary<ulong, string>();
 
@@ -47,7 +50,7 @@ namespace IntegrityService.Jobs
             _pid = Environment.ProcessId;
             _cancellationTokenSource = new CancellationTokenSource();
             _messageStore = regStore;
-            _events = new List<ExtendedRegistryTraceData>();
+            _rawEvents = new List<RegistryTraceData>();
         }
 
         /// <summary>
@@ -116,19 +119,33 @@ namespace IntegrityService.Jobs
             if (string.IsNullOrWhiteSpace(eventKeyName) && string.IsNullOrWhiteSpace(eventValueName))
                 return string.Empty;
 
-            var fullName = string.Empty;
+            // Use a StringBuilder for more efficient string concatenation
+            var fullNameBuilder = new System.Text.StringBuilder();
 
-            if (keyHandle != 0 && _regHandleToKeyName.TryGetValue(keyHandle, out var result))
+            // Lookup the key handle in the dictionary
+            if (keyHandle != 0 && _regHandleToKeyName.TryGetValue(keyHandle, out var handleName))
             {
-                fullName = result;
+                fullNameBuilder.Append(handleName);
             }
-            if (!string.IsNullOrWhiteSpace(eventKeyName))
-                fullName += "\\" + eventKeyName;
-            if (!string.IsNullOrWhiteSpace(eventValueName))
-                fullName += "\\" + eventValueName;
 
-            fullName = Regex.Replace(fullName, @"\\REGISTRY\\MACHINE", "HKEY_LOCAL_MACHINE", RegexOptions.IgnoreCase);
-            fullName = Regex.Replace(fullName, @"\\REGISTRY\\USER", "HKEY_USERS", RegexOptions.IgnoreCase);
+            // Append event key name if available
+            if (!string.IsNullOrWhiteSpace(eventKeyName))
+            {
+                if (fullNameBuilder.Length > 0) fullNameBuilder.Append('\\');
+                fullNameBuilder.Append(eventKeyName);
+            }
+
+            // Append event value name if available
+            if (!string.IsNullOrWhiteSpace(eventValueName))
+            {
+                if (fullNameBuilder.Length > 0) fullNameBuilder.Append('\\');
+                fullNameBuilder.Append(eventValueName);
+            }
+
+            // Replace registry prefixes with human-readable paths
+            var fullName = fullNameBuilder.ToString();
+            fullName = fullName.Replace(@"\REGISTRY\MACHINE", "HKEY_LOCAL_MACHINE", StringComparison.OrdinalIgnoreCase);
+            fullName = fullName.Replace(@"\REGISTRY\USER", "HKEY_USERS", StringComparison.OrdinalIgnoreCase);
 
             return fullName;
         }
@@ -156,14 +173,45 @@ namespace IntegrityService.Jobs
 
                 if (IsMonitoredEvent(keyName, ev.ProcessID))
                 {
-                    var eev = new ExtendedRegistryTraceData(ev, keyName);
-
-                    _events.Add(eev);
+                    _eventQueue.Enqueue((RegistryTraceData)ev!.Clone());
                 }
             }
             catch (Exception ex)
             {
                 ex.Log(_logger);
+            }
+        }
+
+        private async Task ProcessEventQueueAsync(CancellationToken stoppingToken)
+        {
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                try
+                {
+                    while (_eventQueue.TryDequeue(out var ev))
+                    {
+                        try
+                        {
+                            var eev = new ExtendedRegistryTraceData(ev, GetFullKeyName(ev.KeyHandle, ev.KeyName, ev.ValueName));
+                            _logger.LogInformation("Change Type: {changeType:l}\nCategory: {category:l}\nEvent Data:\n{eev:l}",
+                                Enum.GetName(ConfigChangeType.Registry), Enum.GetName(eev.ChangeCategory), eev.ToString());
+
+                            var change = RegistryChange.FromTrace(eev);
+                            if (change != null)
+                            {
+                                _messageStore.Add(change);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            ex.Log(_logger);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error processing event queue.");
+                }
             }
         }
 
@@ -180,9 +228,13 @@ namespace IntegrityService.Jobs
 
             _logger.LogInformation("Started ETW session 'RegistryWatcher' for Registry changes.");
 
+            // Start event queue processing
+            var processingTask = Task.Run(() => ProcessEventQueueAsync(_cancellationTokenSource.Token));
+
             while (!_cancellationTokenSource.IsCancellationRequested)
             {
                 var session = new TraceEventSession(ETWSessionName, null);
+                session.BufferSizeMB = 1024;
                 session.EnableKernelProvider(TraceFlags);
                 MakeKernelParserStateless(session.Source);
 
@@ -201,15 +253,16 @@ namespace IntegrityService.Jobs
                     session.Source.Process();
                 }
 
-                foreach (var ev in _events)
+                foreach (var ev in _rawEvents)
                 {
                     try
                     {
+                        var eev = new ExtendedRegistryTraceData(ev, GetFullKeyName(ev.KeyHandle, ev.KeyName, ev.ValueName));
                         _logger
-                            .LogInformation("Change Type: {changeType:l}\nEvent Data:\n{ev:l}",
-                            Enum.GetName(ConfigChangeType.Registry), ev.ToString());
+                            .LogInformation("Change Type: {changeType:l}\nCategory: {category:l}\nEvent Data:\n{eev:l}",
+                            Enum.GetName(ConfigChangeType.Registry), Enum.GetName(eev.ChangeCategory), eev.ToString());
 
-                        var change = RegistryChange.FromTrace(ev);
+                        var change = RegistryChange.FromTrace(eev);
                         if (change != null)
                         {
                             _messageStore.Add(change);
@@ -220,10 +273,13 @@ namespace IntegrityService.Jobs
                         ex.Log(_logger);
                     }
                 }
-                _events.Clear();
+                _rawEvents.Clear();
                 session.Stop();
                 session.Dispose();
             }
+
+            // Ensure processing task completes when stopping
+            processingTask.Wait();
         }
 
         #region Dispose
