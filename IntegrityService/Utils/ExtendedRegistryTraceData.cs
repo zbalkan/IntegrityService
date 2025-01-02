@@ -12,17 +12,11 @@ namespace IntegrityService.Utils
     {
         public ChangeCategory ChangeCategory { get; set; }
 
-        public double ElapsedTimeMSec { get; set; }
-
-        public int EventIndex { get; set; }
-
         public string EventName { get; set; }
 
         public string FullName { get; set; }
 
         public RegistryHive Hive { get; }
-
-        public int Index { get; set; }
 
         public RegistryKey? Key { get; set; }
 
@@ -31,10 +25,6 @@ namespace IntegrityService.Utils
         public int ProcessID { get; set; }
 
         public string ProcessName { get; set; }
-
-        public int Status { get; set; }
-
-        public int ThreadID { get; set; }
 
         public DateTime Timestamp { get; set; }
 
@@ -48,14 +38,9 @@ namespace IntegrityService.Utils
 
         public ExtendedRegistryTraceData(RegistryTraceData data, string fullName)
         {
-            ElapsedTimeMSec = data.ElapsedTimeMSec;
-            EventIndex = (int)data.EventIndex;
             EventName = data.OpcodeName;
-            Index = data.Index;
             ProcessID = data.ProcessID;
             ProcessName = data.ProcessName;
-            Status = data.Status;
-            ThreadID = data.ThreadID;
             Timestamp = data.TimeStamp;
             KeyName = data.KeyName;
             ValueName = data.ValueName;
@@ -129,7 +114,7 @@ namespace IntegrityService.Utils
             return FullName == o!.FullName && Timestamp == o.Timestamp && ChangeCategory == o.ChangeCategory;
         }
 
-        public override int GetHashCode() => HashCode.Combine(FullName, Timestamp, ChangeCategory, ProcessID, ThreadID);
+        public override int GetHashCode() => HashCode.Combine(FullName, Timestamp, ChangeCategory, ProcessID);
 
         public override string ToString() => $"Timestamp: {Timestamp:O}\nEvent Name: {EventName}\nChange Category: {ChangeCategory}\nFull Name: {FullName}\nKey Name: {KeyName}\nValue Name: {ValueName}\nValue Data: {ValueData}\nProcess: {ProcessName} (PID: {ProcessID})\nUser Info: {Username} (SID: {UserSID})";
 
