@@ -30,25 +30,29 @@ namespace IntegrityService.Utils
         {
             var digest = string.Empty;
 
-            try
+            if (Path.Exists(path))
             {
-                var fileStream = new FileStream(path, FileMode.OpenOrCreate,
-            FileAccess.Read);
-                using var bufferedStream = new BufferedStream(fileStream, 1024 * 32);
-                var sha = SHA256.Create();
-                var checksum = sha.ComputeHash(bufferedStream);
-                digest = BitConverter.ToString(checksum).Replace("-", string.Empty);
+                try
+                {
+                    var fileStream = new FileStream(path, FileMode.OpenOrCreate,
+                FileAccess.Read);
+                    using var bufferedStream = new BufferedStream(fileStream, 1024 * 32);
+                    var sha = SHA256.Create();
+                    var checksum = sha.ComputeHash(bufferedStream);
+                    digest = BitConverter.ToString(checksum).Replace("-", string.Empty);
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    // Access denied
+                    Debug.WriteLine(ex);
+                }
+                catch (IOException ex)
+                {
+                    // File is locked by another process
+                    Debug.WriteLine(ex);
+                }
             }
-            catch (UnauthorizedAccessException ex)
-            {
-                // Access denied
-                Debug.WriteLine(ex);
-            }
-            catch (IOException ex)
-            {
-                // File is locked by another process
-                Debug.WriteLine(ex);
-            }
+
             return digest;
         }
 
