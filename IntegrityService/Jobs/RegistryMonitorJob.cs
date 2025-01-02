@@ -75,22 +75,23 @@ namespace IntegrityService.Jobs
         /// <param name="traceSessionSource">
         ///     WTW trace event source to listen
         /// </param>
-        /// <exception cref="FieldAccessException">
-        /// </exception>
-        /// <exception cref="TargetException">
-        /// </exception>
-        /// <exception cref="ArgumentNullException">
-        /// </exception>
-        private static void MakeKernelParserStateless(ETWTraceEventSource traceSessionSource)
+        private void MakeKernelParserStateless(ETWTraceEventSource traceSessionSource)
         {
-            ArgumentNullException.ThrowIfNull(traceSessionSource);
+            try
+            {
+                ArgumentNullException.ThrowIfNull(traceSessionSource);
 
-            const KernelTraceEventParser.ParserTrackingOptions options = KernelTraceEventParser.ParserTrackingOptions.None;
-            var kernelParser = new KernelTraceEventParser(traceSessionSource, options);
+                const KernelTraceEventParser.ParserTrackingOptions options = KernelTraceEventParser.ParserTrackingOptions.None;
+                var kernelParser = new KernelTraceEventParser(traceSessionSource, options);
 
-            var t = traceSessionSource.GetType();
-            var kernelField = t.GetField("_Kernel", BindingFlags.Instance | BindingFlags.SetField | BindingFlags.NonPublic);
-            kernelField?.SetValue(traceSessionSource, kernelParser);
+                var t = traceSessionSource.GetType();
+                var kernelField = t.GetField("_Kernel", BindingFlags.Instance | BindingFlags.SetField | BindingFlags.NonPublic);
+                kernelField?.SetValue(traceSessionSource, kernelParser);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during Kernel parser stateless configuration.");
+            }
         }
 
         private void CleanupExistingSession()
