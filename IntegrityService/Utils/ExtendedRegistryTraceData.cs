@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Text.RegularExpressions;
 using IntegrityService.FIM;
 using Microsoft.Diagnostics.Tracing.Parsers.Kernel;
 using Microsoft.Win32;
 
 namespace IntegrityService.Utils
 {
-    public class ExtendedRegistryTraceData
+    public partial class ExtendedRegistryTraceData
     {
         public ChangeCategory ChangeCategory { get; set; }
 
@@ -61,19 +62,7 @@ namespace IntegrityService.Utils
 
             FullName = fullName;
             Hive = ParseHive(FullName);
-
-            var stripped = fullName;
-            if (!string.IsNullOrEmpty(ValueName))
-            {
-                // Remove value to get the full key path and clean up forward slash if needed
-                stripped = fullName.Replace(ValueName, string.Empty);
-                if (stripped.EndsWith('\\'))
-                {
-                    stripped = stripped.Substring(0, stripped.Length - 1);
-                }
-            }
-            // Remove the Hive name
-            stripped = stripped.Substring(stripped.IndexOf('\\') + 1);
+            var stripped = StripFullName(fullName, ValueName);
 
             var baseKey = RegistryKey.OpenBaseKey(Hive, RegistryView.Default);
 
@@ -172,6 +161,9 @@ namespace IntegrityService.Utils
             }
         }
 
+        [GeneratedRegex(@"^(?:[^\\]+\\)?(.*?)(?:\\[^\\]*)?$")]
+        private static partial Regex StrippedKeyNameRegex();
+
         private string? ExtractValueData()
         {
             if (string.IsNullOrEmpty(ValueName))
@@ -208,6 +200,22 @@ namespace IntegrityService.Utils
                 }
             }
             return result;
+        }
+
+        private string StripFullName(string fullName, string valueName)
+        {
+            if (string.IsNullOrEmpty(fullName))
+                return string.Empty;
+
+            // Remove the ValueName if provided
+            if (!string.IsNullOrEmpty(valueName))
+            {
+                var valuePattern = $@"\\{Regex.Escape(valueName)}$";
+                fullName = Regex.Replace(fullName, valuePattern, string.Empty); // Remove ValueName
+            }
+
+            // Apply regex to strip the hive name and clean the full key path
+            return StrippedKeyNameRegex().Replace(fullName, "$1");
         }
     }
 }
