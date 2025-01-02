@@ -11,6 +11,9 @@ namespace IntegrityService.Utils
 {
     public static partial class FileSystem
     {
+
+        private static readonly SHA256 sha = SHA256.Create();
+
         /// <summary>
         ///     Calculate <see cref="SHA256" /> digest of a file
         /// </summary>
@@ -30,24 +33,27 @@ namespace IntegrityService.Utils
         {
             var digest = string.Empty;
 
-            try
+            if (Path.Exists(path))
             {
-                var fileStream = new FileStream(path, FileMode.OpenOrCreate,
-            FileAccess.Read);
-                using var bufferedStream = new BufferedStream(fileStream, 1024 * 32);
-                var sha = SHA256.Create();
-                var checksum = sha.ComputeHash(bufferedStream);
-                digest = BitConverter.ToString(checksum).Replace("-", string.Empty);
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                // Access denied
-                Debug.WriteLine(ex);
-            }
-            catch (IOException ex)
-            {
-                // File is locked by another process
-                Debug.WriteLine(ex);
+                try
+                {
+                    var fileStream = new FileStream(path, FileMode.OpenOrCreate,
+                FileAccess.Read);
+                    using var bufferedStream = new BufferedStream(fileStream, 1024 * 32);
+                    digest = BitConverter
+                        .ToString(sha.ComputeHash(bufferedStream))
+                        .Replace("-", string.Empty);
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    // Access denied
+                    Debug.WriteLine(ex);
+                }
+                catch (IOException ex)
+                {
+                    // File is locked by another process
+                    Debug.WriteLine(ex);
+                }
             }
             return digest;
         }
