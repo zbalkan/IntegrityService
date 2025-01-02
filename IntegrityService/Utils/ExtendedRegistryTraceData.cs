@@ -60,26 +60,6 @@ namespace IntegrityService.Utils
             KeyName = data.KeyName;
             ValueName = data.ValueName;
 
-            FullName = fullName;
-            Hive = ParseHive(FullName);
-            var stripped = StripFullName(fullName, ValueName);
-
-            var baseKey = RegistryKey.OpenBaseKey(Hive, RegistryView.Default);
-
-            Key = baseKey.OpenSubKey(stripped, false);
-
-            if (Key != null)
-            {
-                if (KeyName?.Length == 0)
-                {
-                    KeyName = Key.Name;
-                }
-                if (ChangeCategory != ChangeCategory.Deleted)
-                {
-                    ValueData = ExtractValueData();
-                }
-            }
-
             switch ((RegistryEventCategory)(int)data.Opcode)
             {
                 case RegistryEventCategory.Create:
@@ -95,6 +75,25 @@ namespace IntegrityService.Utils
                 case RegistryEventCategory.DeleteValue:
                     ChangeCategory = ChangeCategory.Deleted;
                     break;
+            }
+
+            FullName = fullName;
+            Hive = ParseHive(FullName);
+
+            using (var baseKey = RegistryKey.OpenBaseKey(Hive, RegistryView.Default))
+            {
+                Key = baseKey.OpenSubKey(StripFullName(fullName, ValueName), false);
+                if (Key != null)
+                {
+                    if (KeyName?.Length == 0)
+                    {
+                        KeyName = Key.Name;
+                    }
+                    if (ChangeCategory != ChangeCategory.Deleted)
+                    {
+                        ValueData = ExtractValueData();
+                    }
+                }
             }
 
             var process = Process.GetProcessById(ProcessID);
