@@ -23,7 +23,7 @@ namespace IntegrityService
     {
         private const int BUCKET_SIZE = 5000;
 
-        private const int INTERVAL = 100; // 1 second
+        private const int INTERVAL_MS = 50;
 
         private readonly ILiteDbContext _ctx;
 
@@ -43,7 +43,7 @@ namespace IntegrityService
             _ctx = ctx;
         }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken) =>
+        protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
             Task.Run(async () =>
             {
                 _logger.LogInformation("Initiated Persistence Worker");
@@ -66,9 +66,7 @@ namespace IntegrityService
                             Debug.WriteLine($"Succesfully inserted {regCount} items.");
                         }
 
-                        // We don't want to wait, but run the task continuously. Comment the line below
-                        // when actall code is added
-                        await Task.Delay(INTERVAL, stoppingToken);
+                        await Task.Delay(INTERVAL_MS, stoppingToken);
                     }
                 }
 

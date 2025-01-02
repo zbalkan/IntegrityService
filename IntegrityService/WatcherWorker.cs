@@ -39,10 +39,7 @@ namespace IntegrityService
             _ctx = ctx;
         }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken) => _ = Task.Run(async () =>
-                                                                                                {
-                                                                                                    await ExecutableTask(stoppingToken);
-                                                                                                });
+        protected override Task ExecuteAsync(CancellationToken stoppingToken) => _ = Task.Run(async () => await ExecutableTask(stoppingToken));
 
         // Workaround for synchronous actions
         // Reference: https://blog.stephencleary.com/2020/05/backgroundservice-gotcha-startup.html
