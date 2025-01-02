@@ -160,7 +160,7 @@ namespace IntegrityService.Utils
             }
         }
 
-        [GeneratedRegex(@"^(?:[^\\]+\\)?(.*?)(?:\\[^\\]*)?$")]
+        [GeneratedRegex(@"^[^\\]+\\(.+?)(\\)?$")]
         private static partial Regex StrippedKeyNameRegex();
 
         private string? ExtractValueData()
