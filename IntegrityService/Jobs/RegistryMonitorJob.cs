@@ -32,7 +32,7 @@ namespace IntegrityService.Jobs
 
         private readonly CancellationTokenSource _cancellationTokenSource;
 
-        private readonly List<ExtendedRegistryTraceData> _events;
+        private readonly List<RegistryChange> _changes;
 
         private readonly ILogger _logger;
 
@@ -52,7 +52,7 @@ namespace IntegrityService.Jobs
             _pid = Environment.ProcessId;
             _cancellationTokenSource = new CancellationTokenSource();
             _messageStore = regStore;
-            _events = new List<ExtendedRegistryTraceData>();
+            _changes = new List<RegistryChange>();
         }
 
         /// <summary>
@@ -89,26 +89,22 @@ namespace IntegrityService.Jobs
                     session.Source.Process();
                 }
 
-                foreach (var ev in _events)
+                foreach (var change in _changes)
                 {
                     try
                     {
                         _logger
                             .LogInformation("Change Type: {changeType:l}\nCategory: {category}\nEvent Data:\n{ev:l}",
-                            Enum.GetName(ConfigChangeType.Registry), Enum.GetName(ev.ChangeCategory), ev.ToString());
+                            Enum.GetName(ConfigChangeType.Registry), Enum.GetName(change.ChangeCategory), change.ToString());
 
-                        var change = RegistryChange.FromTrace(ev);
-                        if (change != null)
-                        {
-                            _messageStore.Add(change);
-                        }
+                        _messageStore.Add(change);
                     }
                     catch (Exception ex)
                     {
                         ex.Log(_logger);
                     }
                 }
-                _events.Clear();
+                _changes.Clear();
                 session.Stop();
                 session.Dispose();
             }
@@ -220,9 +216,9 @@ namespace IntegrityService.Jobs
                 if (IsMonitoredEvent(keyName, ev.ProcessID))
                 {
                     Debug.WriteLine($"Processing event: {ev.EventName} for {keyName}");
-                    var eev = new ExtendedRegistryTraceData(ev, keyName);
+                    var eev = new RegistryChange(ev, keyName);
 
-                    _events.Add(eev);
+                    _changes.Add(eev);
                 }
             }
             catch (Exception ex)
