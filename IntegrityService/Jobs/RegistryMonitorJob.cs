@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -57,10 +58,59 @@ namespace IntegrityService.Jobs
         /// </exception>
         /// <exception cref="TargetException">
         /// </exception>
-        public void Start() =>
+        public void Start()
+        {
 
             // No baseline database for registry keys
-            StartSession();
+            CleanupExistingSession();
+
+            _logger.LogInformation("Started ETW session 'RegistryWatcher' for Registry changes.");
+
+            while (!_cancellationTokenSource.IsCancellationRequested)
+            {
+                var session = new TraceEventSession(ETWSessionName, null);
+                session.EnableKernelProvider(TraceFlags);
+                MakeKernelParserStateless(session.Source);
+
+                session.Source.Kernel.RegistryKCBRundownEnd += (RegistryTraceData data) => _regHandleToKeyName[data.KeyHandle] = data.KeyName;
+
+                session.Source.Kernel.RegistryCreate += ProcessEvent;
+                session.Source.Kernel.RegistryDelete += ProcessEvent;
+                session.Source.Kernel.RegistrySetValue += ProcessEvent;
+                session.Source.Kernel.RegistryDeleteValue += ProcessEvent;
+                session.Source.Kernel.RegistrySetInformation += ProcessEvent;
+
+                // Run for 200ms and cancel
+                using (session)
+                {
+                    var timer = new Timer((object? _) => session!.Stop(), null, (int)(MonitorTimeInSeconds * 1000), Timeout.Infinite);
+                    session.Source.Process();
+                }
+
+                foreach (var ev in _events)
+                {
+                    try
+                    {
+                        _logger
+                            .LogInformation("Change Type: {changeType:l}\nEvent Data:\n{ev:l}",
+                            Enum.GetName(ConfigChangeType.Registry), ev.ToString());
+
+                        var change = RegistryChange.FromTrace(ev);
+                        if (change != null)
+                        {
+                            _messageStore.Add(change);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        ex.Log(_logger);
+                    }
+                }
+                _events.Clear();
+                session.Stop();
+                session.Dispose();
+            }
+        }
 
         /// <summary>
         ///     Stop monitoring selected Registry keys
@@ -157,6 +207,7 @@ namespace IntegrityService.Jobs
 
                 if (IsMonitoredEvent(keyName, ev.ProcessID))
                 {
+                    Debug.WriteLine($"Processing event: {ev.EventName} for {keyName}");
                     var eev = new ExtendedRegistryTraceData(ev, keyName);
 
                     _events.Add(eev);
@@ -165,65 +216,6 @@ namespace IntegrityService.Jobs
             catch (Exception ex)
             {
                 ex.Log(_logger);
-            }
-        }
-
-        /// <summary>
-        ///     Start a new ETW session
-        /// </summary>
-        /// <exception cref="FieldAccessException">
-        /// </exception>
-        /// <exception cref="TargetException">
-        /// </exception>
-        private void StartSession()
-        {
-            CleanupExistingSession();
-
-            _logger.LogInformation("Started ETW session 'RegistryWatcher' for Registry changes.");
-
-            while (!_cancellationTokenSource.IsCancellationRequested)
-            {
-                var session = new TraceEventSession(ETWSessionName, null);
-                session.EnableKernelProvider(TraceFlags);
-                MakeKernelParserStateless(session.Source);
-
-                session.Source.Kernel.RegistryKCBRundownEnd += (RegistryTraceData data) => _regHandleToKeyName[data.KeyHandle] = data.KeyName;
-
-                session.Source.Kernel.RegistryCreate += ProcessEvent;
-                session.Source.Kernel.RegistryDelete += ProcessEvent;
-                session.Source.Kernel.RegistrySetValue += ProcessEvent;
-                session.Source.Kernel.RegistryDeleteValue += ProcessEvent;
-                session.Source.Kernel.RegistrySetInformation += ProcessEvent;
-
-                // Run for 200ms and cancel
-                using (session)
-                {
-                    var timer = new Timer((object? _) => session!.Stop(), null, (int)(MonitorTimeInSeconds * 1000), Timeout.Infinite);
-                    session.Source.Process();
-                }
-
-                foreach (var ev in _events)
-                {
-                    try
-                    {
-                        _logger
-                            .LogInformation("Change Type: {changeType:l}\nEvent Data:\n{ev:l}",
-                            Enum.GetName(ConfigChangeType.Registry), ev.ToString());
-
-                        var change = RegistryChange.FromTrace(ev);
-                        if (change != null)
-                        {
-                            _messageStore.Add(change);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        ex.Log(_logger);
-                    }
-                }
-                _events.Clear();
-                session.Stop();
-                session.Dispose();
             }
         }
 
