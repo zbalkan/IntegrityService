@@ -97,7 +97,7 @@ For ease of use, an ADMX file is created. So, the monitored paths, excluded path
         <tr style="height: 18px;">
             <td style="width: 23.1657%; height: 18px;">Enable Registry Monitoring</td>
             <td style="width: 76.8343%; height: 18px;">
-                <p>0 (false)</p>
+                <p>1 (true)</p>
             </td>
         </tr>
         <tr style="height: 18px;">
