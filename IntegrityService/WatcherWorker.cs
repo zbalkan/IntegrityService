@@ -49,7 +49,7 @@ namespace IntegrityService
 
             ReloadConfig();
 
-            if (!Settings.Instance.DisableLocalDatabase && !Settings.Instance.IsFileDiscoveryCompleted)
+            if (Settings.Instance.EnableLocalDatabase && !Settings.Instance.IsFileDiscoveryCompleted)
             {
                 _backgroundWorkerQueue.QueueBackgroundWorkItem(_ => StartFilesystemDiscoveryAsync(stoppingToken).Unwrap());
                 ReloadConfig();

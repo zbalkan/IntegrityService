@@ -47,7 +47,7 @@ namespace IntegrityService
             Task.Run(async () =>
             {
                 _logger.LogInformation("Initiated Persistence Worker");
-                if (!Settings.Instance.DisableLocalDatabase)
+                if (Settings.Instance.EnableLocalDatabase)
                 {// This loop must continue until service is stopped.
                     while (!stoppingToken.IsCancellationRequested)
                     {
