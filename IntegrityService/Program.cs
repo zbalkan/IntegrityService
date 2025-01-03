@@ -33,7 +33,7 @@ namespace IntegrityService
                     _ = services.AddSingleton<BackgroundWorkerQueue>();
                     _ = services.AddSingleton<IBuffer<FileSystemChange>, FileSystemChangeBuffer>();
                     _ = services.AddSingleton<IBuffer<RegistryChange>, RegistryChangeBuffer>();
-                    _ = services.AddHostedService<WatcherWorker>();
+                    _ = services.AddHostedService<JobOrchestrator>();
                     _ = services.AddHostedService<BufferConsumer>();
 
                     IConfiguration configuration = new ConfigurationBuilder()

@@ -26,11 +26,11 @@ namespace IntegrityService
 
         private readonly IBuffer<FileSystemChange> _fsStore;
 
-        private readonly ILogger<WatcherWorker> _logger;
+        private readonly ILogger<JobOrchestrator> _logger;
 
         private readonly IBuffer<RegistryChange> _regStore;
 
-        public BufferConsumer(ILogger<WatcherWorker> logger,
+        public BufferConsumer(ILogger<JobOrchestrator> logger,
                       IBuffer<FileSystemChange> fsStore,
                       IBuffer<RegistryChange> regStore,
                       ILiteDbContext ctx)

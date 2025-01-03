@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 
 namespace IntegrityService
 {
-    public partial class WatcherWorker : BackgroundService
+    public partial class JobOrchestrator : BackgroundService
     {
         private readonly BackgroundWorkerQueue _backgroundWorkerQueue;
 
@@ -20,11 +20,11 @@ namespace IntegrityService
 
         private readonly FileSystemMonitorJob _fsMonitor;
 
-        private readonly ILogger<WatcherWorker> _logger;
+        private readonly ILogger<JobOrchestrator> _logger;
 
         private RegistryMonitorJob _regMonitor;
 
-        public WatcherWorker(ILogger<WatcherWorker> logger,
+        public JobOrchestrator(ILogger<JobOrchestrator> logger,
                       BackgroundWorkerQueue backgroundWorkerQueue,
                       IBuffer<FileSystemChange> fsStore,
                       IBuffer<RegistryChange> regStore,
