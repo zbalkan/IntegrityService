@@ -49,9 +49,9 @@ For ease of use, an ADMX file is created. So, the monitored paths, excluded path
                     <li>%SystemRoot%\SysWOW64</li>
                     <li>%ProgramFiles%</li>
                     <li>%ProgramFiles(x86)%</li>
-                    <li>%PROGRAMDATA%\Microsoft\Windows\Start Menu\Programs\Startup</li>,
-                    <li>%SYSTEMDRIVE%\Users\*\Downloads</li>,
-                    <li>%SYSTEMDRIVE%\Users\*\Documents\PowerShell</li>,
+                    <li>%PROGRAMDATA%\Microsoft\Windows\Start Menu\Programs\Startup</li>
+                    <li>%SYSTEMDRIVE%\Users\*\Downloads</li>
+                    <li>%SYSTEMDRIVE%\Users\*\Documents\PowerShell</li>
                     <li>%SYSTEMDRIVE%\Users\*\Documents\WindowsPowerShell</li>
                 </ul>
             </td>
