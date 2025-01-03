@@ -9,13 +9,11 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
-using IntegrityService.FIM;
 
-namespace IntegrityService.Message
+namespace IntegrityService.FIM
 {
-    public class FileSystemMessageStore : IMessageStore<FileSystemChange>
+    public class FileSystemChangeBuffer : IBuffer<FileSystemChange>
     {
         private readonly ConcurrentDictionary<string, FileSystemChange> store = new();
 
@@ -26,14 +24,15 @@ namespace IntegrityService.Message
             return Task.CompletedTask;
         }
 
-        public Task AddRange(IEnumerable<IChange> changes)
+        public Task AddRange(IEnumerable<FileSystemChange> changes)
         {
             ArgumentNullException.ThrowIfNull(changes);
 
-            Parallel.ForEach(changes.Cast<FileSystemChange>(), change => store.AddOrUpdate(change.Id, change, (_, _) => change));
+            Parallel.ForEach(changes, change => store.AddOrUpdate(change.Id, change, (_, _) => change));
 
             return Task.CompletedTask;
         }
+
         public int Count() => store.Count;
 
         public bool HasNext() => !store.IsEmpty;

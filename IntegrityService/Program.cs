@@ -1,7 +1,6 @@
 using IntegrityService.Data;
 using IntegrityService.FIM;
 using IntegrityService.IO;
-using IntegrityService.Message;
 using IntegrityService.Utils;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,10 +31,10 @@ namespace IntegrityService
                     _ = services.Configure<LiteDbOptions>(options => options.DatabasePath = Settings.Instance.DatabasePath);
                     _ = services.AddSingleton<ILiteDbContext, LiteDbContext>();
                     _ = services.AddSingleton<BackgroundWorkerQueue>();
-                    _ = services.AddSingleton<IMessageStore<FileSystemChange>, FileSystemMessageStore>();
-                    _ = services.AddSingleton<IMessageStore<RegistryChange>, RegistryMessageStore>();
+                    _ = services.AddSingleton<IBuffer<FileSystemChange>, FileSystemChangeBuffer>();
+                    _ = services.AddSingleton<IBuffer<RegistryChange>, RegistryChangeBuffer>();
                     _ = services.AddHostedService<WatcherWorker>();
-                    _ = services.AddHostedService<MessageStoreConsumer>();
+                    _ = services.AddHostedService<BufferConsumer>();
 
                     IConfiguration configuration = new ConfigurationBuilder()
                     .AddWindowsRegistry(Registry.RootName, Registry.Hive, false)

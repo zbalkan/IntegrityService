@@ -8,16 +8,15 @@
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using IntegrityService.FIM;
 
-namespace IntegrityService.Message
+namespace IntegrityService.FIM
 {
-    public interface IMessageStore<T>
+    public interface IBuffer<T>
         where T : IChange
     {
         Task Add(T change);
 
-        Task AddRange(IEnumerable<IChange> changes);
+        Task AddRange(IEnumerable<T> changes);
 
         public int Count();
 

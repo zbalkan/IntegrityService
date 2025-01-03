@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using FastCache;
 using IntegrityService.Data;
 using IntegrityService.FIM;
 using IntegrityService.IO;
-using IntegrityService.Message;
 using IntegrityService.Utils;
 using Microsoft.Extensions.Logging;
 
@@ -20,20 +20,18 @@ namespace IntegrityService.Jobs
         ///     can be minimized. For this, a buffer is used to check duplicate records.
         /// </summary>
         /// <see href="https://devblogs.microsoft.com/oldnewthing/20140507-00/?p=1053" />
-        private readonly FixedSizeDictionary<string, DateTime> _duplicateCheckBuffer;
 
         private readonly ILogger _logger;
 
-        private readonly IMessageStore<FileSystemChange> _messageStore;
+        private readonly IBuffer<FileSystemChange> _messageStore;
 
         private readonly List<FileSystemWatcher> _watchers;
 
         private bool _disposedValue;
 
-        public FileSystemMonitorJob(ILogger logger, IMessageStore<FileSystemChange> fsStore, ILiteDbContext ctx)
+        public FileSystemMonitorJob(ILogger logger, IBuffer<FileSystemChange> fsStore, ILiteDbContext ctx)
         {
             _logger = logger;
-            _duplicateCheckBuffer = new FixedSizeDictionary<string, DateTime>();
             _watchers = [];
             _messageStore = fsStore;
             _ctx = ctx;
@@ -94,14 +92,7 @@ namespace IntegrityService.Jobs
         private bool IsDuplicate(string fullPath)
         {
             var lastWriteTime = File.GetLastWriteTime(fullPath);
-            if (_duplicateCheckBuffer.ContainsKey(fullPath) &&
-                _duplicateCheckBuffer[fullPath] == lastWriteTime)
-            {
-                return true;
-            }
-
-            _duplicateCheckBuffer.AddOrUpdate(fullPath, lastWriteTime);
-            return false;
+            return Cached<DateTime>.TryGet(fullPath, out var cached) && cached == lastWriteTime;
         }
 
         private void OnChanged(object sender, FileSystemEventArgs e) => ProcessEvent(e.FullPath, ChangeCategory.Changed);
@@ -126,6 +117,7 @@ namespace IntegrityService.Jobs
                     }
 
                     _messageStore.Add(change);
+                    Cached<DateTime>.Save(path, change.DateTime, TimeSpan.FromSeconds(5));
                 }
             }
         }

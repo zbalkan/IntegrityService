@@ -13,27 +13,27 @@ using System.Threading;
 using System.Threading.Tasks;
 using IntegrityService.Data;
 using IntegrityService.FIM;
-using IntegrityService.Message;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace IntegrityService
 {
-    internal partial class MessageStoreConsumer : BackgroundService
+    internal partial class BufferConsumer : BackgroundService
     {
         private const int BUCKET_SIZE = 500;
 
         private readonly ILiteDbContext _ctx;
 
-        private readonly IMessageStore<FileSystemChange> _fsStore;
+        private readonly IBuffer<FileSystemChange> _fsStore;
 
         private readonly ILogger<WatcherWorker> _logger;
 
-        private readonly IMessageStore<RegistryChange> _regStore;
+        private readonly IBuffer<RegistryChange> _regStore;
 
-        public MessageStoreConsumer(ILogger<WatcherWorker> logger,
-                      IMessageStore<FileSystemChange> fsStore,
-                      IMessageStore<RegistryChange> regStore, ILiteDbContext ctx)
+        public BufferConsumer(ILogger<WatcherWorker> logger,
+                      IBuffer<FileSystemChange> fsStore,
+                      IBuffer<RegistryChange> regStore,
+                      ILiteDbContext ctx)
         {
             _logger = logger;
             _fsStore = fsStore;
@@ -62,17 +62,17 @@ namespace IntegrityService
             var fsCount = Math.Min(_fsStore.Count(), BUCKET_SIZE);
             if (fsCount > 0)
             {
-                var fsChangeMessages = _fsStore.Take(fsCount);
+                var fsChanges = _fsStore.Take(fsCount);
 
                 // Flush to database
-                _ = _ctx.FileSystemChanges.InsertBulk(fsChangeMessages.Select(m => m));
+                _ = _ctx.FileSystemChanges.InsertBulk(fsChanges.Select(m => m));
                 Debug.WriteLine($"Succesfully inserted {fsCount} items.");
 
                 // Write to eventlog
-                foreach (var message in fsChangeMessages)
+                foreach (var change in fsChanges)
                 {
-                    _logger.LogInformation("Category: {category}\nChange Type: {changeType}\nPath: {path}\nCurrent Hash: {currentHash}\nPreviousHash: {previousHash}",
-                        Enum.GetName(message.ChangeCategory), Enum.GetName(ConfigChangeType.FileSystem), message.Entity, message.CurrentHash, message.PreviousHash);
+                    _logger.LogInformation("Change Type: {changeType:l}\nCategory: {category:l}\nPath: {path:l}\nCurrent Hash: {currentHash:l}\nPreviousHash: {previousHash:l}",
+                        Enum.GetName(change.ChangeCategory), Enum.GetName(ConfigChangeType.FileSystem), change.Entity, change.CurrentHash, change.PreviousHash);
                 }
             }
         }
@@ -80,18 +80,18 @@ namespace IntegrityService
         private void ProcessRegistryChanges()
         {
             var regCount = Math.Min(_regStore.Count(), BUCKET_SIZE);
-            var regChangeMessages = _regStore.Take(regCount);
+            var regChanges = _regStore.Take(regCount);
             if (regCount > 0)
             {
-                _ = _ctx.RegistryChanges.InsertBulk(regChangeMessages.Select(m => m));
+                _ = _ctx.RegistryChanges.InsertBulk(regChanges.Select(m => m));
                 Debug.WriteLine($"Succesfully inserted {regCount} items.");
             }
 
-            foreach (var message in regChangeMessages)
+            foreach (var change in regChanges)
             {
                 _logger
                     .LogInformation("Change Type: {changeType:l}\nCategory: {category:l}\nEvent Data:\n{ev:l}",
-                    Enum.GetName(ConfigChangeType.Registry), Enum.GetName(message.ChangeCategory), message.ToString());
+                    Enum.GetName(ConfigChangeType.Registry), Enum.GetName(change.ChangeCategory), change.ToString());
             }
         }
     }
