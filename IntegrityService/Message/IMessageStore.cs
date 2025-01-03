@@ -12,9 +12,8 @@ using IntegrityService.FIM;
 
 namespace IntegrityService.Message
 {
-    public interface IMessageStore<T, K>
+    public interface IMessageStore<T>
         where T : IChange
-        where K : IMessage<T>
     {
         Task Add(T change);
 
@@ -22,10 +21,8 @@ namespace IntegrityService.Message
 
         public bool HasNext();
 
-        public List<K> Take(int count);
+        public List<T> Take(int count);
 
-        public List<K> TakeAll();
-
-        public K? TakeNext();
+        public List<T> TakeAll();
     }
 }

@@ -9,7 +9,6 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -18,28 +17,14 @@ using Microsoft.Extensions.ObjectPool;
 
 namespace IntegrityService.Message
 {
-    public class FileSystemMessageStore : IMessageStore<FileSystemChange, FileSystemChangeMessage>
+    public class FileSystemMessageStore : IMessageStore<FileSystemChange>
     {
-        private const string INDEX_NAME = "fileSystemChanges";
-
-        private readonly ObjectPool<StringBuilder> pool = new DefaultObjectPoolProvider().CreateStringBuilderPool();
-
-        private readonly ConcurrentDictionary<string, FileSystemChangeMessage> store = new();
+        private readonly ConcurrentDictionary<string, FileSystemChange> store = new();
 
         public Task Add(FileSystemChange change)
         {
             ArgumentNullException.ThrowIfNull(change);
-
-            var documentId = BuildDocumentId(INDEX_NAME, change.Entity);
-
-            var item = new FileSystemChangeMessage
-            {
-                Index = INDEX_NAME,
-                DocumentId = documentId,
-                Change = change
-            };
-
-            store.AddOrUpdate(item.DocumentId, item, (_, _) => item);
+            store.AddOrUpdate(change.Id, change, (_, _) => change);
             return Task.CompletedTask;
         }
 
@@ -47,9 +32,9 @@ namespace IntegrityService.Message
 
         public bool HasNext() => !store.IsEmpty;
 
-        public List<FileSystemChangeMessage> Take(int count)
+        public List<FileSystemChange> Take(int count)
         {
-            var result = new List<FileSystemChangeMessage>();
+            var result = new List<FileSystemChange>();
             var counter = 0;
             foreach (var key in store.Keys)
             {
@@ -66,30 +51,14 @@ namespace IntegrityService.Message
             return result;
         }
 
-        public List<FileSystemChangeMessage> TakeAll()
+        public List<FileSystemChange> TakeAll()
         {
-            var result = new List<FileSystemChangeMessage>();
+            var result = new List<FileSystemChange>();
             foreach (var key in store.Keys)
             {
                 store.TryRemove(key, out var message);
                 if (message != null) { result.Add(message); }
             }
-
-            return result;
-        }
-
-        public FileSystemChangeMessage? TakeNext() => store.TryRemove(store.Keys.First(), out var message) ? message : null;
-
-        private string BuildDocumentId(string index, string fileName)
-        {
-            const char separator = '_';
-
-            var sb = pool.Get();
-            sb.Append(index);
-            sb.Append(separator);
-            sb.Append(fileName.Replace(Path.DirectorySeparatorChar, separator).Replace(' ', separator));
-            var result = sb.ToString();
-            pool.Return(sb);
 
             return result;
         }

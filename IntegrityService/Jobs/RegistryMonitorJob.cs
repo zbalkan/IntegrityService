@@ -36,7 +36,7 @@ namespace IntegrityService.Jobs
 
         private readonly ILogger _logger;
 
-        private readonly IMessageStore<RegistryChange, RegistryChangeMessage> _messageStore;
+        private readonly IMessageStore<RegistryChange> _messageStore;
 
         private readonly int _pid;
 
@@ -46,7 +46,7 @@ namespace IntegrityService.Jobs
 
         private bool _disposedValue;
 
-        public RegistryMonitorJob(ILogger logger, IMessageStore<RegistryChange, RegistryChangeMessage> regStore)
+        public RegistryMonitorJob(ILogger logger, IMessageStore<RegistryChange> regStore)
         {
             _logger = logger;
             _pid = Environment.ProcessId;

@@ -25,15 +25,15 @@ namespace IntegrityService
 
         private readonly ILiteDbContext _ctx;
 
-        private readonly IMessageStore<FileSystemChange, FileSystemChangeMessage> _fsStore;
+        private readonly IMessageStore<FileSystemChange> _fsStore;
 
         private readonly ILogger<WatcherWorker> _logger;
 
-        private readonly IMessageStore<RegistryChange, RegistryChangeMessage> _regStore;
+        private readonly IMessageStore<RegistryChange> _regStore;
 
         public MessageStoreConsumer(ILogger<WatcherWorker> logger,
-                      IMessageStore<FileSystemChange, FileSystemChangeMessage> fsStore,
-                      IMessageStore<RegistryChange, RegistryChangeMessage> regStore, ILiteDbContext ctx)
+                      IMessageStore<FileSystemChange> fsStore,
+                      IMessageStore<RegistryChange> regStore, ILiteDbContext ctx)
         {
             _logger = logger;
             _fsStore = fsStore;
@@ -54,27 +54,7 @@ namespace IntegrityService
                         ProcessRegistryChanges();
                     }
                 }
-
             });
-
-        private void ProcessRegistryChanges()
-        {
-            var regCount = Math.Min(_regStore.Count(), BUCKET_SIZE);
-            var regChangeMessages = _regStore.Take(regCount);
-            if (regCount > 0)
-            {
-                _ = _ctx.RegistryChanges.InsertBulk(regChangeMessages.Select(m => m.Change));
-                Debug.WriteLine($"Succesfully inserted {regCount} items.");
-            }
-
-            foreach (var message in regChangeMessages)
-            {
-                _logger
-                    .LogInformation("Change Type: {changeType:l}\nCategory: {category:l}\nEvent Data:\n{ev:l}",
-                    Enum.GetName(ConfigChangeType.Registry), Enum.GetName(message.Change.ChangeCategory), message.Change.ToString());
-
-            }
-        }
 
         private void ProcessFileSystemChanges()
         {
@@ -85,14 +65,33 @@ namespace IntegrityService
                 var fsChangeMessages = _fsStore.Take(fsCount);
 
                 // Flush to database
-                _ = _ctx.FileSystemChanges.InsertBulk(fsChangeMessages.Select(m => m.Change));
+                _ = _ctx.FileSystemChanges.InsertBulk(fsChangeMessages.Select(m => m));
                 Debug.WriteLine($"Succesfully inserted {fsCount} items.");
 
                 // Write to eventlog
                 foreach (var message in fsChangeMessages)
                 {
-                    _logger.LogInformation("Category: {category}\nChange Type: {changeType}\nPath: {path}\nCurrent Hash: {currentHash}\nPreviousHash: {previousHash}", Enum.GetName(message.Change.ChangeCategory), Enum.GetName(ConfigChangeType.FileSystem), message.Change.Entity, message.Change.CurrentHash, message.Change.PreviousHash);
+                    _logger.LogInformation("Category: {category}\nChange Type: {changeType}\nPath: {path}\nCurrent Hash: {currentHash}\nPreviousHash: {previousHash}",
+                        Enum.GetName(message.ChangeCategory), Enum.GetName(ConfigChangeType.FileSystem), message.Entity, message.CurrentHash, message.PreviousHash);
                 }
+            }
+        }
+
+        private void ProcessRegistryChanges()
+        {
+            var regCount = Math.Min(_regStore.Count(), BUCKET_SIZE);
+            var regChangeMessages = _regStore.Take(regCount);
+            if (regCount > 0)
+            {
+                _ = _ctx.RegistryChanges.InsertBulk(regChangeMessages.Select(m => m));
+                Debug.WriteLine($"Succesfully inserted {regCount} items.");
+            }
+
+            foreach (var message in regChangeMessages)
+            {
+                _logger
+                    .LogInformation("Change Type: {changeType:l}\nCategory: {category:l}\nEvent Data:\n{ev:l}",
+                    Enum.GetName(ConfigChangeType.Registry), Enum.GetName(message.ChangeCategory), message.ToString());
             }
         }
     }
