@@ -10,10 +10,8 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using IntegrityService.FIM;
-using Microsoft.Extensions.ObjectPool;
 
 namespace IntegrityService.Message
 {
@@ -28,6 +26,14 @@ namespace IntegrityService.Message
             return Task.CompletedTask;
         }
 
+        public Task AddRange(IEnumerable<IChange> changes)
+        {
+            ArgumentNullException.ThrowIfNull(changes);
+
+            Parallel.ForEach(changes.Cast<FileSystemChange>(), change => store.AddOrUpdate(change.Id, change, (_, _) => change));
+
+            return Task.CompletedTask;
+        }
         public int Count() => store.Count;
 
         public bool HasNext() => !store.IsEmpty;

@@ -9,6 +9,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using IntegrityService.FIM;
 
@@ -23,6 +24,15 @@ namespace IntegrityService.Message
             ArgumentNullException.ThrowIfNull(change);
 
             store.AddOrUpdate(change.Id, change, (_, _) => change);
+            return Task.CompletedTask;
+        }
+
+        public Task AddRange(IEnumerable<IChange> changes)
+        {
+            ArgumentNullException.ThrowIfNull(changes);
+
+            Parallel.ForEach(changes.Cast<RegistryChange>(), change => store.AddOrUpdate(change.Id, change, (_, _) => change));
+
             return Task.CompletedTask;
         }
 
