@@ -24,7 +24,7 @@
                 <multiText id="presMonitoredPaths" valueName="MonitoredPaths"/>
                 <multiText id="presExcludedPaths" valueName="ExcludedPaths"/>
                 <multiText id="presExcludedExtensions" valueName="ExcludedExtensions"/>
-                <boolean id="presDisableLocalDatabase" valueName="DisableLocalDatabase">
+                <boolean id="presEnableLocalDatabase" valueName="EnableLocalDatabase">
                     <trueValue>
                         <string>1</string>
                     </trueValue>
