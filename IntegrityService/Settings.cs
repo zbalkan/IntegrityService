@@ -20,9 +20,9 @@ namespace IntegrityService
 
         /// <summary>
         ///     Switch to enable/disable local database. When true, you cannot display previous hashes.
-        ///     Default: false.
+        ///     Default: true.
         /// </summary>
-        public bool DisableLocalDatabase { get; private set; }
+        public bool EnableLocalDatabase { get; private set; } = true;
 
         /// <summary>
         ///     Switch to enable/disable Registry monitoring.
@@ -422,13 +422,13 @@ namespace IntegrityService
 
             HeartbeatInterval = heartbeat;
 
-            var disableLocalDatabase = Registry.ReadDwordValue("DisableLocalDatabase");
-            if (disableLocalDatabase == -1)
+            var enableLocalDatabase = Registry.ReadDwordValue("EnableLocalDatabase");
+            if (enableLocalDatabase == -1)
             {
-                Registry.WriteDwordValue("DisableLocalDatabase", 0);
-                disableLocalDatabase = 0;
+                Registry.WriteDwordValue("EnableLocalDatabase", 1);
+                enableLocalDatabase = 1;
             }
-            DisableLocalDatabase = disableLocalDatabase == 1;
+            EnableLocalDatabase = enableLocalDatabase == 1;
 
             var fileDiscoveryCompleted = Registry.ReadDwordValue("FileDiscoveryCompleted");
             if (fileDiscoveryCompleted == -1)

@@ -118,7 +118,7 @@ namespace IntegrityService.Jobs
                 return;
             }
 
-            if (Settings.Instance.DisableLocalDatabase)
+            if (!Settings.Instance.EnableLocalDatabase)
             {
                 _logger.LogInformation("Category: {category}\nChange Type: {changeType}\nPath: {path}\nCurrent Hash: {currentHash}\nPreviousHash: {previousHash}", Enum.GetName(category), Enum.GetName(ConfigChangeType.FileSystem), path, FileSystem.CalculateFileHash(path), string.Empty);
             }
