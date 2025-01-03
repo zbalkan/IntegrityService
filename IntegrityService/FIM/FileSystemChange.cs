@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using IntegrityService.Data;
@@ -45,7 +46,7 @@ namespace IntegrityService.FIM
             }
 
             var hash = string.Empty;
-            if (objectType == ObjectType.File)
+            if (IsHashableFile(path, objectType))
             {
                 hash = CalculateFileHash(path);
             }
@@ -64,6 +65,24 @@ namespace IntegrityService.FIM
                 PreviousHash = string.Empty,
                 ACLs = path.GetACL()
             };
+        }
+
+        private static bool IsHashableFile(string path, ObjectType objectType)
+        {
+            if (objectType != ObjectType.File) return false;
+            try
+            {
+                if(new FileInfo(path).Length < Settings.Instance.HashLimitMB)
+                {
+                    return true;
+                }
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+                return false;
+            }
         }
 
         private static ObjectType GetObjectType(string path)

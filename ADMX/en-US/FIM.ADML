@@ -41,10 +41,14 @@ File extensions to exclude from file system monitoring. Please type each extensi
 .etl            
 
 
-Disable local database:
-In the first run, the service creates a database that includes information and metadata of files within the monitored paths, including ACLs, SHA256 hashes, etc.
+Enable local database:
+In the first run, the service creates a local database that includes information and metadata of files within the monitored paths, including ACLs and SHA256 hashes.
 The initial discovery generally takes around 30-90 minutes depending on the number of the files. After a discovery scan, the service needs to be restarted.
-By selecting this checkbox, you can disable the discovery phase and just start logging into event logs.</string>
+By using this checkbox, you can enable or disable the discovery phase. Without a local database, previous hash cannot be calculated.
+
+Hashing limit:
+Larger files may take longer processing time and even block the process while calculating SHA256 hashes. By default the files with size 1GB or more are ignored for calculation.
+The spin uses steps of 256 MB to help easy configuration.</string>
             <string id="polRegistry">Configure registry monitoring</string>
             <string id="polRegistry_HELP">This policy includes the registry monitoring settings for FIM (File Integrity Monitoring) Service.
 
@@ -68,7 +72,8 @@ Registry keys to exclude from file system monitoring. Please type each key in on
                 <multiTextBox refId="presMonitoredPaths">Monitored paths:</multiTextBox>
                 <multiTextBox refId="presExcludedPaths">Excluded paths:</multiTextBox>
                 <multiTextBox refId="presExcludedExtensions">Excluded extensions:</multiTextBox>
-                <checkBox refId="presDisableLocalDatabase" defaultChecked="false">Disable local database</checkBox>
+                <checkBox refId="presEnableLocalDatabase" defaultChecked="false">Enable local database:</checkBox>
+                <decimalTextBox refId="presHashLimitMB" defaultValue="1024" spin="true" spinStep="256">Hashing limit:</decimalTextBox>
             </presentation>
             <presentation id="presRegistry">
                 <multiTextBox refId="presMonitoredKeys">Monitored keys:</multiTextBox>

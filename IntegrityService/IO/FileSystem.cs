@@ -23,12 +23,6 @@ namespace IntegrityService.Utils
         /// <returns>
         ///     <see cref="SHA256" /> digest converted into <see cref="string" />
         /// </returns>
-        /// <exception cref="NotSupportedException">
-        /// </exception>
-        /// <exception cref="System.Security.SecurityException">
-        /// </exception>
-        /// <exception cref="System.Reflection.TargetInvocationException">
-        /// </exception>
         public static string CalculateFileHash(string path)
         {
             var digest = string.Empty;
@@ -52,6 +46,12 @@ namespace IntegrityService.Utils
                 catch (IOException ex)
                 {
                     // File is locked by another process
+                    Debug.WriteLine(ex);
+                }
+                catch(Exception ex)
+                {
+                    // Any other exception
+                    // Here for creating breakpoints for separate cases.
                     Debug.WriteLine(ex);
                 }
             }

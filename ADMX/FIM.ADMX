@@ -32,6 +32,7 @@
                         <string>0</string>
                     </falseValue>
                 </boolean>
+                <decimal id="presHashLimitMB" valueName="HashLimitMB" required="true"/>
             </elements>
         </policy>
         <policy name="polRegistry" displayName="$(string.polRegistry)" explainText="$(string.polRegistry_HELP)" key="SOFTWARE\FIM" valueName="EnableRegistryMonitoring" class="Machine" presentation="$(presentation.presRegistry)">

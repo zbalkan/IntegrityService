@@ -16,7 +16,7 @@ namespace IntegrityService
         /// </summary>
         /// <exception cref="PlatformNotSupportedException">
         /// </exception>
-        public static string DatabasePath => $"{Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData)}\\FIM\\fim.db";
+        public string DatabasePath => $"{Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData)}\\FIM\\fim.db";
 
         /// <summary>
         ///     Switch to enable/disable local database. When true, you cannot display previous hashes.
@@ -54,6 +54,12 @@ namespace IntegrityService
         ///     Default: 60
         /// </summary>
         public int HeartbeatInterval { get; private set; }
+
+        /// <summary>
+        ///     Ignore caculating hashes of large files for memory consumption.
+        ///     Default: 1024 (1GB)
+        /// </summary>
+        public int HashLimitMB { get; private set; }
 
         /// <summary>
         ///     A flag that returns true if file discovery task is completed.
@@ -103,6 +109,8 @@ namespace IntegrityService
 #pragma warning restore Ex0101 // Member accessor may throw undocumented exception
 
         private const int DEFAULT_HEARTBEAT_INTERVAL = 60;
+
+        private const int DEFAULT_HASHLIMIT_MB = 1024;
 
         private static readonly Lazy<Settings> Lazy = new(() => new Settings());
 
@@ -435,6 +443,15 @@ namespace IntegrityService
             {
                 IsFileDiscoveryCompleted = false;
             }
+
+            var hashLimitMb = Registry.ReadDwordValue("HashLimitMB");
+            if (hashLimitMb == -1)
+            {
+                Registry.WriteDwordValue("HashLimitMB", DEFAULT_HASHLIMIT_MB);
+                hashLimitMb = DEFAULT_HASHLIMIT_MB;
+            }
+
+            HashLimitMB = hashLimitMb;
         }
 
         private StringBuilder Sanitize(StringBuilder sb) => sb
