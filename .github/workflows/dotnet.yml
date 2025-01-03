@@ -1,19 +1,7 @@
-name: Release when tagged
+name: Release manually
 
 on:
   workflow_dispatch:
-
-  push:
-    branches: [master]
-    tags:
-      - "*.*.*"
-    paths-ignore:
-      - '**.md'
-      - '**.txt'
-      - '**.ADML'
-      - '**.ADMX'
-      - '**.ico'
-      - '**.reg'
 
 permissions:
   contents: write
