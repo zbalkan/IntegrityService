@@ -17,6 +17,8 @@ namespace IntegrityService.Message
     {
         Task Add(T change);
 
+        Task AddRange(IEnumerable<IChange> changes);
+
         public int Count();
 
         public bool HasNext();

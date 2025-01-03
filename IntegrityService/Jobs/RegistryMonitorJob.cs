@@ -88,18 +88,16 @@ namespace IntegrityService.Jobs
                     session.Source.Process();
                 }
 
-                foreach (var change in _changes)
+                try
                 {
-                    try
-                    {
-                        _messageStore.Add(change);
-                    }
-                    catch (Exception ex)
-                    {
-                        ex.Log(_logger);
-                    }
+                    _messageStore.AddRange(_changes);
+                    _changes.Clear();
                 }
-                _changes.Clear();
+                catch (Exception ex)
+                {
+                    ex.Log(_logger);
+                }
+
                 session.Stop();
                 session.Dispose();
             }
