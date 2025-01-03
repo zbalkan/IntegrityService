@@ -64,11 +64,12 @@ namespace IntegrityService
             {
                 var fsChanges = _fsStore.Take(fsCount);
 
-                // Flush to database
-                _ = _ctx.FileSystemChanges.InsertBulk(fsChanges.Select(m => m));
-                Debug.WriteLine($"Succesfully inserted {fsCount} items.");
+                if (Settings.Instance.EnableLocalDatabase)
+                {
+                    _ = _ctx.FileSystemChanges.InsertBulk(fsChanges.Select(m => m));
+                    Debug.WriteLine($"Succesfully inserted {fsCount} items.");
+                }
 
-                // Write to eventlog
                 foreach (var change in fsChanges)
                 {
                     _logger.LogInformation("Change Type: {changeType:l}\nCategory: {category:l}\nPath: {path:l}\nCurrent Hash: {currentHash:l}\nPreviousHash: {previousHash:l}",
@@ -80,18 +81,22 @@ namespace IntegrityService
         private void ProcessRegistryChanges()
         {
             var regCount = Math.Min(_regStore.Count(), BUCKET_SIZE);
-            var regChanges = _regStore.Take(regCount);
             if (regCount > 0)
             {
-                _ = _ctx.RegistryChanges.InsertBulk(regChanges.Select(m => m));
-                Debug.WriteLine($"Succesfully inserted {regCount} items.");
-            }
+                var regChanges = _regStore.Take(regCount);
 
-            foreach (var change in regChanges)
-            {
-                _logger
-                    .LogInformation("Change Type: {changeType:l}\nCategory: {category:l}\nEvent Data:\n{ev:l}",
-                    Enum.GetName(ConfigChangeType.Registry), Enum.GetName(change.ChangeCategory), change.ToString());
+                if (Settings.Instance.EnableLocalDatabase)
+                {
+                    _ = _ctx.RegistryChanges.InsertBulk(regChanges.Select(m => m));
+                    Debug.WriteLine($"Succesfully inserted {regCount} items.");
+                }
+
+                foreach (var change in regChanges)
+                {
+                    _logger
+                        .LogInformation("Change Type: {changeType:l}\nCategory: {category:l}\nEvent Data:\n{ev:l}",
+                        Enum.GetName(ConfigChangeType.Registry), Enum.GetName(change.ChangeCategory), change.ToString());
+                }
             }
         }
     }
