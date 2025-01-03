@@ -359,9 +359,7 @@ namespace IntegrityService
                     "%PROGRAMDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup",
                     "%SYSTEMDRIVE%\\Users\\*\\Downloads",
                     "%SYSTEMDRIVE%\\Users\\*\\Documents\\PowerShell",
-                    "%SYSTEMDRIVE%\\Users\\*\\Documents\\WindowsPowerShell",
-                    "%SystemRoot%\\System32\\WindowsPowerShell\\v1.0",
-                    "%ProgramFiles%\\PowerShell\\7"];
+                    "%SYSTEMDRIVE%\\Users\\*\\Documents\\WindowsPowerShell"];
 
                 Registry.WriteMultiStringValue("MonitoredPaths", monitoredPaths);
             }
