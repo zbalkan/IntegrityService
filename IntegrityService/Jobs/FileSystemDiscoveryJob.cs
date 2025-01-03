@@ -1,14 +1,11 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading.Tasks;
 using IntegrityService.Data;
 using IntegrityService.FIM;
 using IntegrityService.IO;
 using IntegrityService.Message;
-using IntegrityService.Utils;
 using Microsoft.Extensions.Logging;
 
 // {{ FIM }} Copyright (C) {{ 2022 }} {{ Zafer Balkan }}
@@ -78,20 +75,20 @@ namespace IntegrityService.Jobs
 
         private List<string> ContinueFromLastScan(Stopwatch sw, List<string> filtered)
         {
-            _logger.LogInformation("Filtering out the data in the database...");
+            Debug.WriteLine("Filtering out the data in the database...");
             sw.Restart();
             var initialCount = filtered.Count;
             var filteredOut = filtered.RemoveAll(x => _ctx.FileSystemChanges.Exists(c => c.Entity.Equals(x)));
             sw.Stop();
-            _logger.LogInformation("Filtering out completed: {elapsed}", sw.Elapsed);
+            Debug.WriteLine("Filtering out completed: {elapsed}", sw.Elapsed);
             if (filteredOut > 0)
             {
-                _logger.LogInformation("Number of files not in database: {filteredCount} (filtered out {filteredOut}, %{percentage})",
+                Debug.WriteLine("Number of files not in database: {filteredCount} (filtered out {filteredOut}, %{percentage})",
                     filtered.Count.ToString("N0"), filteredOut, (double)filteredOut * 100 / initialCount);
             }
             else
             {
-                _logger.LogInformation("Nothing to filter out. Discovery database is empty.");
+                Debug.WriteLine("Nothing to filter out. Discovery database is empty.");
             }
 
             return filtered;
@@ -121,11 +118,13 @@ namespace IntegrityService.Jobs
         /// </exception>
         private List<string> FilterByConfig(Stopwatch sw, ConcurrentBag<string> files)
         {
-            _logger.LogInformation("Starting filtering by configuration values...");
+            Debug.WriteLine("Starting filtering by configuration values...");
             sw.Restart();
             var filtered = Settings.Instance.FilterPaths(files);
             sw.Stop();
-            _logger.LogInformation("Path filtering completed: {elapsed}", sw.Elapsed);
+            Debug.WriteLine("Path filtering completed: {elapsed}", sw.Elapsed);
+            Debug.WriteLine("Number of files to be monitored: {filteredCount} (filtered out {diff}, %{percentage})",
+                filtered.Count.ToString("N0"), files.Count - filtered.Count, (double)(files.Count - filtered.Count) * 100 / files.Count);
             _logger.LogInformation("Number of files to be monitored: {filteredCount} (filtered out {diff}, %{percentage})",
                 filtered.Count.ToString("N0"), files.Count - filtered.Count, (double)(files.Count - filtered.Count) * 100 / files.Count);
             return filtered;
@@ -148,13 +147,16 @@ namespace IntegrityService.Jobs
         /// </exception>
         private ConcurrentBag<string> RunNtfsDiscovery(out Stopwatch sw)
         {
-            _logger.LogInformation("Starting file search...");
+            Debug.WriteLine("Starting file search...");
             sw = new Stopwatch();
             sw.Start();
             var files = FileSystem.InvokeNtfsSearch();
             sw.Stop();
             _logger.LogInformation("Filesystem search completed: {elapsed}", sw.Elapsed);
-            _logger.LogInformation("Number of all files in the device: {filesCount}", files.Count.ToString("N0"));
+            Debug.WriteLine("Number of all files in the device: {filesCount}", files.Count.ToString("N0"));
+
+            _logger.LogInformation("Number of all files in the device: {filesCount}",
+                files.Count.ToString("N0"));
 
             return files;
         }

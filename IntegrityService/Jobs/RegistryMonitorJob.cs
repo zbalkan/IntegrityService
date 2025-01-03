@@ -93,10 +93,6 @@ namespace IntegrityService.Jobs
                 {
                     try
                     {
-                        _logger
-                            .LogInformation("Change Type: {changeType:l}\nCategory: {category}\nEvent Data:\n{ev:l}",
-                            Enum.GetName(ConfigChangeType.Registry), Enum.GetName(change.ChangeCategory), change.ToString());
-
                         _messageStore.Add(change);
                     }
                     catch (Exception ex)
