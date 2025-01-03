@@ -43,7 +43,7 @@ namespace IntegrityService
         public string[] ExcludedKeys { get; private set; }
 
         /// <summary>
-        ///     Filesystem directories to exclude from monitoring.
+        ///     Filesystem directories to exclude from monitoring. Wildcards for folder names are accepted.
         ///     Default: Empty list.
         /// </summary>
         public string[] ExcludedPaths { get; private set; }
@@ -90,7 +90,7 @@ namespace IntegrityService
         public string[] MonitoredKeys { get; private set; }
 
         /// <summary>
-        ///     Filesystem directories to monitor.
+        ///     Filesystem directories to monitor. Wildcards for folder names are accepted.
         ///     Default: Empty list.
         /// </summary>
         public string[] MonitoredPaths { get; private set; }
@@ -351,42 +351,62 @@ namespace IntegrityService
             var monitoredPaths = Registry.ReadMultiStringValue("MonitoredPaths");
             if (monitoredPaths.Length == 0)
             {
-                monitoredPaths = [@"C:\Windows\System32", @"C:\Windows\SysWOW64", @"C:\Program Files", @"C:\Program Files (x86)"];
+                monitoredPaths = [
+                    "%SystemRoot%\\System32",
+                    "%SystemRoot%\\SysWOW64",
+                    "%ProgramFiles%",
+                    "%ProgramFiles(x86)%",
+                    "%PROGRAMDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup",
+                    "%SYSTEMDRIVE%\\Users\\*\\Downloads",
+                    "%SYSTEMDRIVE%\\Users\\*\\Documents\\PowerShell",
+                    "%SYSTEMDRIVE%\\Users\\*\\Documents\\WindowsPowerShell",
+                    "%SystemRoot%\\System32\\WindowsPowerShell\\v1.0",
+                    "%ProgramFiles%\\PowerShell\\7"];
+
                 Registry.WriteMultiStringValue("MonitoredPaths", monitoredPaths);
             }
-            MonitoredPaths = monitoredPaths.Order().ToArray();
+
+            MonitoredPaths = monitoredPaths
+                .Select(Environment.ExpandEnvironmentVariables) // Expand variables like %WINDIR%
+                .Select(FileSystem.ResolveWildcardPath) // Resolve wildcard in paths like "%SYSTEMDRIVE%\\Users\\*\\Downloads"
+                .SelectMany(x => x) // Flatten the list of paths, as resolving wildcard ends up with a list of paths
+                .Order().ToArray();
             monitoredPathsPattern = GenerateMonitoredPathsPattern();
 
             var excludedPaths = Registry.ReadMultiStringValue("ExcludedPaths");
             if (excludedPaths.Length == 0)
             {
-                excludedPaths = [@"C:\Windows\System32\winevt",
-                    @"C:\Windows\System32\sru",
-                    @"C:\Windows\System32\config",
-                    @"C:\Windows\System32\catroot2",
-                    @"C:\Windows\System32\LogFiles",
-                    @"C:\Windows\System32\wbem",
-                    @"C:\Windows\System32\WDI\LogFiles",
-                    @"C:\Windows\System32\Microsoft\Protect\Recovery",
-                    @"C:\Windows\SysWOW64\winevt",
-                    @"C:\Windows\SysWOW64\sru",
-                    @"C:\Windows\SysWOW64\config",
-                    @"C:\Windows\SysWOW64\catroot2",
-                    @"C:\Windows\SysWOW64\LogFiles",
-                    @"C:\Windows\SysWOW64\wbem",
-                    @"C:\Windows\SysWOW64\WDI\LogFiles",
-                    @"C:\Windows\SysWOW64\Microsoft\Protect\Recovery",
-                    @"C:\Program Files\Windows Defender Advanced Threat Protection\Classification\Configuration",
-                    @"C:\Program Files\Microsoft OneDrive\StandaloneUpdater\logs"];
+                excludedPaths = [@"%SystemRoot%\System32\winevt",
+                    @"%SystemRoot%\System32\sru",
+                    @"%SystemRoot%\System32\config",
+                    @"%SystemRoot%\System32\catroot2",
+                    @"%SystemRoot%\System32\LogFiles",
+                    @"%SystemRoot%\System32\wbem",
+                    @"%SystemRoot%\System32\WDI\LogFiles",
+                    @"%SystemRoot%\System32\Microsoft\Protect\Recovery",
+                    @"%SystemRoot%\SysWOW64\winevt",
+                    @"%SystemRoot%\SysWOW64\sru",
+                    @"%SystemRoot%\SysWOW64\config",
+                    @"%SystemRoot%\SysWOW64\catroot2",
+                    @"%SystemRoot%\SysWOW64\LogFiles",
+                    @"%SystemRoot%\SysWOW64\wbem",
+                    @"%SystemRoot%\SysWOW64\WDI\LogFiles",
+                    @"%SystemRoot%\SysWOW64\Microsoft\Protect\Recovery",
+                    @"%ProgramFiles%\Windows Defender Advanced Threat Protection\Classification\Configuration",
+                    @"%ProgramFiles%\Microsoft OneDrive\StandaloneUpdater\logs"];
                 Registry.WriteMultiStringValue("ExcludedPaths", excludedPaths);
             }
-            ExcludedPaths = excludedPaths.Order().ToArray();
+            ExcludedPaths = excludedPaths
+                .Select(Environment.ExpandEnvironmentVariables) // Expand variables like %WINDIR%
+                .Select(FileSystem.ResolveWildcardPath) // Resolve wildcard in paths like "%SYSTEMDRIVE%\\Users\\*\\Downloads"
+                .SelectMany(x => x) // Flatten the list of paths, as resolving wildcard ends up with a list of paths
+                .Order().ToArray();
             excludedPathsPattern = GenerateExcludedPathsPattern();
 
             var excludedExtensions = Registry.ReadMultiStringValue("ExcludedExtensions");
             if (excludedExtensions.Length == 0)
             {
-                excludedExtensions = [".log", ".evtx", ".etl"];
+                excludedExtensions = [".log", ".evtx", ".etl", ".wal", ".db-wal", ".db"];
                 Registry.WriteMultiStringValue("ExcludedExtensions", excludedExtensions);
             }
             ExcludedExtensions = excludedExtensions.Order().ToArray();
@@ -460,6 +480,7 @@ namespace IntegrityService
             .Replace(".", @"\.")
             .Replace(" ", "\\ ")
             .Replace("(", "\\(")
-            .Replace(")", "\\)");
+            .Replace(")", "\\)")
+            .Replace("-", "\\-");
     }
 }

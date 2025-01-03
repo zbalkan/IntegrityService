@@ -6,6 +6,7 @@ using System.Security;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace IntegrityService.Utils
 {
@@ -18,13 +19,7 @@ namespace IntegrityService.Utils
                                                                               SecurityImpersonationLevel.TokenImpersonate |
                                                                               SecurityImpersonationLevel.TokenDuplicate);
 
-        public static void AddRange<T>(this ConcurrentBag<T> @this, IEnumerable<T> toAdd)
-        {
-            foreach (var element in toAdd)
-            {
-                @this.Add(element);
-            }
-        }
+        public static void AddRange<T>(this ConcurrentBag<T> @this, IEnumerable<T> toAdd) => Parallel.ForEach(toAdd, @this.Add);
 
         public static void Log(this Exception? ex, ILogger logger)
         {

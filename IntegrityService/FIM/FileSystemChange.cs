@@ -5,7 +5,7 @@ using System.Linq;
 using IntegrityService.Data;
 using IntegrityService.IO.Security;
 using NUlid;
-using static IntegrityService.Utils.FileSystem;
+using static IntegrityService.IO.FileSystem;
 
 namespace IntegrityService.FIM
 {
