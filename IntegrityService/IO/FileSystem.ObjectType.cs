@@ -1,4 +1,4 @@
-﻿namespace IntegrityService.Utils
+﻿namespace IntegrityService.IO
 {
     public static partial class FileSystem
     {

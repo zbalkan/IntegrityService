@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using IntegrityService.Data;
 using IntegrityService.FIM;
+using IntegrityService.IO;
 using IntegrityService.Message;
 using IntegrityService.Utils;
 using Microsoft.Extensions.Logging;

@@ -1,13 +1,15 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Filesystem.Ntfs;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
+using IntegrityService.Utils;
 
-namespace IntegrityService.Utils
+namespace IntegrityService.IO
 {
     public static partial class FileSystem
     {
@@ -97,6 +99,77 @@ namespace IntegrityService.Utils
             });
 
             return allPaths;
+        }
+
+        /// <summary>
+        ///     Gets a path with wildcard, resolves it and returns a list of paths
+        /// </summary>
+        /// <param name="path">a path with or without wildcard.</param>
+        /// <returns>List of paths returned after resolving wildcard path.</returns>
+        /// <remarks>
+        /// Position of wildcard can be;
+        /// 1. At the end of the path: all files in the directory such as "%WINDIR%\\*", remove and continue.
+        /// 2. In the middle of the path: All subfolders in a folder such as "%SYSTEMDRIVE%\\Users\\*\\Downloads". Get the path before wildcard. Enumerate all subfolders, append the part after wildcard and append the final path to the list of paths.
+        /// 3. At the beginning, such as "*\\Downloads", which is too broad. Ignore invalid.
+        /// 4. Nowhere. Return the same path as a single-item list.
+        /// </remarks>
+        public static List<string> ResolveWildcardPath(string path)
+        {
+            var resolvedPaths = new List<string>();
+
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return resolvedPaths; // Return empty list for invalid input
+            }
+
+            // Case 1: Wildcard at the end of the path
+            if (path.EndsWith('*'))
+            {
+                var directory = Path.GetDirectoryName(path);
+
+                if (Directory.Exists(directory))
+                {
+                    // Get all files in the directory
+                    resolvedPaths.AddRange(Directory.GetFiles(directory));
+                }
+            }
+            // Case 2: Wildcard in the middle of the path
+            else if (path.Contains('*'))
+            {
+                var wildcardIndex = path.IndexOf('*');
+                var prefix = path.Substring(0, wildcardIndex).TrimEnd(Path.DirectorySeparatorChar);
+                var suffix = path.Substring(wildcardIndex + 1).TrimStart(Path.DirectorySeparatorChar);
+
+                if (Directory.Exists(prefix))
+                {
+                    // Get all subfolders in the directory
+                    var subfolders = Directory.GetDirectories(prefix);
+
+                    foreach (var subfolder in subfolders)
+                    {
+                        var finalPath = Path.Combine(subfolder, suffix);
+
+                        // Check if the path exists (file or directory)
+                        if (Directory.Exists(finalPath) || File.Exists(finalPath))
+                        {
+                            resolvedPaths.Add(finalPath);
+                        }
+                    }
+                }
+            }
+            // Case 3: Wildcard at the beginning
+            else if (path.StartsWith('*'))
+            {
+                // Ignore, as this is too broad
+                return resolvedPaths;
+            }
+            // Case 0: No wildcard
+            else
+            {
+                resolvedPaths.Add(path);
+            }
+
+            return resolvedPaths;
         }
     }
 }

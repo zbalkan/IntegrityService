@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using IntegrityService.Data;
 using IntegrityService.FIM;
+using IntegrityService.IO;
 using IntegrityService.Message;
 using IntegrityService.Utils;
 using Microsoft.Extensions.Logging;

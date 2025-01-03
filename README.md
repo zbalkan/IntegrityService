@@ -25,9 +25,11 @@ If there is no path to monitor defined in the Registry, service will not do any 
 
 In the first use, it will run a full discovery, search for all the files, calculate SHA256 checksum and save it in a local database as the baseline. File search process reads the data from NTFS MFT (Master File Table) so it will take up to 10 seconds. But file search will generally catch at least 500.000 files and folders on a fresh Windows 10 installation and take about 30 to 90 minutes for calculating hashes, obtaining and parsing ACLs and writing to database depending on the number of files and the system specifications. This search can be disabled via Group Policy or Registry. If you disabled the local database, just skip to the next paragraph.
 
-The service  will subscribe to file system events and when any changes occur, it will create an event log and update the database. You can see the SHA256 hashes for the current and (if exist) previous versions.
+The service will subscribe to file system events and when any changes occur, it will create an event log and update the database. You can see the SHA256 hashes for the current and (if exist) previous versions.
 
 Windows has a lot of quirks when it comes to low level callbacks, especially for NTFS. Many of the use cases are handled but it needs to be fine-tuned for edge cases.
+
+The registry monitoring uses ETW traces. It is detected under heavy loads, there may be misses. Espceially if there are frequent changes on the same keys, the changes may be lost at some point. It happens when the ETW trace production is higher than the trace consumption speed. 
 
 For ease of use, an ADMX file is created. So, the monitored paths, excluded paths (such as log folders), and excluded file extensions (such as log, evtx, etl) can be set via Group Policy. Suggested values for Group Policies can be found below.
 
@@ -43,10 +45,14 @@ For ease of use, an ADMX file is created. So, the monitored paths, excluded path
             <td style="width: 23.1657%; height: 18px;">Monitored Paths</td>
             <td style="width: 76.8343%; height: 18px;">
                 <ul>
-                    <li>C:\Windows\System32</li>
-                    <li>C:\Windows\SysWOW64</li>
-                    <li>C:\Program Files</li>
-                    <li>C:\Program Files (x86)</li>
+                    <li>%SystemRoot%\System32</li>
+                    <li>%SystemRoot%\SysWOW64</li>
+                    <li>%ProgramFiles%</li>
+                    <li>%ProgramFiles(x86)%</li>
+                    <li>%PROGRAMDATA%\Microsoft\Windows\Start Menu\Programs\Startup</li>,
+                    <li>%SYSTEMDRIVE%\Users\*\Downloads</li>,
+                    <li>%SYSTEMDRIVE%\Users\*\Documents\PowerShell</li>,
+                    <li>%SYSTEMDRIVE%\Users\*\Documents\WindowsPowerShell</li>
                 </ul>
             </td>
         </tr>
@@ -54,24 +60,24 @@ For ease of use, an ADMX file is created. So, the monitored paths, excluded path
             <td style="width: 23.1657%; height: 18px;">Excluded Paths</td>
             <td style="width: 76.8343%; height: 18px;">
                 <ul>
-                    <li>C:\Windows\System32\winevt</li>
-                    <li>C:\Windows\System32\sru</li>
-                    <li>C:\Windows\System32\config</li>
-                    <li>C:\Windows\System32\catroot2</li>
-                    <li>C:\Windows\System32\LogFiles</li>
-                    <li>C:\Windows\System32\wbem</li>
-                    <li>C:\Windows\System32\WDI\LogFiles</li>
-                    <li>C:\Windows\System32\Microsoft\Protect\Recovery</li>
-                    <li>C:\Windows\SysWOW64\winevt</li>
-                    <li>C:\Windows\SysWOW64\sru</li>
-                    <li>C:\Windows\SysWOW64\config</li>
-                    <li>C:\Windows\SysWOW64\catroot2</li>
-                    <li>C:\Windows\SysWOW64\LogFiles</li>
-                    <li>C:\Windows\SysWOW64\wbem</li>
-                    <li>C:\Windows\SysWOW64\WDI\LogFiles</li>
-                    <li>C:\Windows\SysWOW64\Microsoft\Protect\Recovery</li>
-                    <li>C:\Program Files\Windows Defender Advanced Threat Protection\Classification\Configuration</li>
-                    <li>C:\Program Files\Microsoft OneDrive\StandaloneUpdater\logs</li>
+                    <li>%SystemRoot%\System32\winevt</li>
+                    <li>%SystemRoot%\System32\sru</li>
+                    <li>%SystemRoot%\System32\config</li>
+                    <li>%SystemRoot%\System32\catroot2</li>
+                    <li>%SystemRoot%\System32\LogFiles</li>
+                    <li>%SystemRoot%\System32\wbem</li>
+                    <li>%SystemRoot%\System32\WDI\LogFiles</li>
+                    <li>%SystemRoot%\System32\Microsoft\Protect\Recovery</li>
+                    <li>%SystemRoot%\SysWOW64\winevt</li>
+                    <li>%SystemRoot%\SysWOW64\sru</li>
+                    <li>%SystemRoot%\SysWOW64\config</li>
+                    <li>%SystemRoot%\SysWOW64\catroot2</li>
+                    <li>%SystemRoot%\SysWOW64\LogFiles</li>
+                    <li>%SystemRoot%\SysWOW64\wbem</li>
+                    <li>%SystemRoot%\SysWOW64\WDI\LogFiles</li>
+                    <li>%SystemRoot%\SysWOW64\Microsoft\Protect\Recovery</li>
+                    <li>%ProgramFiles%\Windows Defender Advanced Threat Protection\Classification\Configuration</li>
+                    <li>%ProgramFiles%\Microsoft OneDrive\StandaloneUpdater\logs</li>
                 </ul>
             </td>
         </tr>
@@ -82,6 +88,9 @@ For ease of use, an ADMX file is created. So, the monitored paths, excluded path
                     <li>.log</li>
                     <li>.evtx</li>
                     <li>.etl</li>
+                    <li>.wal</li>
+                    <li>.db-wal</li>
+                    <li>.db</li>
                 </ul>
             </td>
         </tr>
@@ -95,10 +104,70 @@ For ease of use, an ADMX file is created. So, the monitored paths, excluded path
             <td style="width: 23.1657%; height: 18px;">Monitored Keys</td>
             <td style="width: 76.8343%; height: 18px;">
                 <ul>
-                    <li>Computer\HKEY_LOCAL_MACHINE\SOFTWARE\FIM</li>
-                    <li>Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run</li>
-                    <li>Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce</li>
-                    <li>Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon</li>
+                    <li>HKEY_LOCAL_MACHINE\SOFTWARE\FIM</li>
+                    <li>HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Microsoft Defender</li>
+                    <li>HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders</li>
+                    <li>HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders</li>
+                    <li>HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Session Manager</li>
+                    <li>HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\RunServicesOnce</li>
+                    <li>HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\RunServices</li>
+                    <li>HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run</li>
+                    <li>HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\RunOnce</li>
+                    <li>HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders</li>
+                    <li>HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders</li>
+                    <li>HKEY_CURRENT_USER\Software\Microsoft\Windows NT\CurrentVersion\Windows</li>
+                    <li>HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run</li>
+                    <li>HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\RunServicesOnce</li>
+                    <li>HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\RunServices</li>
+                    <li>HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL</li>
+                    <li>HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Lsa\FipsAlgorithmPolicy</li>
+                    <li>HKEY_LOCAL_MACHINE\SHKLM\SOFTWARE\Policies\Microsoft\Cryptography\Configuration\SSL\00010002</li>
+                    <li>HKEY_CURRENT_USER\Software\Classes\Mscfile\Shell\Open\Command</li>
+                    <li>HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\App Paths\Control.exe</li>
+                    <li>HKEY_CURRENT_USER\Software\Classes\Exefile\Shell\Runas\Command\IsolatedCommand</li>
+                    <li>HKEY_LOCAL_MACHINE\Software\Microsoft\Windows Nt\CurrentVersion\Imagefileexecutionoptions</li>
+                    <li>HKEY_LOCAL_MACHINE\System\CurrentControlSet\Enum\USBTor</li>
+                    <li>HKEY_LOCAL_MACHINE\System\CurrentControlSet\Enum\USB</li>
+                    <li>HKEY_CURRENT_USER\Environment</li>
+                    <li>HKEY_CURRENT_USER\Control Panel\Desktop\Scrnsave.exe</li>
+                    <li>HKEY_CURRENT_USER\Software\Microsoft\Command Processor\Autorun</li>
+                    <li>HKEY_CURRENT_USER\Software\Microsoft\Internet Explorer\Desktop\Components</li>
+                    <li>HKEY_CURRENT_USER\Software\Microsoft\Internet Explorer\Explorer Bars</li>
+                    <li>HKEY_CURRENT_USER\Software\Microsoft\Internet Explorer\Extensions</li>
+                    <li>HKEY_CURRENT_USER\Software\Microsoft\Internet Explorer\UrlSearchHooks\Server\Install\Software\Microsoft\Windows\CurrentVersion\Run</li>
+                    <li>HKEY_CURRENT_USER\Software\Microsoft\Windows NT\CurrentVersion\Windows\Run</li>
+                    <li>HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Winlogon</li>
+                    <li>HKEY_CURRENT_USER\Software\Microsoft\Windows NT\CurrentVersion\Winlogon\Shell</li>
+                    <li>HKEY_CURRENT_USER\Software\Microsoft\Windows NT\CurrentVersion\Run</li>
+                    <li>HKEY_CURRENT_USER\Software\Policies\Microsoft\Windows\Control Panel\Desktop\Scrnsave.exe</li>
+                    <li>HKEY_CURRENT_USER\Software\Policies\Microsoft\Windows\System\Scripts\Logoff</li>
+                    <li>HKEY_CURRENT_USER\Software\Wow6432Node\Microsoft\Internet Explorer\Explorer Bars</li>
+                    <li>HKEY_CURRENT_USER\Software\Wow6432Node\Microsoft\Internet Explorer\Extensions</li>
+                    <li>HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Winlogon</li>
+                    <li>HKEY_LOCAL_MACHINE\Software\Microsoft\Windows NT\CurrentVersion\Winlogon\Notify</li>
+                    <li>HKEY_LOCAL_MACHINE\Software\Microsoft\Windows NT\CurrentVersion\Winlogon\Shell</li>
+                    <li>HKEY_LOCAL_MACHINE\Software\Microsoft\Windows NT\CurrentVersion\Winlogon</li>
+                    <li>HKEY_LOCAL_MACHINE\Software\Microsoft\Windows NT\CurrentVersion\Winlogon\System</li>
+                    <li>HKEY_LOCAL_MACHINE\Software\Microsoft\Windows NT\CurrentVersion\Winlogon\Taskman</li>
+                    <li>HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\GroupPolicy\Scripts\Shutdown</li>
+                    <li>HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\GroupPolicy\Scripts\Startup</li>
+                    <li>HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run</li>
+                    <li>HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\Policies\System\Shell</li>
+                    <li>HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\Run</li>
+                    <li>HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\RunOnce</li>
+                    <li>HKEY_LOCAL_MACHINE\Software\Policies\Microsoft\Windows\System\Scripts\Logoff</li>
+                    <li>HKEY_LOCAL_MACHINE\Software\Policies\Microsoft\Windows\System\Scripts\Logon</li>
+                    <li>HKEY_LOCAL_MACHINE\Software\Policies\Microsoft\Windows\System\Scripts\Shutdown</li>
+                    <li>HKEY_LOCAL_MACHINE\Software\Policies\Microsoft\Windows\System\Scripts\Startup</li>
+                    <li>HKEY_LOCAL_MACHINE\Software\Wow6432Node\Microsoft\Command\Processor\Autorun</li>
+                    <li>HKEY_LOCAL_MACHINE\Software\Wow6432Node\Microsoft\Internet Explorer\Explorer Bars</li>
+                    <li>HKEY_LOCAL_MACHINE\Software\Wow6432Node\Microsoft\Internet Explorer\Extensions</li>
+                    <li>HKEY_LOCAL_MACHINE\Software\Wow6432Node\Microsoft\Internet Explorer\Toolbar</li>
+                    <li>HKEY_LOCAL_MACHINE\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Run</li>
+                    <li>HKEY_LOCAL_MACHINE\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce</li>
+                    <li>HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\LSA</li>
+                    <li>HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Keyboard Layout</li>
+                    <li>HKEY_CURRENT_USER\Keyboard Layout\Preload</li>
                 </ul>
             </td>
         </tr>
@@ -151,7 +220,7 @@ https://go.microsoft.com/fwlink/?LinkID=208121.
     <Platform>Any CPU</Platform>
     <PublishDir>..\publish\</PublishDir>
     <PublishProtocol>FileSystem</PublishProtocol>
-    <TargetFramework>net6.0-windows</TargetFramework>
+    <TargetFramework>net8.0-windows</TargetFramework>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>true</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
@@ -163,15 +232,6 @@ https://go.microsoft.com/fwlink/?LinkID=208121.
 ## Development
 
 You need to have .NET 8 for the service. The installer project requires Wix Toolset, and that requires enabling .NET 3.5 on development machine.
-
-## Roadmap
-
-- [x] Include ACLs
-- [x] Monitor Registry
-- [x] Generate installer, preferably in MSI format.
-- [ ] Translate AD addresses (resource consuming task)
-- [ ] Use Observable pattern for registry instead of looping
-- [x] Fine tune MSI
 
 ## Special thanks to:
 

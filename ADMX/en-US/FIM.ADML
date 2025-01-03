@@ -20,26 +20,44 @@ When disabled or not configured, there is no default value. Service will run wit
 
 Monitored Paths:
 The paths enumerated in this list will be monitored by the FIM service. Please type each full path in one line without quotation marks, for instance:
-C:\Windows\System32
-C:\Windows\SysWOW64
-C:\Program Files
-C:\Program Files (x86)
+%SystemRoot%\System32
+%SystemRoot%\SysWOW64
+%ProgramFiles%
+%ProgramFiles(x86)%
+%PROGRAMDATA%\Microsoft\Windows\Start Menu\Programs\Startup,
+%SYSTEMDRIVE%\Users\*\Downloads,
+%SYSTEMDRIVE%\Users\*\Documents\PowerShell,
+%SYSTEMDRIVE%\Users\*\Documents\WindowsPowerShell
 
 Excluded Paths:
 Paths to exclude from file system monitoring. Please type each full path in one line without quotation marks, for instance:
-C:\Windows\System32\winevt
-C:\Windows\System32\sru
-C:\Windows\System32\config
-C:\Windows\System32\catroot2
-C:\Windows\System32\LogFiles
-C:\Windows\System32\wbem
+%SystemRoot%\System32\winevt
+%SystemRoot%\System32\sru
+%SystemRoot%\System32\config
+%SystemRoot%\System32\catroot2
+%SystemRoot%\System32\LogFiles
+%SystemRoot%\System32\wbem
+%SystemRoot%\System32\WDI\LogFiles
+%SystemRoot%\System32\Microsoft\Protect\Recovery
+%SystemRoot%\SysWOW64\winevt
+%SystemRoot%\SysWOW64\sru
+%SystemRoot%\SysWOW64\config
+%SystemRoot%\SysWOW64\catroot2
+%SystemRoot%\SysWOW64\LogFiles
+%SystemRoot%\SysWOW64\wbem
+%SystemRoot%\SysWOW64\WDI\LogFiles
+%SystemRoot%\SysWOW64\Microsoft\Protect\Recovery
+%ProgramFiles%\Windows Defender Advanced Threat Protection\Classification\Configuration
+%ProgramFiles%\Microsoft OneDrive\StandaloneUpdater\logs
 
 Excluded extensions:
 File extensions to exclude from file system monitoring. Please type each extension in one line with preceding dot without quotation marks or wild cards, for instance:
 .log
 .evtx
-.etl            
-
+.etl
+.wal
+.db-wal
+.db
 
 Enable local database:
 In the first run, the service creates a local database that includes information and metadata of files within the monitored paths, including ACLs and SHA256 hashes.
@@ -56,10 +74,10 @@ When disabled or not configured, Registry monitoring will not run. Service will 
 
 Monitored Keys:
 Registry keys to monitor. Please type each key in one line without quotation marks, for instance:
-Computer\HKEY_LOCAL_MACHINE\SOFTWARE\FIM
-Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run
-Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce
-Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon
+HKEY_LOCAL_MACHINE\SOFTWARE\FIM
+HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run
+HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce
+HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon
 
 Excluded keys:
 Registry keys to exclude from file system monitoring. Please type each key in one line without quotation marks.</string>

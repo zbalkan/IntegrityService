@@ -43,10 +43,16 @@ namespace IntegrityService
         public string[] ExcludedKeys { get; private set; }
 
         /// <summary>
-        ///     Filesystem directories to exclude from monitoring.
+        ///     Filesystem directories to exclude from monitoring. Wildcards for folder names are accepted.
         ///     Default: Empty list.
         /// </summary>
         public string[] ExcludedPaths { get; private set; }
+
+        /// <summary>
+        ///     Ignore caculating hashes of large files for memory consumption.
+        ///     Default: 1024 (1GB)
+        /// </summary>
+        public int HashLimitMB { get; private set; }
 
         /// <summary>
         ///     Interval in seconds to send an informational heartbeat log entry to allow monitoring
@@ -54,12 +60,6 @@ namespace IntegrityService
         ///     Default: 60
         /// </summary>
         public int HeartbeatInterval { get; private set; }
-
-        /// <summary>
-        ///     Ignore caculating hashes of large files for memory consumption.
-        ///     Default: 1024 (1GB)
-        /// </summary>
-        public int HashLimitMB { get; private set; }
 
         /// <summary>
         ///     A flag that returns true if file discovery task is completed.
@@ -90,7 +90,7 @@ namespace IntegrityService
         public string[] MonitoredKeys { get; private set; }
 
         /// <summary>
-        ///     Filesystem directories to monitor.
+        ///     Filesystem directories to monitor. Wildcards for folder names are accepted.
         ///     Default: Empty list.
         /// </summary>
         public string[] MonitoredPaths { get; private set; }
@@ -108,9 +108,9 @@ namespace IntegrityService
         internal static Settings Instance => Lazy.Value;
 #pragma warning restore Ex0101 // Member accessor may throw undocumented exception
 
-        private const int DEFAULT_HEARTBEAT_INTERVAL = 60;
-
         private const int DEFAULT_HASHLIMIT_MB = 1024;
+
+        private const int DEFAULT_HEARTBEAT_INTERVAL = 60;
 
         private static readonly Lazy<Settings> Lazy = new(() => new Settings());
 
@@ -351,42 +351,60 @@ namespace IntegrityService
             var monitoredPaths = Registry.ReadMultiStringValue("MonitoredPaths");
             if (monitoredPaths.Length == 0)
             {
-                monitoredPaths = [@"C:\Windows\System32", @"C:\Windows\SysWOW64", @"C:\Program Files", @"C:\Program Files (x86)"];
+                monitoredPaths = [
+                    "%SystemRoot%\\System32",
+                    "%SystemRoot%\\SysWOW64",
+                    "%ProgramFiles%",
+                    "%ProgramFiles(x86)%",
+                    "%PROGRAMDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup",
+                    "%SYSTEMDRIVE%\\Users\\*\\Downloads",
+                    "%SYSTEMDRIVE%\\Users\\*\\Documents\\PowerShell",
+                    "%SYSTEMDRIVE%\\Users\\*\\Documents\\WindowsPowerShell"];
+
                 Registry.WriteMultiStringValue("MonitoredPaths", monitoredPaths);
             }
-            MonitoredPaths = monitoredPaths.Order().ToArray();
+
+            MonitoredPaths = monitoredPaths
+                .Select(Environment.ExpandEnvironmentVariables) // Expand variables like %WINDIR%
+                .Select(FileSystem.ResolveWildcardPath) // Resolve wildcard in paths like "%SYSTEMDRIVE%\\Users\\*\\Downloads"
+                .SelectMany(x => x) // Flatten the list of paths, as resolving wildcard ends up with a list of paths
+                .Order().ToArray();
             monitoredPathsPattern = GenerateMonitoredPathsPattern();
 
             var excludedPaths = Registry.ReadMultiStringValue("ExcludedPaths");
             if (excludedPaths.Length == 0)
             {
-                excludedPaths = [@"C:\Windows\System32\winevt",
-                    @"C:\Windows\System32\sru",
-                    @"C:\Windows\System32\config",
-                    @"C:\Windows\System32\catroot2",
-                    @"C:\Windows\System32\LogFiles",
-                    @"C:\Windows\System32\wbem",
-                    @"C:\Windows\System32\WDI\LogFiles",
-                    @"C:\Windows\System32\Microsoft\Protect\Recovery",
-                    @"C:\Windows\SysWOW64\winevt",
-                    @"C:\Windows\SysWOW64\sru",
-                    @"C:\Windows\SysWOW64\config",
-                    @"C:\Windows\SysWOW64\catroot2",
-                    @"C:\Windows\SysWOW64\LogFiles",
-                    @"C:\Windows\SysWOW64\wbem",
-                    @"C:\Windows\SysWOW64\WDI\LogFiles",
-                    @"C:\Windows\SysWOW64\Microsoft\Protect\Recovery",
-                    @"C:\Program Files\Windows Defender Advanced Threat Protection\Classification\Configuration",
-                    @"C:\Program Files\Microsoft OneDrive\StandaloneUpdater\logs"];
+                excludedPaths = [@"%SystemRoot%\System32\winevt",
+                    @"%SystemRoot%\System32\sru",
+                    @"%SystemRoot%\System32\config",
+                    @"%SystemRoot%\System32\catroot2",
+                    @"%SystemRoot%\System32\LogFiles",
+                    @"%SystemRoot%\System32\wbem",
+                    @"%SystemRoot%\System32\WDI\LogFiles",
+                    @"%SystemRoot%\System32\Microsoft\Protect\Recovery",
+                    @"%SystemRoot%\SysWOW64\winevt",
+                    @"%SystemRoot%\SysWOW64\sru",
+                    @"%SystemRoot%\SysWOW64\config",
+                    @"%SystemRoot%\SysWOW64\catroot2",
+                    @"%SystemRoot%\SysWOW64\LogFiles",
+                    @"%SystemRoot%\SysWOW64\wbem",
+                    @"%SystemRoot%\SysWOW64\WDI\LogFiles",
+                    @"%SystemRoot%\SysWOW64\Microsoft\Protect\Recovery",
+                    @"%ProgramFiles%\Windows Defender Advanced Threat Protection\Classification\Configuration",
+                    @"%ProgramFiles%\Microsoft OneDrive\StandaloneUpdater\logs"];
                 Registry.WriteMultiStringValue("ExcludedPaths", excludedPaths);
             }
-            ExcludedPaths = excludedPaths.Order().ToArray();
+            ExcludedPaths = excludedPaths
+                .Select(Environment.ExpandEnvironmentVariables) // Expand variables like %WINDIR%
+                .Select(FileSystem.ResolveWildcardPath) // Resolve wildcard in paths like "%SYSTEMDRIVE%\\Users\\*\\Downloads"
+                .SelectMany(x => x) // Flatten the list of paths, as resolving wildcard ends up with a list of paths
+                .Order().ToArray();
             excludedPathsPattern = GenerateExcludedPathsPattern();
 
             var excludedExtensions = Registry.ReadMultiStringValue("ExcludedExtensions");
             if (excludedExtensions.Length == 0)
             {
-                excludedExtensions = [".log", ".evtx", ".etl"];
+                excludedExtensions = [".log", ".evtx", ".etl", ".wal", ".db-wal", ".db"];
                 Registry.WriteMultiStringValue("ExcludedExtensions", excludedExtensions);
             }
             ExcludedExtensions = excludedExtensions.Order().ToArray();
@@ -395,18 +413,80 @@ namespace IntegrityService
             var registryMonitoring = Registry.ReadDwordValue("EnableRegistryMonitoring");
             if (registryMonitoring == -1)
             {
-                Registry.WriteDwordValue("EnableRegistryMonitoring", 0);
-                registryMonitoring = 0;
+                Registry.WriteDwordValue("EnableRegistryMonitoring", 1);
+                registryMonitoring = 1;
             }
             EnableRegistryMonitoring = registryMonitoring == 1;
 
             var monitoredKeys = Registry.ReadMultiStringValue("MonitoredKeys");
             if (monitoredKeys.Length == 0)
             {
-                monitoredKeys = [@"HKEY_LOCAL_MACHINE\SOFTWARE\FIM",
-                @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run",
-                @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce",
-                @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"];
+                monitoredKeys = [
+                    @"HKEY_LOCAL_MACHINE\SOFTWARE\FIM",
+                    @"HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Microsoft Defender",
+                    @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders",
+                    @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders",
+                    @"HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Session Manager",
+                    @"HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\RunServicesOnce",
+                    @"HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\RunServices",
+                    @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run",
+                    @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\RunOnce",
+                    @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders",
+                    @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders",
+                    @"HKEY_CURRENT_USER\Software\Microsoft\Windows NT\CurrentVersion\Windows",
+                    @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run",
+                    @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\RunServicesOnce",
+                    @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\RunServices",
+                    @"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL",
+                    @"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Lsa\FipsAlgorithmPolicy",
+                    @"HKEY_LOCAL_MACHINE\SHKLM\SOFTWARE\Policies\Microsoft\Cryptography\Configuration\SSL\00010002",
+                    @"HKEY_CURRENT_USER\Software\Classes\Mscfile\Shell\Open\Command",
+                    @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\App Paths\Control.exe",
+                    @"HKEY_CURRENT_USER\Software\Classes\Exefile\Shell\Runas\Command\IsolatedCommand",
+                    @"HKEY_LOCAL_MACHINE\Software\Microsoft\Windows Nt\CurrentVersion\Imagefileexecutionoptions",
+                    @"HKEY_LOCAL_MACHINE\System\CurrentControlSet\Enum\USBTor",
+                    @"HKEY_LOCAL_MACHINE\System\CurrentControlSet\Enum\USB",
+                    @"HKEY_CURRENT_USER\Environment",
+                    @"HKEY_CURRENT_USER\Control Panel\Desktop\Scrnsave.exe",
+                    @"HKEY_CURRENT_USER\Software\Microsoft\Command Processor\Autorun",
+                    @"HKEY_CURRENT_USER\Software\Microsoft\Internet Explorer\Desktop\Components",
+                    @"HKEY_CURRENT_USER\Software\Microsoft\Internet Explorer\Explorer Bars",
+                    @"HKEY_CURRENT_USER\Software\Microsoft\Internet Explorer\Extensions",
+                    @"HKEY_CURRENT_USER\Software\Microsoft\Internet Explorer\UrlSearchHooks\Server\Install\Software\Microsoft\Windows\CurrentVersion\Run",
+                    @"HKEY_CURRENT_USER\Software\Microsoft\Windows NT\CurrentVersion\Windows\Run",
+                    @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Winlogon",
+                    @"HKEY_CURRENT_USER\Software\Microsoft\Windows NT\CurrentVersion\Winlogon\Shell",
+                    @"HKEY_CURRENT_USER\Software\Microsoft\Windows NT\CurrentVersion\Run",
+                    @"HKEY_CURRENT_USER\Software\Policies\Microsoft\Windows\Control Panel\Desktop\Scrnsave.exe",
+                    @"HKEY_CURRENT_USER\Software\Policies\Microsoft\Windows\System\Scripts\Logoff",
+                    @"HKEY_CURRENT_USER\Software\Wow6432Node\Microsoft\Internet Explorer\Explorer Bars",
+                    @"HKEY_CURRENT_USER\Software\Wow6432Node\Microsoft\Internet Explorer\Extensions",
+                    @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Winlogon",
+                    @"HKEY_LOCAL_MACHINE\Software\Microsoft\Windows NT\CurrentVersion\Winlogon\Notify",
+                    @"HKEY_LOCAL_MACHINE\Software\Microsoft\Windows NT\CurrentVersion\Winlogon\Shell",
+                    @"HKEY_LOCAL_MACHINE\Software\Microsoft\Windows NT\CurrentVersion\Winlogon",
+                    @"HKEY_LOCAL_MACHINE\Software\Microsoft\Windows NT\CurrentVersion\Winlogon\System",
+                    @"HKEY_LOCAL_MACHINE\Software\Microsoft\Windows NT\CurrentVersion\Winlogon\Taskman",
+                    @"HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\GroupPolicy\Scripts\Shutdown",
+                    @"HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\GroupPolicy\Scripts\Startup",
+                    @"HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run",
+                    @"HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\Policies\System\Shell",
+                    @"HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\Run",
+                    @"HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\RunOnce",
+                    @"HKEY_LOCAL_MACHINE\Software\Policies\Microsoft\Windows\System\Scripts\Logoff",
+                    @"HKEY_LOCAL_MACHINE\Software\Policies\Microsoft\Windows\System\Scripts\Logon",
+                    @"HKEY_LOCAL_MACHINE\Software\Policies\Microsoft\Windows\System\Scripts\Shutdown",
+                    @"HKEY_LOCAL_MACHINE\Software\Policies\Microsoft\Windows\System\Scripts\Startup",
+                    @"HKEY_LOCAL_MACHINE\Software\Wow6432Node\Microsoft\Command\Processor\Autorun",
+                    @"HKEY_LOCAL_MACHINE\Software\Wow6432Node\Microsoft\Internet Explorer\Explorer Bars",
+                    @"HKEY_LOCAL_MACHINE\Software\Wow6432Node\Microsoft\Internet Explorer\Extensions",
+                    @"HKEY_LOCAL_MACHINE\Software\Wow6432Node\Microsoft\Internet Explorer\Toolbar",
+                    @"HKEY_LOCAL_MACHINE\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Run",
+                    @"HKEY_LOCAL_MACHINE\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce",
+                    @"HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\LSA",
+                    @"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Keyboard Layout",
+                    @"HKEY_CURRENT_USER\Keyboard Layout\Preload"];
+
                 Registry.WriteMultiStringValue("MonitoredKeys", monitoredKeys);
             }
             MonitoredKeys = monitoredKeys.Order().ToArray();
@@ -460,6 +540,7 @@ namespace IntegrityService
             .Replace(".", @"\.")
             .Replace(" ", "\\ ")
             .Replace("(", "\\(")
-            .Replace(")", "\\)");
+            .Replace(")", "\\)")
+            .Replace("-", "\\-");
     }
 }
