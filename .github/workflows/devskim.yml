@@ -8,8 +8,26 @@ name: DevSkim
 on:
   push:
     branches: [master]
+    paths-ignore:
+      - '**.md'
+      - '**.txt'
+      - '**.ADML'
+      - '**.ADMX'
+      - '**.ico'
+      - '**.reg'
+      - '.github/*'
+
   pull_request:
     branches: [master]
+    paths-ignore:
+      - '**.md'
+      - '**.txt'
+      - '**.ADML'
+      - '**.ADMX'
+      - '**.ico'
+      - '**.reg'
+      - '.github/*'
+
   schedule:
     - cron: "22 3 * * 4"
 
