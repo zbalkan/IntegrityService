@@ -35,7 +35,7 @@ namespace IntegrityService
                     _ = services.AddSingleton<IMessageStore<FileSystemChange, FileSystemChangeMessage>, FileSystemMessageStore>();
                     _ = services.AddSingleton<IMessageStore<RegistryChange, RegistryChangeMessage>, RegistryMessageStore>();
                     _ = services.AddHostedService<WatcherWorker>();
-                    _ = services.AddHostedService<PersistenceWorker>();
+                    _ = services.AddHostedService<MessageStoreConsumer>();
 
                     IConfiguration configuration = new ConfigurationBuilder()
                     .AddWindowsRegistry(Registry.RootName, Registry.Hive, false)

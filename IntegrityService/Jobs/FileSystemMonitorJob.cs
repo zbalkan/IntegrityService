@@ -114,28 +114,18 @@ namespace IntegrityService.Jobs
 
         private void ProcessEvent(string path, ChangeCategory category)
         {
-            if (!Settings.Instance.IsMonitoredPath(path) || IsDuplicate(path))
-            {
-                return;
-            }
-
-            if (!Settings.Instance.EnableLocalDatabase)
-            {
-                _logger.LogInformation("Category: {category}\nChange Type: {changeType}\nPath: {path}\nCurrent Hash: {currentHash}\nPreviousHash: {previousHash}", Enum.GetName(category), Enum.GetName(ConfigChangeType.FileSystem), path, FileSystem.CalculateFileHash(path), string.Empty);
-            }
-            else
+            if (Settings.Instance.IsMonitoredPath(path) && !IsDuplicate(path))
             {
                 var change = FileSystemChange.FromPath(path, category);
 
                 if (change != null)
                 {
-                    if(change.ObjectType == FileSystem.ObjectType.File)
+                    if (Settings.Instance.EnableLocalDatabase && change.ObjectType == FileSystem.ObjectType.File)
                     {
                         change.PreviousHash = FileSystemChange.RetrievePreviousHash(path, _ctx);
                     }
 
                     _messageStore.Add(change);
-                    _logger.LogInformation("Category: {category}\nChange Type: {changeType}\nPath: {path}\nCurrent Hash: {currentHash}\nPreviousHash: {previousHash}", Enum.GetName(change.ChangeCategory), Enum.GetName(ConfigChangeType.FileSystem), path, change.CurrentHash, change.PreviousHash);
                 }
             }
         }
