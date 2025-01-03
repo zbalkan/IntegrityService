@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using FastCache;
 using IntegrityService.FIM;
 using IntegrityService.Message;
 using IntegrityService.Utils;
@@ -40,8 +41,6 @@ namespace IntegrityService.Jobs
 
         private readonly int _pid;
 
-        private readonly Dictionary<ulong, string> _regHandleToKeyName = new Dictionary<ulong, string>();
-
         private readonly ObjectPool<StringBuilder> _sbPool = new DefaultObjectPoolProvider().CreateStringBuilderPool();
 
         private bool _disposedValue;
@@ -75,7 +74,7 @@ namespace IntegrityService.Jobs
                 session.EnableKernelProvider(TraceFlags);
                 MakeKernelParserStateless(session.Source);
 
-                session.Source.Kernel.RegistryKCBRundownEnd += (RegistryTraceData data) => _regHandleToKeyName[data.KeyHandle] = data.KeyName;
+                session.Source.Kernel.RegistryKCBRundownEnd += UpdateCache;
 
                 session.Source.Kernel.RegistryCreate += ProcessEvent;
                 session.Source.Kernel.RegistryDelete += ProcessEvent;
@@ -105,6 +104,8 @@ namespace IntegrityService.Jobs
                 session.Dispose();
             }
         }
+
+        private void UpdateCache(RegistryTraceData data) => Cached<string>.Save(data.KeyHandle, data.KeyName, TimeSpan.FromSeconds(MonitorTimeInSeconds * 2));
 
         /// <summary>
         ///     Stop monitoring selected Registry keys
@@ -137,9 +138,10 @@ namespace IntegrityService.Jobs
                 return string.Empty;
 
             var fullNameBuilder = _sbPool.Get();
-            if (keyHandle != 0 && _regHandleToKeyName.TryGetValue(keyHandle, out var handleName))
+
+            if (keyHandle != 0 && Cached<string>.TryGet(keyHandle, out var keyName))
             {
-                fullNameBuilder.Append(handleName);
+                fullNameBuilder.Append(keyName);
             }
 
             if (!string.IsNullOrWhiteSpace(eventKeyName))
@@ -212,9 +214,9 @@ namespace IntegrityService.Jobs
                 if (IsMonitoredEvent(keyName, ev.ProcessID))
                 {
                     Debug.WriteLine($"Processing event: {ev.EventName} for {keyName}");
-                    var eev = new RegistryChange(ev, keyName);
+                    var change = new RegistryChange(ev, keyName);
 
-                    _changes.Add(eev);
+                    _changes.Add(change);
                 }
             }
             catch (Exception ex)
