@@ -7,7 +7,6 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using FastCache;
 using IntegrityService.FIM;
-using IntegrityService.Message;
 using IntegrityService.Utils;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tracing.Parsers;
@@ -37,7 +36,7 @@ namespace IntegrityService.Jobs
 
         private readonly ILogger _logger;
 
-        private readonly IMessageStore<RegistryChange> _messageStore;
+        private readonly IBuffer<RegistryChange> _messageStore;
 
         private readonly int _pid;
 
@@ -45,7 +44,7 @@ namespace IntegrityService.Jobs
 
         private bool _disposedValue;
 
-        public RegistryMonitorJob(ILogger logger, IMessageStore<RegistryChange> regStore)
+        public RegistryMonitorJob(ILogger logger, IBuffer<RegistryChange> regStore)
         {
             _logger = logger;
             _pid = Environment.ProcessId;

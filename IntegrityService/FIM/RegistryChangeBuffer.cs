@@ -9,13 +9,11 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
-using IntegrityService.FIM;
 
-namespace IntegrityService.Message
+namespace IntegrityService.FIM
 {
-    public class RegistryMessageStore : IMessageStore<RegistryChange>
+    public class RegistryChangeBuffer : IBuffer<RegistryChange>
     {
         private readonly ConcurrentDictionary<string, RegistryChange> store = new();
 
@@ -27,11 +25,11 @@ namespace IntegrityService.Message
             return Task.CompletedTask;
         }
 
-        public Task AddRange(IEnumerable<IChange> changes)
+        public Task AddRange(IEnumerable<RegistryChange> changes)
         {
             ArgumentNullException.ThrowIfNull(changes);
 
-            Parallel.ForEach(changes.Cast<RegistryChange>(), change => store.AddOrUpdate(change.Id, change, (_, _) => change));
+            Parallel.ForEach(changes, change => store.AddOrUpdate(change.Id, change, (_, _) => change));
 
             return Task.CompletedTask;
         }

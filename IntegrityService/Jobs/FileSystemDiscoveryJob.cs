@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using IntegrityService.Data;
 using IntegrityService.FIM;
 using IntegrityService.IO;
-using IntegrityService.Message;
 using Microsoft.Extensions.Logging;
 
 // {{ FIM }} Copyright (C) {{ 2022 }} {{ Zafer Balkan }}
@@ -24,9 +23,9 @@ namespace IntegrityService.Jobs
 
         private readonly ILogger _logger;
 
-        private readonly IMessageStore<FileSystemChange> _messageStore;
+        private readonly IBuffer<FileSystemChange> _messageStore;
 
-        public FileSystemDiscoveryJob(ILogger logger, IMessageStore<FileSystemChange> fsStore, ILiteDbContext ctx)
+        public FileSystemDiscoveryJob(ILogger logger, IBuffer<FileSystemChange> fsStore, ILiteDbContext ctx)
         {
             _logger = logger;
             _messageStore = fsStore;
