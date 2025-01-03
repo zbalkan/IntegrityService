@@ -32,8 +32,8 @@ namespace IntegrityService
                     _ = services.Configure<LiteDbOptions>(options => options.DatabasePath = Settings.Instance.DatabasePath);
                     _ = services.AddSingleton<ILiteDbContext, LiteDbContext>();
                     _ = services.AddSingleton<BackgroundWorkerQueue>();
-                    _ = services.AddSingleton<IMessageStore<FileSystemChange, FileSystemChangeMessage>, FileSystemMessageStore>();
-                    _ = services.AddSingleton<IMessageStore<RegistryChange, RegistryChangeMessage>, RegistryMessageStore>();
+                    _ = services.AddSingleton<IMessageStore<FileSystemChange>, FileSystemMessageStore>();
+                    _ = services.AddSingleton<IMessageStore<RegistryChange>, RegistryMessageStore>();
                     _ = services.AddHostedService<WatcherWorker>();
                     _ = services.AddHostedService<MessageStoreConsumer>();
 

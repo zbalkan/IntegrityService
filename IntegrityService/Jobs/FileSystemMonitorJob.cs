@@ -24,13 +24,13 @@ namespace IntegrityService.Jobs
 
         private readonly ILogger _logger;
 
-        private readonly IMessageStore<FileSystemChange, FileSystemChangeMessage> _messageStore;
+        private readonly IMessageStore<FileSystemChange> _messageStore;
 
         private readonly List<FileSystemWatcher> _watchers;
 
         private bool _disposedValue;
 
-        public FileSystemMonitorJob(ILogger logger, IMessageStore<FileSystemChange, FileSystemChangeMessage> fsStore, ILiteDbContext ctx)
+        public FileSystemMonitorJob(ILogger logger, IMessageStore<FileSystemChange> fsStore, ILiteDbContext ctx)
         {
             _logger = logger;
             _duplicateCheckBuffer = new FixedSizeDictionary<string, DateTime>();

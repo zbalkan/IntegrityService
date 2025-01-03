@@ -24,9 +24,9 @@ namespace IntegrityService.Jobs
 
         private readonly ILogger _logger;
 
-        private readonly IMessageStore<FileSystemChange, FileSystemChangeMessage> _messageStore;
+        private readonly IMessageStore<FileSystemChange> _messageStore;
 
-        public FileSystemDiscoveryJob(ILogger logger, IMessageStore<FileSystemChange, FileSystemChangeMessage> fsStore, ILiteDbContext ctx)
+        public FileSystemDiscoveryJob(ILogger logger, IMessageStore<FileSystemChange> fsStore, ILiteDbContext ctx)
         {
             _logger = logger;
             _messageStore = fsStore;

@@ -9,37 +9,20 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using IntegrityService.FIM;
-using Microsoft.Extensions.ObjectPool;
 
 namespace IntegrityService.Message
 {
-    public class RegistryMessageStore : IMessageStore<RegistryChange, RegistryChangeMessage>
+    public class RegistryMessageStore : IMessageStore<RegistryChange>
     {
-        private const string INDEX_NAME = "fileSystemChanges";
-
-        private readonly ObjectPool<StringBuilder> pool = new DefaultObjectPoolProvider().CreateStringBuilderPool();
-
-        private readonly ConcurrentDictionary<string, RegistryChangeMessage> store = new();
+        private readonly ConcurrentDictionary<string, RegistryChange> store = new();
 
         public Task Add(RegistryChange change)
         {
             ArgumentNullException.ThrowIfNull(change);
 
-            var documentId = BuildDocumentId(INDEX_NAME, change.Entity);
-
-            var item = new RegistryChangeMessage
-            {
-                Index = INDEX_NAME,
-                DocumentId = documentId,
-                Change = change
-            };
-
-            store.AddOrUpdate(item.DocumentId, item, (_, _) => item);
+            store.AddOrUpdate(change.Id, change, (_, _) => change);
             return Task.CompletedTask;
         }
 
@@ -47,9 +30,9 @@ namespace IntegrityService.Message
 
         public bool HasNext() => !store.IsEmpty;
 
-        public List<RegistryChangeMessage> Take(int count)
+        public List<RegistryChange> Take(int count)
         {
-            var result = new List<RegistryChangeMessage>();
+            var result = new List<RegistryChange>();
             var counter = 0;
             foreach (var key in store.Keys)
             {
@@ -66,30 +49,14 @@ namespace IntegrityService.Message
             return result;
         }
 
-        public List<RegistryChangeMessage> TakeAll()
+        public List<RegistryChange> TakeAll()
         {
-            var result = new List<RegistryChangeMessage>();
+            var result = new List<RegistryChange>();
             foreach (var key in store.Keys)
             {
                 store.TryRemove(key, out var message);
                 if (message != null) { result.Add(message); }
             }
-
-            return result;
-        }
-
-        public RegistryChangeMessage? TakeNext() => store.TryRemove(store.Keys.First(), out var message) ? message : null;
-
-        private string BuildDocumentId(string index, string fileName)
-        {
-            const char separator = '_';
-
-            var sb = pool.Get();
-            sb.Append(index);
-            sb.Append(separator);
-            sb.Append(fileName.Replace(Path.DirectorySeparatorChar, separator).Replace(' ', separator));
-            var result = sb.ToString();
-            pool.Return(sb);
 
             return result;
         }

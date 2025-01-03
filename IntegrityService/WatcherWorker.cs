@@ -27,8 +27,8 @@ namespace IntegrityService
 
         public WatcherWorker(ILogger<WatcherWorker> logger,
                       BackgroundWorkerQueue backgroundWorkerQueue,
-                      IMessageStore<FileSystemChange, FileSystemChangeMessage> fsStore,
-                      IMessageStore<RegistryChange, RegistryChangeMessage> regStore,
+                      IMessageStore<FileSystemChange> fsStore,
+                      IMessageStore<RegistryChange> regStore,
                       ILiteDbContext ctx)
         {
             _logger = logger;
@@ -40,6 +40,21 @@ namespace IntegrityService
         }
 
         protected override Task ExecuteAsync(CancellationToken stoppingToken) => _ = Task.Run(async () => await ExecutableTask(stoppingToken));
+
+        private void Cleanup()
+        {
+            // Cleanup members here
+            _fsMonitor.Stop();
+            _fsMonitor.Dispose();
+
+            if (Settings.Instance.EnableRegistryMonitoring)
+            {
+                _regMonitor.Stop();
+                _regMonitor.Dispose();
+            }
+
+            _ctx?.Dispose();
+        }
 
         // Workaround for synchronous actions
         // Reference: https://blog.stephencleary.com/2020/05/backgroundservice-gotcha-startup.html
@@ -78,21 +93,6 @@ namespace IntegrityService
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 await Task.Delay(Settings.Instance.HeartbeatInterval * 1000, stoppingToken);
             }
-        }
-
-        private void Cleanup()
-        {
-            // Cleanup members here
-            _fsMonitor.Stop();
-            _fsMonitor.Dispose();
-
-            if (Settings.Instance.EnableRegistryMonitoring)
-            {
-                _regMonitor.Stop();
-                _regMonitor.Dispose();
-            }
-
-            _ctx?.Dispose();
         }
 
         private bool Handler(CtrlType signal)
