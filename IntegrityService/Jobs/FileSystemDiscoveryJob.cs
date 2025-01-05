@@ -49,11 +49,27 @@ namespace IntegrityService.Jobs
         /// </exception>
         internal void Start()
         {
+            _logger.LogInformation("Starting inventory discovery (path and hash)...");
+
             var files = RunNtfsDiscovery(out var sw);
 
             var filtered = FilterByConfig(sw, files);
 
             filtered = ContinueFromLastScan(sw, filtered);
+
+            var filesCount = files.Count.ToString("N0");
+            var filteredAfterLastScanCount = filtered.Count.ToString("N0");
+            var diff = (files.Count - filtered.Count).ToString("N0");
+            var percentage = ((double)(files.Count - filtered.Count) * 100 / files.Count).ToString("N2");
+
+            Debug.WriteLine("Number of all files on the device: {0}\n" +
+                "Number of files to be monitored: {1}\n" +
+                "Filtered out: {2} (%{3})",
+                filesCount, filteredAfterLastScanCount, diff, percentage);
+            _logger.LogInformation("Number of all files on the device: {files:l}\n" +
+                "Number of files to be monitored: {filteredCount:l}\n" +
+                "Filtered out: {diff:l} (%{percentage:l})",
+                filesCount, filteredAfterLastScanCount, diff, percentage);
 
             UpdateDiscoveryDatabase(sw, filtered);
         }
@@ -80,12 +96,14 @@ namespace IntegrityService.Jobs
             Debug.WriteLine("Filtering out the data in the database...");
             sw.Restart();
             var initialCount = filtered.Count;
+
+            // TODO: Find an easier way to filter out. This takes too much time.
             var filteredOut = filtered.RemoveAll(x => _ctx.FileSystemChanges.Exists(c => c.Entity.Equals(x)));
             sw.Stop();
-            Debug.WriteLine("Filtering out completed: {elapsed}", sw.Elapsed);
+            Debug.WriteLine("Filtering out completed: {0}", sw.Elapsed);
             if (filteredOut > 0)
             {
-                Debug.WriteLine("Number of files not in database: {filteredCount} (filtered out {filteredOut}, %{percentage})",
+                Debug.WriteLine("Number of files not in database: {0} (filtered out {1}, %{2})",
                     filtered.Count.ToString("N0"), filteredOut, (double)filteredOut * 100 / initialCount);
             }
             else
@@ -124,11 +142,7 @@ namespace IntegrityService.Jobs
             sw.Restart();
             var filtered = Settings.Instance.FilterPaths(files);
             sw.Stop();
-            Debug.WriteLine("Path filtering completed: {elapsed}", sw.Elapsed);
-            Debug.WriteLine("Number of files to be monitored: {filteredCount} (filtered out {diff}, %{percentage})",
-                filtered.Count.ToString("N0"), files.Count - filtered.Count, (double)(files.Count - filtered.Count) * 100 / files.Count);
-            _logger.LogInformation("Number of files to be monitored: {filteredCount} (filtered out {diff}, %{percentage})",
-                filtered.Count.ToString("N0"), files.Count - filtered.Count, (double)(files.Count - filtered.Count) * 100 / files.Count);
+            Debug.WriteLine("Path filtering completed: {0}", sw.Elapsed);
             return filtered;
         }
 
@@ -154,22 +168,17 @@ namespace IntegrityService.Jobs
             sw.Start();
             var files = FileSystem.InvokeNtfsSearch();
             sw.Stop();
-            _logger.LogInformation("Filesystem search completed: {elapsed}", sw.Elapsed);
+            Debug.WriteLine("Filesystem search completed: {0}", sw.Elapsed);
             Debug.WriteLine("Number of all files in the device: {filesCount}", files.Count.ToString("N0"));
-
-            _logger.LogInformation("Number of all files in the device: {filesCount}",
-                files.Count.ToString("N0"));
-
             return files;
         }
 
         private void UpdateDiscoveryDatabase(Stopwatch sw, List<string> filtered)
         {
-            _logger.LogInformation("Starting inventory discovery (path and hash)...");
             sw.Restart();
             Parallel.ForEach(filtered, Add);
             sw.Stop();
-            _logger.LogInformation("Database update completed: {elapsed}", sw.Elapsed);
+            Debug.WriteLine("Database update completed: {0}", sw.Elapsed);
         }
     }
 }
