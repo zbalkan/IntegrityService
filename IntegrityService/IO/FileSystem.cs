@@ -33,7 +33,7 @@ namespace IntegrityService.IO
             {
                 try
                 {
-                    var fileStream = new FileStream(path, FileMode.OpenOrCreate,
+                    var fileStream = new FileStream(path, FileMode.Open,
                 FileAccess.Read);
                     using var bufferedStream = new BufferedStream(fileStream, 1024 * 32);
                     digest = BitConverter
