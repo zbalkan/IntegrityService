@@ -46,7 +46,9 @@ namespace IntegrityService.FIM
             }
 
             var hash = string.Empty;
-            if (IsHashableFile(path, objectType))
+            if (objectType == ObjectType.File &&
+                category != ChangeCategory.Deleted &&
+                IsUnderSizeLimit(path))
             {
                 hash = CalculateFileHash(path);
             }
@@ -67,15 +69,17 @@ namespace IntegrityService.FIM
             };
         }
 
-        private static bool IsHashableFile(string path, ObjectType objectType)
+        private static bool IsUnderSizeLimit(string path)
         {
-            if (objectType != ObjectType.File) return false;
             try
             {
-                if(new FileInfo(path).Length < Settings.Instance.HashLimitMB)
-                {
-                    return true;
-                }
+                return new FileInfo(path).Length < Settings.Instance.HashLimitMB;
+            }
+            catch (FileNotFoundException)
+            {
+                // File is removed during recording.
+                // We cannot do anything here.
+                // No need to spam debug logs.
                 return false;
             }
             catch (Exception ex)
