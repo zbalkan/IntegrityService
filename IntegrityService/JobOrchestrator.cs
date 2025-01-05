@@ -12,8 +12,6 @@ namespace IntegrityService
 {
     public partial class JobOrchestrator : BackgroundService
     {
-        private readonly BackgroundWorkerQueue _backgroundWorkerQueue;
-
         private readonly ILiteDbContext _ctx;
 
         private readonly FileSystemDiscoveryJob _fsDiscovery;
@@ -25,13 +23,11 @@ namespace IntegrityService
         private readonly RegistryMonitorJob _regMonitor;
 
         public JobOrchestrator(ILogger<JobOrchestrator> logger,
-                      BackgroundWorkerQueue backgroundWorkerQueue,
                       IBuffer<FileSystemChange> fsStore,
                       IBuffer<RegistryChange> regStore,
                       ILiteDbContext ctx)
         {
             _logger = logger;
-            _backgroundWorkerQueue = backgroundWorkerQueue;
             _fsMonitor = new FileSystemMonitorJob(_logger, fsStore, ctx);
             _regMonitor = new RegistryMonitorJob(_logger, regStore);
             _fsDiscovery = new FileSystemDiscoveryJob(_logger, fsStore, ctx);
@@ -39,6 +35,19 @@ namespace IntegrityService
         }
 
         protected override Task ExecuteAsync(CancellationToken stoppingToken) => _ = Task.Run(async () => await ExecutableTask(stoppingToken));
+
+        private void Cleanup()
+        {
+            // Cleanup members here
+            _fsMonitor.Stop();
+            _fsMonitor.Dispose();
+
+            if (Settings.Instance.EnableRegistryMonitoring)
+            {
+                _regMonitor.Stop();
+                _regMonitor.Dispose();
+            }
+        }
 
         // Workaround for synchronous actions
         // Reference: https://blog.stephencleary.com/2020/05/backgroundservice-gotcha-startup.html
@@ -48,7 +57,7 @@ namespace IntegrityService
 
             if (Settings.Instance.EnableLocalDatabase && !Settings.Instance.IsFileDiscoveryCompleted)
             {
-                _backgroundWorkerQueue.QueueBackgroundWorkItem(_ => StartFilesystemDiscoveryAsync(stoppingToken).Unwrap());
+                StartFilesystemDiscoveryAsync(stoppingToken);
             }
             _fsMonitor.Start();
 
@@ -64,28 +73,7 @@ namespace IntegrityService
                 {
                     _logger.LogInformation("HEARTBEAT: Worker running at: {time}", DateTimeOffset.Now);
                 }
-
-                var workItem = await _backgroundWorkerQueue.DequeueAsync(stoppingToken);
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                if (workItem?.Target != null)
-                {
-                    workItem(stoppingToken);
-                }
-#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 await Task.Delay(Settings.Instance.HeartbeatInterval * 1000, stoppingToken);
-            }
-        }
-
-        private void Cleanup()
-        {
-            // Cleanup members here
-            _fsMonitor.Stop();
-            _fsMonitor.Dispose();
-
-            if (Settings.Instance.EnableRegistryMonitoring)
-            {
-                _regMonitor.Stop();
-                _regMonitor.Dispose();
             }
         }
 
@@ -108,27 +96,20 @@ namespace IntegrityService
             }
         }
 
-        private async Task<Task> StartFilesystemDiscoveryAsync(CancellationToken token)
-        {
-            var tcs = new TaskCompletionSource();
-
-            try
-            {
-                await Task.Run(() =>
-                {
-                    _logger.LogInformation(
-                        "File discovery not completed. Initiating file system discovery. It will take time.");
-                    _fsDiscovery.Start();
-                    Settings.Instance.IsFileDiscoveryCompleted = true;
-                    _logger.LogInformation("File system discovery completed.");
-                },
-                       token);
-            }
-            catch (Exception ex)
-            {
-                tcs.SetException(ex);
-            }
-            return tcs.Task;
-        }
+        private Task StartFilesystemDiscoveryAsync(CancellationToken stoppingToken) => Task.Run(() =>
+                       {
+                           _logger.LogInformation(
+                               "File discovery not completed. Initiating file system discovery. It will take time.");
+                           _fsDiscovery.Start();
+                           Settings.Instance.IsFileDiscoveryCompleted = true;
+                           _logger.LogInformation("File system discovery completed.");
+                       },
+                       stoppingToken).ContinueWith(t =>
+                       {
+                           if (t.IsFaulted)
+                           {
+                               _logger.LogError(t.Exception, "Error during file system discovery.");
+                           }
+                       }, TaskContinuationOptions.OnlyOnFaulted);
     }
 }
