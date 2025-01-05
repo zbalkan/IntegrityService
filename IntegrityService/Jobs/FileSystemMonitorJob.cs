@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 
 namespace IntegrityService.Jobs
 {
-    internal partial class FileSystemMonitorJob : IMonitor
+    internal partial class FileSystemMonitorJob
     {
         private readonly ILiteDbContext _ctx;
 

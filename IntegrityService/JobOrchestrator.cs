@@ -12,8 +12,6 @@ namespace IntegrityService
 {
     public partial class JobOrchestrator : BackgroundService
     {
-        private readonly ILiteDbContext _ctx;
-
         private readonly FileSystemDiscoveryJob _fsDiscovery;
 
         private readonly FileSystemMonitorJob _fsMonitor;
@@ -22,16 +20,19 @@ namespace IntegrityService
 
         private readonly RegistryMonitorJob _regMonitor;
 
+        private readonly BufferConsumerJob _consumer;
         public JobOrchestrator(ILogger<JobOrchestrator> logger,
                       IBuffer<FileSystemChange> fsStore,
                       IBuffer<RegistryChange> regStore,
                       ILiteDbContext ctx)
         {
             _logger = logger;
-            _fsMonitor = new FileSystemMonitorJob(_logger, fsStore, ctx);
-            _regMonitor = new RegistryMonitorJob(_logger, regStore);
-            _fsDiscovery = new FileSystemDiscoveryJob(_logger, fsStore, ctx);
-            _ctx = ctx;
+
+            _fsMonitor = new FileSystemMonitorJob(logger, fsStore, ctx);
+            _regMonitor = new RegistryMonitorJob(logger, regStore);
+            _fsDiscovery = new FileSystemDiscoveryJob(logger, fsStore, ctx);
+            _consumer = new BufferConsumerJob(logger, fsStore, regStore, ctx);
+
         }
 
         protected override Task ExecuteAsync(CancellationToken stoppingToken) => _ = Task.Run(async () => await ExecutableTask(stoppingToken));
@@ -54,6 +55,8 @@ namespace IntegrityService
         private async Task ExecutableTask(CancellationToken stoppingToken)
         {
             _ = NativeMethods.SetConsoleCtrlHandler(Handler, true);
+
+            _consumer.ExecuteAsync(stoppingToken);
 
             if (Settings.Instance.EnableLocalDatabase && !Settings.Instance.IsFileDiscoveryCompleted)
             {

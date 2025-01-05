@@ -34,7 +34,6 @@ namespace IntegrityService
                     _ = services.AddSingleton<IBuffer<FileSystemChange>, FileSystemChangeBuffer>();
                     _ = services.AddSingleton<IBuffer<RegistryChange>, RegistryChangeBuffer>();
                     _ = services.AddHostedService<JobOrchestrator>();
-                    _ = services.AddHostedService<BufferConsumer>();
 
                     IConfiguration configuration = new ConfigurationBuilder()
                     .AddWindowsRegistry(Registry.RootName, Registry.Hive, false)

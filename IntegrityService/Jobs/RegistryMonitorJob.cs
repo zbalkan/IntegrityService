@@ -22,7 +22,7 @@ namespace IntegrityService.Jobs
     ///     A class capturing Registry events.
     /// </summary>
     /// <see href="https://github.com/lowleveldesign/lowleveldesign-blog-samples/blob/master/monitoring-registry-activity-with-etw/Program.fs" />
-    internal partial class RegistryMonitorJob : IMonitor
+    internal partial class RegistryMonitorJob
     {
         private const string ETWSessionName = "RegistryWatcher";
 

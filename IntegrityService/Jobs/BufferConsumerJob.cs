@@ -13,12 +13,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using IntegrityService.Data;
 using IntegrityService.FIM;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace IntegrityService
 {
-    internal partial class BufferConsumer : BackgroundService
+    internal partial class BufferConsumerJob
     {
         private const int BUCKET_SIZE = 500;
 
@@ -30,7 +29,7 @@ namespace IntegrityService
 
         private readonly IBuffer<RegistryChange> _regStore;
 
-        public BufferConsumer(ILogger<JobOrchestrator> logger,
+        public BufferConsumerJob(ILogger<JobOrchestrator> logger,
                       IBuffer<FileSystemChange> fsStore,
                       IBuffer<RegistryChange> regStore,
                       ILiteDbContext ctx)
@@ -41,7 +40,7 @@ namespace IntegrityService
             _ctx = ctx;
         }
 
-        protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        public Task ExecuteAsync(CancellationToken stoppingToken) =>
             Task.Run(async () =>
             {
                 _logger.LogInformation("Initiated Persistence Worker");
