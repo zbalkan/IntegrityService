@@ -68,7 +68,10 @@ namespace IntegrityService.Jobs
                     change.PreviousHash = FileSystemChange.RetrievePreviousHash(path, _ctx);
                 }
 
-                _messageStore.Add(change);
+                if (change.CurrentHash.Equals(change.PreviousHash, System.StringComparison.InvariantCultureIgnoreCase))
+                {
+                    _messageStore.Add(change);
+                }
             }
         }
 
