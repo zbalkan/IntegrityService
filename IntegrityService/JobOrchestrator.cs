@@ -1,10 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using IntegrityService.Data;
 using IntegrityService.FIM;
 using IntegrityService.Jobs;
-using IntegrityService.Utils;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -12,95 +12,85 @@ namespace IntegrityService
 {
     public partial class JobOrchestrator : BackgroundService
     {
+        //private readonly BufferConsumer _consumer;
+
+        //private readonly FileSystemDiscoveryJob _fsDiscovery;
+
+        //private readonly FileSystemMonitorJob _fsMonitor;
+
         private readonly ILiteDbContext _ctx;
 
-        private readonly FileSystemDiscoveryJob _fsDiscovery;
-
-        private readonly FileSystemMonitorJob _fsMonitor;
+        private readonly IBuffer<FileSystemChange> _fsChangeBuffer;
 
         private readonly ILogger<JobOrchestrator> _logger;
 
-        private readonly RegistryMonitorJob _regMonitor;
+        //private readonly RegistryMonitorJob _regMonitor;
+        private readonly IBuffer<RegistryChange> _regChangeBuffer;
+        private Timer _heartbeatTimer;
 
         public JobOrchestrator(ILogger<JobOrchestrator> logger,
-                      IBuffer<FileSystemChange> fsStore,
-                      IBuffer<RegistryChange> regStore,
+                      IBuffer<FileSystemChange> fsChangeBuffer,
+                      IBuffer<RegistryChange> regChangeBuffer,
                       ILiteDbContext ctx)
         {
             _logger = logger;
-            _fsMonitor = new FileSystemMonitorJob(_logger, fsStore, ctx);
-            _regMonitor = new RegistryMonitorJob(_logger, regStore);
-            _fsDiscovery = new FileSystemDiscoveryJob(_logger, fsStore, ctx);
+            _fsChangeBuffer = fsChangeBuffer;
+            _regChangeBuffer = regChangeBuffer;
             _ctx = ctx;
-        }
 
-        protected override Task ExecuteAsync(CancellationToken stoppingToken) => _ = Task.Run(async () => await ExecutableTask(stoppingToken));
+            // Move these to wrapper functions that creates and starts the jobs in the same thread
+            //_fsMonitor = new FileSystemMonitorJob(_logger, fsChangeBuffer, ctx);
+            //_regMonitor = new RegistryMonitorJob(_logger, regChangeBuffer);
+            //_fsDiscovery = new FileSystemDiscoveryJob(_logger, fsChangeBuffer, ctx);
 
-        private void Cleanup()
-        {
-            // Cleanup members here
-            _fsMonitor.Stop();
-            _fsMonitor.Dispose();
-
-            if (Settings.Instance.EnableRegistryMonitoring)
-            {
-                _regMonitor.Stop();
-                _regMonitor.Dispose();
-            }
+            //_consumer = new BufferConsumer(logger, fsChangeBuffer, regChangeBuffer, ctx);
         }
 
         // Workaround for synchronous actions
         // Reference: https://blog.stephencleary.com/2020/05/backgroundservice-gotcha-startup.html
-        private async Task ExecutableTask(CancellationToken stoppingToken)
+        internal Task StartJobs(CancellationToken stoppingToken)
         {
-            _ = NativeMethods.SetConsoleCtrlHandler(Handler, true);
+            var tasks = new List<Task>
+            { StartBufferConsumerAsync(stoppingToken)
+            };
 
             if (Settings.Instance.EnableLocalDatabase && !Settings.Instance.IsFileDiscoveryCompleted)
             {
-                StartFilesystemDiscoveryAsync(stoppingToken);
+                tasks.Add(StartFilesystemDiscoveryAsync(stoppingToken));
             }
-            _fsMonitor.Start();
 
             if (Settings.Instance.EnableRegistryMonitoring)
             {
-                _regMonitor.Start();
+                tasks.Add(StartRegistryMonitoringAsync(stoppingToken));
             }
 
-            // This loop must continue until service is stopped.
-            while (!stoppingToken.IsCancellationRequested)
+
+            // These jobs run synchronously
+            StartHeartbeat(stoppingToken);
+
+            using (var fsMonitor = new FileSystemMonitorJob(_logger, _fsChangeBuffer, _ctx))
             {
-                if (Settings.Instance.HeartbeatInterval >= 0)
-                {
-                    _logger.LogInformation("HEARTBEAT: Worker running at: {time}", DateTimeOffset.Now);
-                }
-                await Task.Delay(Settings.Instance.HeartbeatInterval * 1000, stoppingToken);
+                fsMonitor.Start();
             }
+
+            // start async jobs
+            return Task.WhenAll(tasks).ContinueWith(_ => _logger.LogInformation("Worker stopped at: {time}", DateTimeOffset.Now), TaskContinuationOptions.ExecuteSynchronously);
         }
 
-        private bool Handler(CtrlType signal)
+        protected override Task ExecuteAsync(CancellationToken stoppingToken) => _ = Task.Run(async () => await StartJobs(stoppingToken), stoppingToken);
+
+        private Task StartBufferConsumerAsync(CancellationToken stoppingToken)
         {
-            switch (signal)
-            {
-                case CtrlType.CtrlBreakEvent:
-                case CtrlType.CtrlCEvent:
-                case CtrlType.CtrlLogoffEvent:
-                case CtrlType.CtrlShutdownEvent:
-                case CtrlType.CtrlCloseEvent:
-                    _logger.LogInformation("Worker stopped at: {time}", DateTimeOffset.Now);
-                    Cleanup();
-                    Environment.Exit(0);
-                    return false;
-
-                default:
-                    return false;
-            }
+            var consumer = new BufferConsumer(_logger, _fsChangeBuffer, _regChangeBuffer, _ctx);
+            return consumer.StartAsync(stoppingToken);
         }
 
-        private Task StartFilesystemDiscoveryAsync(CancellationToken stoppingToken) => Task.Run(() =>
+        private Task StartFilesystemDiscoveryAsync(CancellationToken stoppingToken) => Task.Run(async () =>
                        {
                            _logger.LogInformation(
                                "File discovery not completed. Initiating file system discovery. It will take time.");
-                           _fsDiscovery.Start();
+                           var fsDiscovery = new FileSystemDiscoveryJob(_logger, _fsChangeBuffer, _ctx);
+                           fsDiscovery.Start();
                            Settings.Instance.IsFileDiscoveryCompleted = true;
                            _logger.LogInformation("File system discovery completed.");
                        },
@@ -111,5 +101,42 @@ namespace IntegrityService
                                _logger.LogError(t.Exception, "Error during file system discovery.");
                            }
                        }, TaskContinuationOptions.OnlyOnFaulted);
+
+
+        private Task StartRegistryMonitoringAsync(CancellationToken stoppingToken) =>
+            Task.Run(() =>
+            {
+                var regMonitor = new RegistryMonitorJob(_logger, _regChangeBuffer);
+                regMonitor.Start();
+            }, stoppingToken)
+            .ContinueWith(t =>
+            {
+                if (t.IsFaulted)
+                {
+                    _logger.LogError(t.Exception, "Error during registry monitoring.");
+                }
+            }, TaskContinuationOptions.OnlyOnFaulted);
+
+        private void StartHeartbeat(CancellationToken stoppingToken)
+        {
+            _heartbeatTimer = new Timer(
+                state =>
+                {
+                    if (Settings.Instance.HeartbeatInterval >= 0)
+                    {
+                        _logger.LogInformation("HEARTBEAT: Worker running at: {time}", DateTimeOffset.Now);
+                    }
+                },
+                null,
+                TimeSpan.Zero,
+                TimeSpan.FromSeconds(Settings.Instance.HeartbeatInterval));
+
+            stoppingToken.Register(() =>
+            {
+                _heartbeatTimer?.Change(Timeout.Infinite, 0);
+                _heartbeatTimer?.Dispose();
+                _logger.LogInformation("Heartbeat task was canceled.");
+            });
+        }
     }
 }

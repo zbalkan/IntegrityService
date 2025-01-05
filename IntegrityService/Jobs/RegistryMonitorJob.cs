@@ -22,7 +22,7 @@ namespace IntegrityService.Jobs
     ///     A class capturing Registry events.
     /// </summary>
     /// <see href="https://github.com/lowleveldesign/lowleveldesign-blog-samples/blob/master/monitoring-registry-activity-with-etw/Program.fs" />
-    internal partial class RegistryMonitorJob : IMonitor
+    internal partial class RegistryMonitorJob
     {
         private const string ETWSessionName = "RegistryWatcher";
 
@@ -30,26 +30,21 @@ namespace IntegrityService.Jobs
 
         private const NtKeywords TraceFlags = NtKeywords.Registry;
 
-        private readonly CancellationTokenSource _cancellationTokenSource;
-
         private readonly List<RegistryChange> _changes;
 
         private readonly ILogger _logger;
 
-        private readonly IBuffer<RegistryChange> _messageStore;
+        private readonly IBuffer<RegistryChange> _buffer;
 
         private readonly int _pid;
 
         private readonly ObjectPool<StringBuilder> _sbPool = new DefaultObjectPoolProvider().CreateStringBuilderPool();
 
-        private bool _disposedValue;
-
-        public RegistryMonitorJob(ILogger logger, IBuffer<RegistryChange> regStore)
+        public RegistryMonitorJob(ILogger logger, IBuffer<RegistryChange> buffer)
         {
             _logger = logger;
             _pid = Environment.ProcessId;
-            _cancellationTokenSource = new CancellationTokenSource();
-            _messageStore = regStore;
+            _buffer = buffer;
             _changes = new List<RegistryChange>();
         }
 
@@ -67,7 +62,7 @@ namespace IntegrityService.Jobs
 
             _logger.LogInformation("Started ETW session 'RegistryWatcher' for Registry changes.");
 
-            while (!_cancellationTokenSource.IsCancellationRequested)
+            while (true)
             {
                 var session = new TraceEventSession(ETWSessionName, null);
                 session.EnableKernelProvider(TraceFlags);
@@ -89,8 +84,11 @@ namespace IntegrityService.Jobs
 
                 try
                 {
-                    _messageStore.AddRange(_changes);
-                    _changes.Clear();
+                    if (_changes.Count > 0)
+                    {
+                        _buffer.AddRange(_changes);
+                        _changes.Clear();
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -101,15 +99,6 @@ namespace IntegrityService.Jobs
                 session.Dispose();
             }
         }
-
-        private void UpdateCache(RegistryTraceData data) => Cached<string>.Save(data.KeyHandle, data.KeyName, TimeSpan.FromSeconds(MonitorTimeInSeconds * 2));
-
-        /// <summary>
-        ///     Stop monitoring selected Registry keys
-        /// </summary>
-        /// <exception cref="AggregateException">
-        /// </exception>
-        public void Stop() => _cancellationTokenSource.Cancel();
 
         private void CleanupExistingSession()
         {
@@ -212,7 +201,6 @@ namespace IntegrityService.Jobs
                 {
                     Debug.WriteLine($"Processing event: {ev.EventName} for {keyName}");
                     var change = new RegistryChange(ev, keyName);
-
                     _changes.Add(change);
                 }
             }
@@ -221,6 +209,8 @@ namespace IntegrityService.Jobs
                 ex.Log(_logger);
             }
         }
+
+        private void UpdateCache(RegistryTraceData data) => Cached<string>.Save(data.KeyHandle, data.KeyName, TimeSpan.FromSeconds(MonitorTimeInSeconds * 2));
 
         #region Regex
 
@@ -231,29 +221,5 @@ namespace IntegrityService.Jobs
         private static partial Regex RegistryUserRegex();
 
         #endregion Regex
-
-        #region Dispose
-
-        public void Dispose()
-        {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
-        }
-
-        private void Dispose(bool disposing)
-        {
-            if (!_disposedValue)
-            {
-                if (disposing)
-                {
-                    _cancellationTokenSource.Dispose();
-                }
-
-                _disposedValue = true;
-            }
-        }
-
-        #endregion Dispose
     }
 }

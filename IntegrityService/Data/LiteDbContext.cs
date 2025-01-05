@@ -59,7 +59,14 @@ namespace IntegrityService.Data
             {
                 if (disposing)
                 {
-                    _database.Dispose();
+                    try
+                    {
+                        _database.Dispose();
+                    }
+                    catch (ApplicationException)
+                    {
+                        // Ignore dispose call fro ma separate thread.
+                    }
                 }
 
                 disposedValue = true;

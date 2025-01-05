@@ -13,38 +13,37 @@ using System.Threading;
 using System.Threading.Tasks;
 using IntegrityService.Data;
 using IntegrityService.FIM;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace IntegrityService
 {
-    internal partial class BufferConsumer : BackgroundService
+    public partial class BufferConsumer
     {
         private const int BUCKET_SIZE = 500;
 
         private readonly ILiteDbContext _ctx;
 
-        private readonly IBuffer<FileSystemChange> _fsStore;
+        private readonly IBuffer<FileSystemChange> _fsBuffer;
 
         private readonly ILogger<JobOrchestrator> _logger;
 
-        private readonly IBuffer<RegistryChange> _regStore;
+        private readonly IBuffer<RegistryChange> _regBuffer;
 
         public BufferConsumer(ILogger<JobOrchestrator> logger,
-                      IBuffer<FileSystemChange> fsStore,
-                      IBuffer<RegistryChange> regStore,
+                      IBuffer<FileSystemChange> fsBuffer,
+                      IBuffer<RegistryChange> regBuffer,
                       ILiteDbContext ctx)
         {
             _logger = logger;
-            _fsStore = fsStore;
-            _regStore = regStore;
+            _fsBuffer = fsBuffer;
+            _regBuffer = regBuffer;
             _ctx = ctx;
         }
 
-        protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        public Task StartAsync(CancellationToken stoppingToken) =>
             Task.Run(async () =>
             {
-                _logger.LogInformation("Initiated Persistence Worker");
+                Debug.WriteLine("Initiated Buffer consumer");
                 if (Settings.Instance.EnableLocalDatabase)
                 {// This loop must continue until service is stopped.
                     while (!stoppingToken.IsCancellationRequested)
@@ -54,15 +53,15 @@ namespace IntegrityService
                         ProcessRegistryChanges();
                     }
                 }
-            });
+            }, stoppingToken);
 
         private void ProcessFileSystemChanges()
         {
             // read from stores as bulk and write to database.
-            var fsCount = Math.Min(_fsStore.Count(), BUCKET_SIZE);
+            var fsCount = Math.Min(_fsBuffer.Count(), BUCKET_SIZE);
             if (fsCount > 0)
             {
-                var fsChanges = _fsStore.Take(fsCount);
+                var fsChanges = _fsBuffer.Take(fsCount);
 
                 if (Settings.Instance.EnableLocalDatabase)
                 {
@@ -83,10 +82,10 @@ namespace IntegrityService
 
         private void ProcessRegistryChanges()
         {
-            var regCount = Math.Min(_regStore.Count(), BUCKET_SIZE);
+            var regCount = Math.Min(_regBuffer.Count(), BUCKET_SIZE);
             if (regCount > 0)
             {
-                var regChanges = _regStore.Take(regCount);
+                var regChanges = _regBuffer.Take(regCount);
 
                 if (Settings.Instance.EnableLocalDatabase)
                 {
