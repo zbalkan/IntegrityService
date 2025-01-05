@@ -87,8 +87,6 @@ namespace IntegrityService
                 _regMonitor.Stop();
                 _regMonitor.Dispose();
             }
-
-            _ctx?.Dispose();
         }
 
         private bool Handler(CtrlType signal)
