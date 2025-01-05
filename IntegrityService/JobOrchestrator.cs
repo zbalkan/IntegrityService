@@ -46,12 +46,9 @@ namespace IntegrityService
         {
             _ = NativeMethods.SetConsoleCtrlHandler(Handler, true);
 
-            ReloadConfig();
-
             if (Settings.Instance.EnableLocalDatabase && !Settings.Instance.IsFileDiscoveryCompleted)
             {
                 _backgroundWorkerQueue.QueueBackgroundWorkItem(_ => StartFilesystemDiscoveryAsync(stoppingToken).Unwrap());
-                ReloadConfig();
             }
             _fsMonitor.Start();
 
@@ -110,19 +107,6 @@ namespace IntegrityService
 
                 default:
                     return false;
-            }
-        }
-
-        private void ReloadConfig()
-        {
-            if (Settings.Instance.Success)
-            {
-                _logger.LogInformation("Read settings successfully");
-            }
-            else
-            {
-                _logger.LogError("Failed to read settings.");
-                Environment.Exit(1);
             }
         }
 
