@@ -116,7 +116,10 @@ namespace IntegrityService.Jobs
                         change.PreviousHash = FileSystemChange.RetrievePreviousHash(path, _ctx);
                     }
 
-                    _messageStore.Add(change);
+                    if (change.CurrentHash != change.PreviousHash)
+                    {
+                        _messageStore.Add(change);
+                    }
                     Cached<DateTime>.Save(path, change.DateTime, TimeSpan.FromSeconds(5));
                 }
             }

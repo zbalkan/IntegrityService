@@ -44,7 +44,6 @@ namespace IntegrityService
         protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
             Task.Run(async () =>
             {
-                _logger.LogInformation("Initiated Persistence Worker");
                 if (Settings.Instance.EnableLocalDatabase)
                 {// This loop must continue until service is stopped.
                     while (!stoppingToken.IsCancellationRequested)
@@ -54,7 +53,7 @@ namespace IntegrityService
                         ProcessRegistryChanges();
                     }
                 }
-            });
+            }, stoppingToken);
 
         private void ProcessFileSystemChanges()
         {

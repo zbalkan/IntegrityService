@@ -212,7 +212,7 @@ namespace IntegrityService.IO.Security
             }
             catch (IdentityNotMappedException ex)
             {
-                Debug.WriteLine(ex);
+                Debug.WriteLine("ex");
                 return primaryGroup != null ? primaryGroup.ToString() : string.Empty;
             }
             catch (Exception ex)
