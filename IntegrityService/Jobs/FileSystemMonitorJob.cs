@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 
 namespace IntegrityService.Jobs
 {
-    internal partial class FileSystemMonitorJob : IMonitor
+    internal partial class FileSystemMonitorJob: IDisposable
     {
         private readonly ILiteDbContext _ctx;
 
@@ -23,41 +23,22 @@ namespace IntegrityService.Jobs
 
         private readonly ILogger _logger;
 
-        private readonly IBuffer<FileSystemChange> _messageStore;
+        private readonly IBuffer<FileSystemChange> _buffer;
 
         private readonly List<FileSystemWatcher> _watchers;
 
         private bool _disposedValue;
 
-        public FileSystemMonitorJob(ILogger logger, IBuffer<FileSystemChange> fsStore, ILiteDbContext ctx)
+        public FileSystemMonitorJob(ILogger logger, IBuffer<FileSystemChange> buffer, ILiteDbContext ctx)
         {
             _logger = logger;
             _watchers = [];
-            _messageStore = fsStore;
+            _buffer = buffer;
             _ctx = ctx;
         }
 
         // This should run async
-        public void Start() => InvokeWatchers();
-
-        public void Stop()
-        {
-            if (_watchers.Count == 0) return;
-
-            foreach (var watcher in _watchers)
-            {
-                watcher.EnableRaisingEvents = false;
-                watcher.Changed -= OnChanged;
-                watcher.Renamed -= OnChanged;
-                watcher.Created -= OnCreated;
-                watcher.Deleted -= OnDeleted;
-                watcher.Error -= OnError;
-                watcher.Dispose();
-            }
-            _watchers.Clear();
-        }
-
-        private void InvokeWatchers()
+        public void Start()
         {
             foreach (var path in Settings.Instance.MonitoredPaths)
             {
@@ -118,7 +99,7 @@ namespace IntegrityService.Jobs
 
                     if (change.CurrentHash.Equals(change.PreviousHash, StringComparison.OrdinalIgnoreCase))
                     {
-                        _messageStore.Add(change);
+                        _buffer.Add(change);
                     }
                     Cached<DateTime>.Save(path, change.DateTime, TimeSpan.FromSeconds(5));
                 }
@@ -140,7 +121,19 @@ namespace IntegrityService.Jobs
             {
                 if (disposing)
                 {
-                    // Dispose managed resources
+                    if (_watchers.Count != 0)
+                    {
+                        foreach (var watcher in _watchers)
+                        {
+                            watcher.EnableRaisingEvents = false;
+                            watcher.Changed -= OnChanged;
+                            watcher.Renamed -= OnChanged;
+                            watcher.Created -= OnCreated;
+                            watcher.Deleted -= OnDeleted;
+                            watcher.Error -= OnError;
+                            watcher.Dispose();
+                        }
+                    }
                 }
 
                 _disposedValue = true;

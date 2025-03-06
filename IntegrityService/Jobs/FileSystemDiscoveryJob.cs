@@ -23,12 +23,12 @@ namespace IntegrityService.Jobs
 
         private readonly ILogger _logger;
 
-        private readonly IBuffer<FileSystemChange> _messageStore;
+        private readonly IBuffer<FileSystemChange> _buffer;
 
-        public FileSystemDiscoveryJob(ILogger logger, IBuffer<FileSystemChange> fsStore, ILiteDbContext ctx)
+        public FileSystemDiscoveryJob(ILogger logger, IBuffer<FileSystemChange> buffer, ILiteDbContext ctx)
         {
             _logger = logger;
-            _messageStore = fsStore;
+            _buffer = buffer;
             _ctx = ctx;
         }
 
@@ -86,7 +86,7 @@ namespace IntegrityService.Jobs
 
                 if (change.CurrentHash.Equals(change.PreviousHash, System.StringComparison.InvariantCultureIgnoreCase))
                 {
-                    _messageStore.Add(change);
+                    _buffer.Add(change);
                 }
             }
         }
