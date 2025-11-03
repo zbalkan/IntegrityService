@@ -1,6 +1,8 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using IntegrityService.Data;
 using IntegrityService.FIM;
@@ -97,8 +99,14 @@ namespace IntegrityService.Jobs
             sw.Restart();
             var initialCount = filtered.Count;
 
-            // TODO: Find an easier way to filter out. This takes too much time.
-            var filteredOut = filtered.RemoveAll(x => _ctx.FileSystemChanges.Exists(c => c.Entity.Equals(x)));
+            // Load existing Entities once into a HashSet for fast in-memory lookups.
+            var existing = new HashSet<string>(
+                _ctx.FileSystemChanges.FindAll().Select(c => c.Entity),
+                StringComparer.OrdinalIgnoreCase);
+
+            // Remove all scanned paths that already exist in DB.
+            var filteredOut = filtered.RemoveAll(x => existing.Contains(x));
+
             sw.Stop();
             Debug.WriteLine("Filtering out completed: {0}", sw.Elapsed);
             if (filteredOut > 0)
